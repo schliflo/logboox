@@ -139,8 +139,18 @@ account.
 
 ```sh
 wrangler login
-pnpm deploy       # build, then wrangler deploy
+pnpm run deploy   # build, then wrangler deploy
 ```
+
+`run` is not optional there: `deploy` is one of pnpm's own commands, so `pnpm
+deploy` reaches pnpm rather than this script and fails. Names carrying a colon
+are safe, which is why `pnpm deploy:legacy` below needs no `run`.
+
+The app answers on logboox.app alone. `workers_dev` is off, because a second
+address would be a second origin, keeping its own copy of every export and its
+own service worker with no way for the two to meet — the whole reason the old
+address below is handled the way it is. For the same reason `www` is a redirect
+rule in the dashboard rather than a second custom domain.
 
 The pages name themselves from `PUBLIC_SITE_URL`: the canonical link, `og:url`,
 the absolute social-image URL and the `Sitemap:` line in `robots.txt`. The
