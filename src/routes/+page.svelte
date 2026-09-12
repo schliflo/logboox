@@ -6,6 +6,7 @@
 	import * as Card from '$lib/components/ui/card';
 	import { Badge } from '$lib/components/ui/badge';
 	import MadeBy from '$lib/components/app/MadeBy.svelte';
+	import MovedNotice from '$lib/components/app/MovedNotice.svelte';
 	import Seo from '$lib/components/app/Seo.svelte';
 	import { data } from '$lib/state/dataset.svelte';
 	import ShieldIcon from '@lucide/svelte/icons/shield-check';
@@ -50,6 +51,8 @@
 				<ParseProgress />
 			</div>
 		{:else}
+			<MovedNotice />
+
 			<header class="mx-auto max-w-3xl text-center">
 				<Badge variant="secondary" class="mb-6 gap-1.5">
 					<ShieldIcon class="size-3.5" />
@@ -150,7 +153,7 @@
 				<p class="text-xs text-muted-foreground">
 					Open source under the
 					<a
-						href="https://github.com/schliflo/xpeng-data-export-browser/blob/main/LICENSE"
+						href="https://github.com/schliflo/logboox/blob/main/LICENSE"
 						class="underline underline-offset-4 hover:text-foreground"
 						target="_blank"
 						rel="noreferrer noopener">MIT licence</a

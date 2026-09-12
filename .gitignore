@@ -26,3 +26,4 @@ vite.config.ts.timestamp-*
 .samples/
 *.csv
 !src/lib/data/__fixtures__/*.csv
+!.env.production

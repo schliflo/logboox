@@ -19,6 +19,11 @@
 import { strFromU8, strToU8, unzipSync, Zip, ZipPassThrough } from 'fflate';
 import { reviveRecord, RECORD_VERSION, type ExportRecord, type StoredBlob } from './codec';
 
+/**
+ * Format identifier written into every manifest and checked on restore. It is
+ * the app's original name and stays that way on purpose: changing it would
+ * reject every backup made so far. The product name lives in `$lib/seo`.
+ */
 export const BACKUP_APP = 'xpeng-data-export-browser';
 export const BACKUP_FORMAT = 1;
 export const MANIFEST = 'manifest.json';
@@ -50,7 +55,7 @@ function safeSegment(id: string): string {
 export function backupFileName(count: number, at: Date = new Date()): string {
 	const date = at.toISOString().slice(0, 10);
 	// No VIN and no vehicle name: a backup often ends up in a shared folder.
-	return `xpeng-exports-${count === 1 ? '' : `${count}-`}backup-${date}.zip`;
+	return `logboox-${count === 1 ? '' : `${count}-exports-`}backup-${date}.zip`;
 }
 
 /**

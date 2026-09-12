@@ -62,9 +62,9 @@ describe('writeBackup', () => {
 	it('names the file by date and count, and never by vehicle', async () => {
 		const name = backupFileName(3, new Date('2026-09-04T10:00:00Z'));
 
-		expect(name).toBe('xpeng-exports-3-backup-2026-09-04.zip');
+		expect(name).toBe('logboox-3-exports-backup-2026-09-04.zip');
 		expect(backupFileName(1, new Date('2026-09-04T10:00:00Z'))).toBe(
-			'xpeng-exports-backup-2026-09-04.zip'
+			'logboox-backup-2026-09-04.zip'
 		);
 	});
 });

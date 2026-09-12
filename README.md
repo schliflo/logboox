@@ -1,9 +1,10 @@
-# XPeng Data Export Browser
+# LogbooX
 
 An interactive reader for the vehicle data XPeng gives you under the EU Data
 Act. Drop in the export, and it becomes trips, charging sessions, battery
 behaviour, driving style, and a plain account of what the file reveals about
-your daily life.
+your daily life. It runs at [logboox.app](https://logboox.app), and used to be
+called XPeng Data Export Browser.
 
 Everything runs in the browser. There is no server to send anything to: the app
 is a set of static files, and the export is parsed by a worker inside the page.
@@ -132,24 +133,40 @@ offline — and reload.
 ## Deploying to Cloudflare Workers
 
 Every route is prerendered and there are no server routes, so the Worker only
-serves static assets.
+serves static assets. `wrangler.jsonc` names the Worker `logboox` and attaches
+the custom domain; the zone for logboox.app has to be in the same Cloudflare
+account.
 
 ```sh
 wrangler login
-pnpm build
-wrangler deploy
+pnpm deploy       # build, then wrangler deploy
 ```
 
-Set `PUBLIC_SITE_URL` at build time so the pages can name themselves:
+The pages name themselves from `PUBLIC_SITE_URL`: the canonical link, `og:url`,
+the absolute social-image URL and the `Sitemap:` line in `robots.txt`. The
+value is read twice — by the prerender, from `.env.production`, and by the
+client on start, from the Worker's `vars` — so it is set in both places, and
+the two must agree. Without it those tags are simply left out and the social
+image is referenced by path, which every major link-preview scraper resolves
+against the page it found it on, so a build without it still works.
+
+### The old address
+
+The app first shipped at `xpeng-data-export-browser.schliflo.workers.dev`.
+Exports are kept per origin, so anything kept there is invisible from
+logboox.app — and a redirect would never reach anyone who installed the app,
+because the service worker serves pages from its own store and refuses a
+redirect when it checks for updates. So the old Worker keeps serving the full
+app, with a notice that points at the new address and offers a backup of
+everything kept:
 
 ```sh
-PUBLIC_SITE_URL=https://your-domain.example pnpm build
+pnpm deploy:legacy
 ```
 
-It fills in the canonical link, `og:url`, the absolute social-image URL and the
-`Sitemap:` line in `robots.txt`. Without it those are simply left out and the
-social image is referenced by path, which every major link-preview scraper
-resolves against the page it found it on — so the build works either way.
+That builds with `PUBLIC_MOVED_TO` set and deploys to the `legacy` environment
+in `wrangler.jsonc`, which carries the old Worker's name. Deploy the new
+address first, then the old one.
 
 ## What the app works out for itself
 

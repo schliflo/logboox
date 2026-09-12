@@ -1,7 +1,7 @@
 {
-	"name": "XPeng Data Export Browser",
-	"short_name": "XPeng Export",
-	"description": "Explore a month of trips, charging, battery health and driving style from your XPeng EU Data Act export, entirely in your browser.",
+	"name": "LogbooX",
+	"short_name": "LogbooX",
+	"description": "LogbooX turns your XPeng EU Data Act export into trips, charging sessions, battery health and driving style. Read in your browser — nothing is uploaded.",
 	"id": "/",
 	"start_url": "/",
 	"scope": "/",

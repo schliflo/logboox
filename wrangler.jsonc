@@ -1,6 +1,6 @@
 {
 	"$schema": "./node_modules/wrangler/config-schema.json",
-	"name": "xpeng-data-export-browser",
+	"name": "logboox",
 	"compatibility_date": "2026-09-01",
 	"compatibility_flags": ["nodejs_als"],
 	"main": ".svelte-kit/cloudflare/_worker.js",
@@ -8,6 +8,33 @@
 		"binding": "ASSETS",
 		"directory": ".svelte-kit/cloudflare"
 	},
+	// The public address. Wrangler creates the DNS record and certificate for a
+	// custom domain itself, as long as the zone is in this account.
+	"routes": [{ "pattern": "logboox.app", "custom_domain": true }],
+	// Keep the workers.dev address only until logboox.app answers, then turn it
+	// off: a second origin would keep its own copy of every export and its own
+	// service worker, and the two would never meet.
 	"workers_dev": true,
-	"preview_urls": true
+	"preview_urls": true,
+	// Read by the client on start; the prerender reads the same value from
+	// `.env.production`. Keep the two in step.
+	"vars": { "PUBLIC_SITE_URL": "https://logboox.app" },
+	"env": {
+		// The Worker the app first shipped on. It keeps serving the full app, with
+		// a notice pointing at the new address, so that the exports readers kept
+		// there — stored per origin, invisible from logboox.app — can be backed up
+		// and carried over. Deploy with `pnpm deploy:legacy`.
+		"legacy": {
+			"name": "xpeng-data-export-browser",
+			// Routes are inherited by environments; an empty list keeps the custom
+			// domain off this Worker.
+			"routes": [],
+			"workers_dev": true,
+			// Vars are not inherited, so both are repeated here.
+			"vars": {
+				"PUBLIC_SITE_URL": "https://logboox.app",
+				"PUBLIC_MOVED_TO": "https://logboox.app"
+			}
+		}
+	}
 }
