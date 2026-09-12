@@ -11,10 +11,9 @@
 	// The public address. Wrangler creates the DNS record and certificate for a
 	// custom domain itself, as long as the zone is in this account.
 	"routes": [{ "pattern": "logboox.app", "custom_domain": true }],
-	// Keep the workers.dev address only until logboox.app answers, then turn it
-	// off: a second origin would keep its own copy of every export and its own
-	// service worker, and the two would never meet.
-	"workers_dev": true,
+	// Off, now that logboox.app answers: a second origin would keep its own copy
+	// of every export and its own service worker, and the two would never meet.
+	"workers_dev": false,
 	"preview_urls": true,
 	// Read by the client on start; the prerender reads the same value from
 	// `.env.production`. Keep the two in step.
