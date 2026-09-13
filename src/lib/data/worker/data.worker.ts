@@ -22,6 +22,7 @@ import { generateDemoDataset } from '../../demo/generator';
 import { backupFileName, readBackup, writeBackup, type BackupEntry } from '../../history/archive';
 import { decodeExport, encodeExport, sourceFromExport } from '../../history/codec';
 import { getExport, putExport, storageAvailable } from '../../history/db';
+import { downloadExport, uploadExport } from './transfer';
 import {
 	packDataset,
 	unpackDataset,
@@ -205,6 +206,53 @@ async function handleBackup(ids: string[]) {
 	post({ type: 'backup', chunks, name: backupFileName(entries.length) }, transfer);
 }
 
+/**
+ * Copies exports to or from the account, one after another.
+ *
+ * One failure does not stop the rest: a request to sync three exports where
+ * the second is too large for the account should still put the other two
+ * where they were asked to go, and say which one did not make it.
+ */
+async function handleTransfer(
+	direction: 'sync' | 'fetch',
+	ids: string[],
+	timeZone: string
+): Promise<void> {
+	const phase = direction === 'sync' ? 'uploading' : 'downloading';
+	const done: string[] = [];
+	const failed: Array<{ id: string; reason: string }> = [];
+
+	for (let i = 0; i < ids.length; i++) {
+		const id = ids[i];
+		try {
+			const report = (loaded: number, total: number) => {
+				// Progress spans the whole request: whole exports finished, plus
+				// how far through the current one's buffers we are.
+				post({
+					type: 'progress',
+					phase,
+					loaded: i + (total > 0 ? loaded / total : 0),
+					total: ids.length,
+					detail: ids.length > 1 ? `Export ${i + 1} of ${ids.length}` : undefined
+				});
+			};
+			report(0, 1);
+
+			if (direction === 'sync') await uploadExport(id, timeZone, report);
+			else await downloadExport(id, report);
+
+			done.push(id);
+		} catch (error) {
+			failed.push({
+				id,
+				reason: error instanceof Error ? error.message : 'It could not be transferred.'
+			});
+		}
+	}
+
+	post({ type: 'transferred', ids: done, failed });
+}
+
 self.addEventListener('message', async (event: MessageEvent<WorkerRequest>) => {
 	const request = event.data;
 	try {
@@ -227,6 +275,12 @@ self.addEventListener('message', async (event: MessageEvent<WorkerRequest>) => {
 				break;
 			case 'backup':
 				await handleBackup(request.ids);
+				break;
+			case 'sync':
+				await handleTransfer('sync', request.ids, request.timeZone);
+				break;
+			case 'fetch':
+				await handleTransfer('fetch', request.ids, '');
 				break;
 		}
 	} catch (error) {

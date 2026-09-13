@@ -1,10 +1,14 @@
 <!--
-  The exports this browser is keeping.
+  Every export this reader can open.
 
   Each one can be reopened on its own, and several from the same vehicle can be
   opened as a single timeline — the only way to see more than the thirty days
-  any one export covers. Everything here is local: the list is read from this
-  device's storage, and the backup is written to it.
+  any one export covers.
+
+  An export is kept in this browser, in the signed-in account, or in both, and
+  each row says which. Only a copy that is here can be opened, so one that
+  exists solely in the account is fetched down first; the button says so rather
+  than hiding the difference.
 -->
 <script lang="ts">
 	import { onMount } from 'svelte';
@@ -15,11 +19,15 @@
 	import { Badge } from '$lib/components/ui/badge';
 	import { Button, buttonVariants } from '$lib/components/ui/button';
 	import { data } from '$lib/state/dataset.svelte';
-	import { history, type VehicleGroup } from '$lib/state/history.svelte';
+	import { account } from '$lib/state/account.svelte';
+	import { history, type LibraryEntry, type VehicleGroup } from '$lib/state/history.svelte';
 	import { settings } from '$lib/state/settings.svelte';
 	import { bytes, dateOnly, maskVin, num } from '$lib/utils/format';
-	import type { ExportRecord } from '$lib/history/codec';
 	import CarIcon from '@lucide/svelte/icons/car';
+	import CloudIcon from '@lucide/svelte/icons/cloud';
+	import CloudOffIcon from '@lucide/svelte/icons/cloud-off';
+	import CloudUploadIcon from '@lucide/svelte/icons/cloud-upload';
+	import CloudDownloadIcon from '@lucide/svelte/icons/cloud-download';
 	import DownloadIcon from '@lucide/svelte/icons/download';
 	import EllipsisIcon from '@lucide/svelte/icons/ellipsis';
 	import LayersIcon from '@lucide/svelte/icons/layers';
@@ -38,8 +46,9 @@
 	});
 
 	const estimate = $derived(history.estimate(selected));
+	const notInAccount = $derived(history.notInAccount);
 
-	function toggle(entry: ExportRecord) {
+	function toggle(entry: LibraryEntry) {
 		// Exports only merge within one vehicle, so picking another vehicle
 		// starts a fresh selection rather than offering an impossible combination.
 		if (selectedVin !== entry.vin) {
@@ -89,23 +98,103 @@
 		selected = [];
 		selectedVin = null;
 	}
+
+	/** Copies up to the account, and says plainly what would not go. */
+	async function keepInAccount(ids: string[]) {
+		const result = await history.sync(ids);
+		if (result.failed.length > 0) {
+			toast(
+				result.failed.length === 1
+					? 'One export was not copied'
+					: `${result.failed.length} exports were not copied`,
+				{ description: result.failed[0].reason, closeButton: true }
+			);
+		} else {
+			toast(
+				ids.length === 1 ? 'Kept in your account' : `${ids.length} exports kept in your account`,
+				{
+					description: 'They will still be here if this browser forgets everything.'
+				}
+			);
+		}
+	}
+
+	async function removeFromAccount(ids: string[]) {
+		await history.forget(ids);
+		toast('Removed from your account', {
+			description: 'The copy in this browser is untouched.'
+		});
+	}
+
+	/**
+	 * Opens an export that is only in the account: it has to come down first,
+	 * because everything that reads one reads it from this browser's store.
+	 */
+	async function fetchAndOpen(entry: LibraryEntry) {
+		if (!(await bringHere([entry.id]))) return;
+		await data.open([entry.id]);
+	}
+
+	/** Fetches down whatever part of a selection is not here yet. */
+	async function bringHere(ids: string[]): Promise<boolean> {
+		const missing = ids.filter((id) => !history.openable([id]));
+		if (missing.length === 0) return true;
+
+		const result = await history.pull(missing);
+		if (result.failed.length > 0) {
+			toast(
+				missing.length === 1
+					? 'That export could not be fetched'
+					: 'Some exports could not be fetched',
+				{ description: result.failed[0].reason, closeButton: true }
+			);
+			return false;
+		}
+		return true;
+	}
+
+	/**
+	 * Merging happens against this browser's own store, so anything living only
+	 * in the account comes down first rather than being quietly left out of the
+	 * timeline.
+	 */
+	async function openTogether(ids: string[]) {
+		if (!(await bringHere(ids))) return;
+		await data.open(ids);
+	}
 </script>
 
-{#if history.status === 'ready' && history.entries.length > 0}
+{#if history.count > 0}
 	<section class="mt-10 space-y-4">
 		<div class="flex flex-wrap items-end justify-between gap-2">
 			<div>
-				<h2 class="text-lg font-medium">Kept in this browser</h2>
+				<h2 class="text-lg font-medium">Your exports</h2>
 				<p class="text-sm text-muted-foreground">
-					Stored on this device only. Open one, or every export from the same car as a single
-					timeline.
+					{#if account.signedIn}
+						Kept in this browser, in your account, or both. Open one, or every export from the same
+						car as a single timeline.
+					{:else}
+						Stored on this device only. Open one, or every export from the same car as a single
+						timeline.
+					{/if}
 				</p>
 			</div>
 			<div class="flex items-center gap-2">
+				{#if account.signedIn && notInAccount.length > 0}
+					<Button
+						variant="ghost"
+						size="sm"
+						disabled={history.busy}
+						onclick={() => keepInAccount(notInAccount.map((entry) => entry.id))}
+					>
+						<CloudUploadIcon class="size-4" />
+						Keep {notInAccount.length === 1 ? 'it' : `all ${notInAccount.length}`} in my account
+					</Button>
+				{/if}
 				<Button
 					variant="ghost"
 					size="sm"
-					disabled={history.busy}
+					disabled={history.busy || history.entries.length === 0}
 					onclick={() => backup(history.entries.map((entry) => entry.id))}
 				>
 					<DownloadIcon class="size-4" />
@@ -144,7 +233,11 @@
 						</div>
 
 						{#if group.entries.length > 1}
-							<Button size="sm" disabled={data.status === 'loading'} onclick={() => data.open(ids)}>
+							<Button
+								size="sm"
+								disabled={data.status === 'loading' || history.busy}
+								onclick={() => openTogether(ids)}
+							>
 								<LayersIcon class="size-4" />
 								Open all {group.entries.length}
 							</Button>
@@ -205,8 +298,8 @@
 						<div class="mt-3 flex flex-wrap items-center gap-3 rounded-lg border bg-background p-3">
 							<Button
 								size="sm"
-								disabled={data.status === 'loading'}
-								onclick={() => data.open(selected)}
+								disabled={data.status === 'loading' || history.busy}
+								onclick={() => openTogether(selected)}
 							>
 								<LayersIcon class="size-4" />
 								Open {selected.length} together

@@ -25,13 +25,7 @@ import {
 	validateSession
 } from './session';
 import { createToken, listTokens, revokeToken, validateToken } from './apiTokens';
-import {
-	API_TOKEN_PREFIX,
-	hashToken,
-	parseApiToken,
-	randomToken,
-	timingSafeEqual
-} from './tokens';
+import { API_TOKEN_PREFIX, hashToken, parseApiToken, randomToken, timingSafeEqual } from './tokens';
 import { deleteUser, findUserByEmail, findOrCreateUser, updateSettings } from './users';
 
 let db: TestDb;
@@ -192,7 +186,9 @@ describe('sessions', () => {
 		expect(await renewIfStale(db, token)).toBe(true);
 
 		const row = await one<{ expires_at: number }>(db, 'SELECT expires_at FROM sessions');
-		expect(row!.expires_at).toBeGreaterThan(Math.floor(Date.now() / 1000) + SESSION_TTL_SECONDS - 5);
+		expect(row!.expires_at).toBeGreaterThan(
+			Math.floor(Date.now() / 1000) + SESSION_TTL_SECONDS - 5
+		);
 	});
 });
 

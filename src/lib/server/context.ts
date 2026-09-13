@@ -24,7 +24,7 @@ const NO_ACCOUNTS = 'Accounts are not available on this address. Use https://log
  * on all of them, so asking for a binding that is not there must be an answer
  * rather than an exception.
  */
-function binding<K extends keyof Env>(event: RequestEvent, key: K): Env[K] | null {
+function binding<K extends keyof Env>(event: RequestEvent, key: K): NonNullable<Env[K]> | null {
 	try {
 		return event.platform?.env?.[key] ?? null;
 	} catch {

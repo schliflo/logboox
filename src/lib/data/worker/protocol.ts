@@ -48,7 +48,9 @@ export type WorkerRequest =
 	| { type: 'parse'; files: File[]; timeZone: string }
 	| { type: 'demo'; seed: number; timeZone: string; awd: boolean }
 	| { type: 'open'; ids: string[]; timeZone: string }
-	| { type: 'backup'; ids: string[] };
+	| { type: 'backup'; ids: string[] }
+	| { type: 'sync'; ids: string[]; timeZone: string }
+	| { type: 'fetch'; ids: string[] };
 
 export type WorkerResponse =
 	| {
@@ -62,6 +64,8 @@ export type WorkerResponse =
 	| { type: 'ready'; dataset: PackedDataset; derived: DerivedData; kept: KeptOutcome | null }
 	| { type: 'restored'; ids: string[]; skipped: string[] }
 	| { type: 'backup'; chunks: Uint8Array[]; name: string }
+	/** What the account now holds, and what would not go or come. */
+	| { type: 'transferred'; ids: string[]; failed: Array<{ id: string; reason: string }> }
 	| { type: 'error'; message: string; hint?: string };
 
 export type ParsePhase =
@@ -74,7 +78,9 @@ export type ParsePhase =
 	| 'loading'
 	| 'merging'
 	| 'packing'
-	| 'restoring';
+	| 'restoring'
+	| 'uploading'
+	| 'downloading';
 
 export const PHASE_LABELS: Record<ParsePhase, string> = {
 	reading: 'Reading files',
@@ -86,7 +92,9 @@ export const PHASE_LABELS: Record<ParsePhase, string> = {
 	loading: 'Reading the kept export',
 	merging: 'Joining the timelines',
 	packing: 'Packing the backup',
-	restoring: 'Restoring from the backup'
+	restoring: 'Restoring from the backup',
+	uploading: 'Copying to your account',
+	downloading: 'Fetching from your account'
 };
 
 /** Detaches a dataset's buffers for transfer to the main thread. */

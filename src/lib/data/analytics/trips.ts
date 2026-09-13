@@ -29,6 +29,15 @@ export interface Trip {
 	/** Seconds with the car actually rolling. */
 	movingSeconds: number;
 	distanceKm: number;
+	/**
+	 * Odometer at each end, in km. Kept rather than only their difference
+	 * because they are what a logbook has to show, and because they are the
+	 * one thing about a trip that survives re-detection: array positions shift
+	 * and boundaries move by a second or two when exports are merged, but a
+	 * reading of 41 207 km is the same trip whenever it is worked out.
+	 */
+	odoStart: number;
+	odoEnd: number;
 	avgSpeed: number;
 	maxSpeed: number;
 	maxSpeedTime: number;
@@ -188,6 +197,8 @@ export function detectTrips(dataset: Dataset): Trip[] {
 			duration,
 			movingSeconds,
 			distanceKm,
+			odoStart,
+			odoEnd,
 			avgSpeed: movingSeconds > 0 ? (distanceKm / movingSeconds) * 3600 : NaN,
 			maxSpeed,
 			maxSpeedTime: time[maxSpeedIndex],

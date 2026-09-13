@@ -17,6 +17,7 @@ import type { KeptOutcome } from '../data/worker/protocol';
 import type { DerivedData } from '../data/analytics';
 import type { Dataset } from '../data/store/columnar';
 import { PyramidCache } from '../data/store/decimate';
+import { account } from './account.svelte';
 import { history } from './history.svelte';
 import { settings } from './settings.svelte';
 
@@ -107,6 +108,36 @@ class DatasetStore {
 				duration: 8000,
 				closeButton: true
 			});
+		}
+
+		await this.copyToAccount(kept.id);
+	}
+
+	/**
+	 * Copies a freshly imported export up, when someone is signed in and has
+	 * asked for that. It runs after the dashboard is already on screen and
+	 * failure is reported rather than thrown: the export is readable either
+	 * way, and an upload is not something to be waited on.
+	 *
+	 * The demonstration month is never copied. It is generated from a seed, so
+	 * an account holding it would be storing something anyone can regenerate
+	 * under a VIN every demo reader shares.
+	 */
+	private async copyToAccount(id: string) {
+		if (!account.signedIn || !account.user?.autoSync) return;
+		if (this.source.demo) return;
+
+		try {
+			const result = await history.sync([id]);
+			if (result.failed.length > 0) {
+				toast('This export was not copied to your account', {
+					description: result.failed[0].reason,
+					closeButton: true
+				});
+			}
+		} catch {
+			// Reported by the library the next time it is listed; nothing here
+			// is worth interrupting a first read for.
 		}
 	}
 

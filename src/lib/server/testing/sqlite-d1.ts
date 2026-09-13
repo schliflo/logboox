@@ -68,7 +68,9 @@ export function migratedDb(): TestDb {
 	const sqlite = new DatabaseSync(':memory:');
 	sqlite.exec('PRAGMA foreign_keys = ON');
 
-	for (const name of readdirSync(MIGRATIONS).filter((f) => f.endsWith('.sql')).sort()) {
+	for (const name of readdirSync(MIGRATIONS)
+		.filter((f) => f.endsWith('.sql'))
+		.sort()) {
 		sqlite.exec(readFileSync(join(MIGRATIONS, name), 'utf8'));
 	}
 
