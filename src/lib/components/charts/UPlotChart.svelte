@@ -16,6 +16,7 @@
 	import type uPlot from 'uplot';
 	import { settings } from '$lib/state/settings.svelte';
 	import ChartTooltip from './ChartTooltip.svelte';
+	import { withGaps } from './gaps';
 
 	export interface ChartSeries {
 		label: string;
@@ -207,7 +208,9 @@
 	}
 
 	function chartData(): uPlot.AlignedData {
-		return [x, ...series.map((s) => s.values)] as unknown as uPlot.AlignedData;
+		// The values arrive as typed arrays, where a missing reading is NaN;
+		// uPlot wants null there. See `withGaps`.
+		return [x, ...series.map((s) => withGaps(s.values))] as unknown as uPlot.AlignedData;
 	}
 
 	onMount(() => {
