@@ -27,3 +27,6 @@ vite.config.ts.timestamp-*
 *.csv
 !src/lib/data/__fixtures__/*.csv
 !.env.production
+
+# Local secrets for wrangler; the example file is committed instead.
+.dev.vars

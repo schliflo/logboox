@@ -17,12 +17,43 @@
 	"preview_urls": true,
 	// Read by the client on start; the prerender reads the same value from
 	// `.env.production`. Keep the two in step.
-	"vars": { "PUBLIC_SITE_URL": "https://logboox.app" },
+	"vars": {
+		"PUBLIC_SITE_URL": "https://logboox.app",
+		// Turns the account UI on. Absent on the legacy Worker below, which has
+		// no database to talk to.
+		"PUBLIC_ACCOUNTS": "1",
+		"MAIL_FROM": "hello@logboox.app"
+	},
+	// Accounts: who signed in, what they kept, and what they shared. Everything
+	// here is optional — the app reads an export without ever touching it.
+	"d1_databases": [
+		{
+			"binding": "DB",
+			"database_name": "logboox",
+			// From `wrangler d1 create logboox`. See docs/deploying.md.
+			"database_id": "REPLACE_WITH_D1_DATABASE_ID",
+			"migrations_dir": "migrations"
+		}
+	],
+	// The compressed columns themselves, one object per signal, exactly as they
+	// are kept in the browser. Far too large for D1 rows.
+	"r2_buckets": [
+		{
+			"binding": "STORAGE",
+			"bucket_name": "logboox-exports"
+		}
+	],
+	// Sign-in links and import reminders. The sender domain has to be verified
+	// in Email Service first; unverified senders fail with E_SENDER_NOT_VERIFIED.
+	"send_email": [{ "name": "EMAIL" }],
 	"env": {
 		// The Worker the app first shipped on. It keeps serving the full app, with
 		// a notice pointing at the new address, so that the exports readers kept
 		// there — stored per origin, invisible from logboox.app — can be backed up
 		// and carried over. Deploy with `pnpm deploy:legacy`.
+		//
+		// It deliberately has no bindings: accounts live at logboox.app alone, and
+		// the server routes answer 503 here.
 		"legacy": {
 			"name": "xpeng-data-export-browser",
 			// Routes are inherited by environments; an empty list keeps the custom

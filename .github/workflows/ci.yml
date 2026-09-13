@@ -1,0 +1,42 @@
+# Checks every branch and pull request with exactly what the deploy workflow
+# runs before it ships, so a green tick here means the same build succeeded.
+name: CI
+
+on:
+  push:
+    branches-ignore: [main]
+  pull_request:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: Lint, types, tests, build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 26
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - run: pnpm lint
+
+      - run: pnpm check
+
+      - run: pnpm test
+
+      - run: pnpm build
+
+      # The Cloudflare adapter writes its Worker to whatever `main` names in
+      # wrangler.jsonc, deleting what was there. A stray change to that field
+      # would leave nothing to deploy, and the deploy itself would still pass.
+      - name: The adapter produced a Worker
+        run: test -f .svelte-kit/cloudflare/_worker.js

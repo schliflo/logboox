@@ -10,6 +10,7 @@
 	import { Input } from '$lib/components/ui/input';
 	import { Switch } from '$lib/components/ui/switch';
 	import MadeBy from '$lib/components/app/MadeBy.svelte';
+	import AccountMenu from '$lib/components/app/AccountMenu.svelte';
 	import Seo from '$lib/components/app/Seo.svelte';
 	import { SITE_NAME } from '$lib/seo';
 	import { data } from '$lib/state/dataset.svelte';
@@ -150,6 +151,8 @@
 					{:else if data.source.kind === 'reopened'}
 						<Badge variant="secondary">Reopened</Badge>
 					{/if}
+
+					<AccountMenu variant="ghost" />
 
 					<Popover.Root>
 						<Popover.Trigger class={buttonVariants({ variant: 'ghost', size: 'icon' })}>

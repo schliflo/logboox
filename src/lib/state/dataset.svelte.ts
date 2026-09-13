@@ -1,10 +1,13 @@
 /**
  * The loaded export, held in memory for the life of the tab.
  *
- * Nothing is uploaded: no server, no cookies, no analytics. A copy is kept in
- * this browser's own storage so the export can be reopened later — and that
- * copy is the only thing that outlives the tab. Removing it is a click, and
- * nothing about it ever leaves the device.
+ * Reading an export involves no server: it is parsed by a worker in this page,
+ * and a copy is kept in this browser's own storage so it can be reopened
+ * later. Removing that copy is a click.
+ *
+ * A signed-in reader may additionally keep a copy in their account, which is
+ * the only way anything here travels. That is opt-in, per export, and lives
+ * behind `sync` — never on the path a first-time reader takes.
  */
 
 import { goto } from '$app/navigation';

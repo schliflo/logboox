@@ -10,6 +10,24 @@
 const CRAWLER_ONLY = /\/(og\.png|robots\.txt|sitemap\.xml)$/;
 
 /**
+ * Paths that must always reach the server.
+ *
+ * The API and the reminder trigger speak to a database, and a share page shows
+ * something that lives on the server and can be revoked — none of it means
+ * anything from a store of files written at deploy time. Served from the cache
+ * they would not merely be stale: an unknown path falls back to the landing
+ * page, so a share link would quietly render the front door instead of saying
+ * it could not be reached.
+ */
+const NETWORK_ONLY = /^\/(api|internal|s)(\/|$)/;
+
+/** True when a request must be left to the network, worker or no worker. */
+export function isNetworkOnly(pathname: string, base = ''): boolean {
+	const path = base && pathname.startsWith(base) ? pathname.slice(base.length) : pathname;
+	return NETWORK_ONLY.test(path || '/');
+}
+
+/**
  * Everything worth having before the connection goes: the hashed build output,
  * the static files and the prerendered pages, minus what only search engines
  * and link previews fetch.

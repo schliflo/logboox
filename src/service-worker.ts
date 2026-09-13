@@ -23,6 +23,7 @@ import { base, build, files, prerendered, version } from '$service-worker';
 import {
 	fetchCacheMode,
 	immutablePrefix,
+	isNetworkOnly,
 	optionalFiles,
 	pageKey,
 	precacheList
@@ -67,6 +68,11 @@ sw.addEventListener('fetch', (event) => {
 
 	const url = new URL(request.url);
 	if (url.origin !== sw.location.origin) return;
+
+	// The server's own paths are never answered from the store. Offline they
+	// fail as a request to a server should, rather than being handed the
+	// landing page below and looking like they worked.
+	if (isNetworkOnly(url.pathname, base)) return;
 
 	if (request.mode === 'navigate') {
 		event.respondWith(page(url, request));
