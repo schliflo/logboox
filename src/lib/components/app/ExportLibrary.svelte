@@ -47,6 +47,15 @@
 		history.refresh();
 	});
 
+	// The account is resolved by a request that lands after this list has
+	// already read local storage, so the account's own exports have to be asked
+	// for again once there is an account to ask about. Without this, a reader
+	// who signs in on a fresh browser sees nothing — which is precisely the
+	// case keeping a copy in an account exists to solve.
+	$effect(() => {
+		if (account.signedIn) history.refreshRemote();
+	});
+
 	const estimate = $derived(history.estimate(selected));
 	const notInAccount = $derived(history.notInAccount);
 
@@ -295,8 +304,26 @@
 							/>
 
 							<div class="min-w-40 flex-1">
-								<p class="text-sm font-medium">
+								<p class="flex items-center gap-2 text-sm font-medium">
 									{dateOnly(entry.startTime)} – {dateOnly(entry.endTime)}
+									{#if account.signedIn}
+										{#if entry.remote && entry.local}
+											<CloudIcon
+												class="size-3.5 text-primary"
+												aria-label="Kept here and in your account"
+											/>
+										{:else if entry.remote}
+											<Badge variant="secondary" class="gap-1">
+												<CloudIcon class="size-3" />
+												In your account
+											</Badge>
+										{:else}
+											<CloudOffIcon
+												class="size-3.5 text-muted-foreground"
+												aria-label="Only in this browser"
+											/>
+										{/if}
+									{/if}
 								</p>
 								<p class="text-xs text-muted-foreground tabular-nums">
 									{entry.days} days · {num(entry.distanceKm)} km · {entry.trips} trips · {bytes(
@@ -305,9 +332,21 @@
 								</p>
 							</div>
 
-							<Button variant="secondary" size="sm" onclick={() => data.open([entry.id])}>
-								Open
-							</Button>
+							{#if entry.local}
+								<Button variant="secondary" size="sm" onclick={() => data.open([entry.id])}>
+									Open
+								</Button>
+							{:else}
+								<Button
+									variant="secondary"
+									size="sm"
+									disabled={history.busy}
+									onclick={() => fetchAndOpen(entry)}
+								>
+									<CloudDownloadIcon class="size-4" />
+									Fetch and open
+								</Button>
+							{/if}
 
 							<DropdownMenu.Root>
 								<DropdownMenu.Trigger class={buttonVariants({ variant: 'ghost', size: 'icon' })}>
@@ -315,14 +354,42 @@
 									<span class="sr-only">More for this export</span>
 								</DropdownMenu.Trigger>
 								<DropdownMenu.Content align="end">
-									<DropdownMenu.Item onclick={() => backup([entry.id])}>
-										<DownloadIcon class="size-4" />
-										Back up
-									</DropdownMenu.Item>
-									<DropdownMenu.Item onclick={() => remove([entry.id])}>
-										<TrashIcon class="size-4" />
-										Remove
-									</DropdownMenu.Item>
+									{#if entry.local}
+										<DropdownMenu.Item onclick={() => backup([entry.id])}>
+											<DownloadIcon class="size-4" />
+											Back up
+										</DropdownMenu.Item>
+									{/if}
+									{#if account.signedIn && entry.local && !entry.remote}
+										<DropdownMenu.Item onclick={() => keepInAccount([entry.id])}>
+											<CloudUploadIcon class="size-4" />
+											Keep in my account
+										</DropdownMenu.Item>
+									{/if}
+									{#if account.signedIn && entry.remote && !entry.local}
+										<DropdownMenu.Item onclick={() => history.pull([entry.id])}>
+											<CloudDownloadIcon class="size-4" />
+											Fetch to this browser
+										</DropdownMenu.Item>
+									{/if}
+									{#if account.signedIn && entry.remote && !entry.isDemo}
+										<DropdownMenu.Item onclick={() => shareExport(entry)}>
+											<ShareIcon class="size-4" />
+											Share this export
+										</DropdownMenu.Item>
+									{/if}
+									{#if account.signedIn && entry.remote}
+										<DropdownMenu.Item onclick={() => removeFromAccount([entry.id])}>
+											<CloudOffIcon class="size-4" />
+											Remove from my account
+										</DropdownMenu.Item>
+									{/if}
+									{#if entry.local}
+										<DropdownMenu.Item onclick={() => remove([entry.id])}>
+											<TrashIcon class="size-4" />
+											Remove from this browser
+										</DropdownMenu.Item>
+									{/if}
 								</DropdownMenu.Content>
 							</DropdownMenu.Root>
 						</div>
@@ -353,15 +420,21 @@
 		{/each}
 
 		<p class="text-xs text-muted-foreground">
-			{history.entries.length}
-			{history.entries.length === 1 ? 'export' : 'exports'} taking {bytes(history.totalBytes)}
-			{#if history.usage && history.usage.quota > 0}
-				of roughly {bytes(history.usage.quota)} this site may use.
+			{#if history.entries.length > 0}
+				{history.entries.length}
+				{history.entries.length === 1 ? 'export' : 'exports'} taking {bytes(history.totalBytes)}
+				{#if history.usage && history.usage.quota > 0}
+					of roughly {bytes(history.usage.quota)} this site may use.
+				{:else}
+					on this device.
+				{/if}
+				A browser can clear its own storage — Safari does so after a week away — so keep a backup of anything
+				you want to hold on to{account.signedIn ? ', or a copy in your account' : ''}.
 			{:else}
-				on this device.
+				<!-- Nothing here, everything in the account: the sentence about this
+				     browser's storage would be about nothing at all. -->
+				Nothing is stored in this browser. Fetch an export to read it, and it is kept here as well.
 			{/if}
-			A browser can clear its own storage — Safari does so after a week away — so keep a backup of anything
-			you want to hold on to.
 		</p>
 	</section>
 {/if}

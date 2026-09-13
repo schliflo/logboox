@@ -15,11 +15,29 @@ export default defineConfig({
 			adapter: adapter()
 		})
 	],
+	server: {
+		watch: {
+			// Wrangler's local state lives here: the emulated database, the
+			// bucket, and a file per message the mail binding "sends". Watching
+			// it means every sign-in link reloads the page that just asked for
+			// one, which is a strange way to test a sign-in link.
+			ignored: ['**/.wrangler/**']
+		}
+	},
 	test: {
 		expect: { requireAssertions: true },
 		projects: [
 			{
 				extends: './vite.config.ts',
+				server: {
+					watch: {
+						// Wrangler's local state lives here: the emulated database, the
+						// bucket, and a file per message the mail binding "sends". Watching
+						// it means every sign-in link reloads the page that just asked for
+						// one, which is a strange way to test a sign-in link.
+						ignored: ['**/.wrangler/**']
+					}
+				},
 				test: {
 					name: 'server',
 					environment: 'node',

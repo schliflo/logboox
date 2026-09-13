@@ -119,7 +119,12 @@
 							{account.storage?.exports ?? 0}
 							{(account.storage?.exports ?? 0) === 1 ? 'export kept' : 'exports kept'}
 						</span>
-						<span class="tabular-nums">{bytes(used)} of {bytes(quota)}</span>
+						<span class="tabular-nums">
+							<!-- `bytes` reads zero as "no figure to give", which is right
+							     where a size is unknown and wrong here: an empty account
+							     is a fact worth stating. -->
+							{used > 0 ? `${bytes(used)} of ${bytes(quota)}` : `nothing yet, of ${bytes(quota)}`}
+						</span>
 					</div>
 					<div class="h-2 overflow-hidden rounded-full bg-muted">
 						<div
