@@ -124,3 +124,56 @@ describe('clearExports', () => {
 		expect(await getExport('DA-a')).toBeNull();
 	});
 });
+
+describe('upgrading an existing store', () => {
+	it('adds the notes store without disturbing the exports already kept', async () => {
+		// Version 1 as it shipped: exports and blobs, and nothing else.
+		await new Promise<void>((resolve, reject) => {
+			const request = indexedDB.open('xpeng-export-browser-upgrade-test', 1);
+			request.onupgradeneeded = () => {
+				const db = request.result;
+				const exports = db.createObjectStore('exports', { keyPath: 'id' });
+				exports.createIndex('vin', 'vin');
+				exports.createIndex('startTime', 'startTime');
+				const blobs = db.createObjectStore('blobs', { keyPath: ['id', 'name'] });
+				blobs.createIndex('id', 'id');
+			};
+			request.onsuccess = () => {
+				const db = request.result;
+				const tx = db.transaction('exports', 'readwrite');
+				tx.objectStore('exports').put({ id: 'DA-old', vin: 'L1N', startTime: 1 });
+				tx.oncomplete = () => {
+					db.close();
+					resolve();
+				};
+				tx.onerror = () => reject(tx.error);
+			};
+			request.onerror = () => reject(request.error);
+		});
+
+		await new Promise<void>((resolve, reject) => {
+			const request = indexedDB.open('xpeng-export-browser-upgrade-test', 2);
+			request.onupgradeneeded = () => {
+				const db = request.result;
+				if (!db.objectStoreNames.contains('annotations')) {
+					const store = db.createObjectStore('annotations', { keyPath: ['vin', 'startTime'] });
+					store.createIndex('vin', 'vin');
+				}
+			};
+			request.onsuccess = () => {
+				const db = request.result;
+				expect([...db.objectStoreNames].sort()).toEqual(['annotations', 'blobs', 'exports']);
+
+				const tx = db.transaction('exports', 'readonly');
+				const kept = tx.objectStore('exports').get('DA-old');
+				tx.oncomplete = () => {
+					expect((kept.result as { vin: string }).vin).toBe('L1N');
+					db.close();
+					resolve();
+				};
+				tx.onerror = () => reject(tx.error);
+			};
+			request.onerror = () => reject(request.error);
+		});
+	});
+});

@@ -14,6 +14,7 @@
 	import Seo from '$lib/components/app/Seo.svelte';
 	import { SITE_NAME } from '$lib/seo';
 	import { data } from '$lib/state/dataset.svelte';
+	import { logbook } from '$lib/state/logbook.svelte';
 	import { settings } from '$lib/state/settings.svelte';
 	import { maskVin, dateOnly } from '$lib/utils/format';
 	import LayoutIcon from '@lucide/svelte/icons/layout-dashboard';
@@ -54,6 +55,16 @@
 		// has nothing to show and belongs back at the start — where the exports
 		// kept in this browser are listed, ready to open again.
 		if (!data.isReady) goto('/');
+	});
+
+	// Notes belong to the car rather than to the export they were written
+	// against, so they are read once a dataset is open and its VIN is known.
+	// Loaded here rather than by the dataset store, which would make the two
+	// import each other.
+	$effect(() => {
+		const vin = data.dataset?.vin;
+		if (vin) logbook.open(vin);
+		else logbook.reset();
 	});
 </script>
 
