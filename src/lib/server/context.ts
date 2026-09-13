@@ -6,6 +6,7 @@
  * for it here and gets a clean 503 rather than a stack trace when it is absent.
  */
 
+import { dev } from '$app/environment';
 import { error } from '@sveltejs/kit';
 import type { RequestEvent } from '@sveltejs/kit';
 import type { Db } from './db';
@@ -54,11 +55,17 @@ export function requireStorage(event: RequestEvent): R2Bucket {
 }
 
 /**
- * The mailer. Without a binding — `vite dev`, or a Worker that never had one —
- * messages are printed instead, which is what makes the sign-in flow usable
- * from a terminal.
+ * The mailer. Printed rather than sent in development, and wherever there is
+ * no binding at all — the legacy Worker, or the prerender.
+ *
+ * The development case has to be asked for explicitly. Wrangler's proxy does
+ * supply a working `send_email` binding to `vite dev`, and it delivers into a
+ * store inside a temporary directory: nothing is sent, and the sign-in link is
+ * unreachable without going and reading that store. Printing it is the whole
+ * point of having a console mailer.
  */
 export function mailer(event: RequestEvent): Mailer {
+	if (dev) return consoleMailer();
 	const email = binding(event, 'EMAIL');
 	const from = binding(event, 'MAIL_FROM');
 	if (!email || !from) return consoleMailer();

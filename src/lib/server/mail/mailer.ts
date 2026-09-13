@@ -3,8 +3,8 @@
  *
  * Four lines of interface, so the two mails this app sends do not depend on
  * who carries them. In production that is Cloudflare's Email Service, through
- * a binding rather than an API key; in `vite dev` there is no binding, so the
- * message is printed and the sign-in link can be followed from the terminal.
+ * a binding rather than an API key; in `vite dev` the message is printed
+ * instead, so the sign-in link can be followed from the terminal.
  */
 
 export interface Message {
@@ -64,7 +64,7 @@ export function consoleMailer(): Mailer {
 	return {
 		async send(message) {
 			console.info(
-				`\n--- mail not sent (no EMAIL binding) ---\nTo: ${message.to}\nSubject: ${message.subject}\n\n${message.text}\n---\n`
+				`\n--- mail not sent, printed instead ---\nTo: ${message.to}\nSubject: ${message.subject}\n\n${message.text}\n---\n`
 			);
 		}
 	};
