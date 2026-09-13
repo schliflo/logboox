@@ -18,6 +18,7 @@
 	import { Separator } from '$lib/components/ui/separator';
 	import Seo from '$lib/components/app/Seo.svelte';
 	import MadeBy from '$lib/components/app/MadeBy.svelte';
+	import ApiTokens from '$lib/components/app/ApiTokens.svelte';
 	import { account } from '$lib/state/account.svelte';
 	import { ACCOUNTS_ENABLED } from '$lib/features';
 	import { bytes, dateOnly, percent } from '$lib/utils/format';
@@ -156,6 +157,8 @@
 				</div>
 			</Card.Content>
 		</Card.Root>
+
+		<ApiTokens />
 
 		<Card.Root>
 			<Card.Header>
