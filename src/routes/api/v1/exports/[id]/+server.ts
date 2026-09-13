@@ -20,6 +20,7 @@ import {
 } from '$lib/server/exports/repo';
 import { deletePrefix, exportPrefix, isSafeBlobName } from '$lib/server/exports/r2';
 import { maybeStorage, requireDb } from '$lib/server/context';
+import { isValidTimeZone } from '$lib/leaderboard/periods';
 import { fail, json, readJson } from '$lib/server/response';
 
 export const PUT: RequestHandler = async (event) => {
@@ -30,10 +31,17 @@ export const PUT: RequestHandler = async (event) => {
 	const id = event.params.id;
 	if (!isSafeBlobName(id)) return fail(400, 'That is not a usable export identifier.');
 
-	const body = await readJson<{ record?: unknown; summary?: ExportSummary; isDemo?: boolean }>(
-		event.request
-	);
+	const body = await readJson<{
+		record?: unknown;
+		summary?: ExportSummary;
+		isDemo?: boolean;
+		timeZone?: unknown;
+	}>(event.request);
 	if (!body?.record || !body.summary) return fail(400, 'Expected a record and a summary.');
+
+	// Which month a drive belongs to depends on where it was driven, and only
+	// the browser knows that. Anything unrecognised is simply not stored.
+	const timeZone = isValidTimeZone(body.timeZone) ? body.timeZone : null;
 
 	try {
 		checkRecord(body.record, id);
@@ -43,7 +51,8 @@ export const PUT: RequestHandler = async (event) => {
 			id,
 			body.record as ExportRecord,
 			body.summary,
-			body.isDemo === true
+			body.isDemo === true,
+			timeZone
 		);
 	} catch (error) {
 		if (error instanceof Invalid) return fail(400, error.message);

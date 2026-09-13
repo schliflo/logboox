@@ -30,6 +30,7 @@ export interface ExportRow {
 	is_demo: number;
 	uploaded_at: number;
 	complete: number;
+	time_zone: string | null;
 }
 
 export class Invalid extends Error {
@@ -116,7 +117,7 @@ export function listExports(db: Db, userId: string): Promise<ExportRow[]> {
 	return all<ExportRow>(
 		db,
 		`SELECT id, vin, vmodel, version, start_time, end_time, rows, days, distance_km, trips,
-			stored_bytes, is_demo, uploaded_at, complete
+			stored_bytes, is_demo, uploaded_at, complete, time_zone
 		 FROM exports WHERE user_id = ? AND complete = 1 ORDER BY start_time DESC`,
 		userId
 	);
@@ -147,6 +148,68 @@ export async function accountBytes(db: Db, userId: string, excluding?: string): 
 	return row?.bytes ?? 0;
 }
 
+/** As many trips or sessions as a month could plausibly hold. */
+const MAX_SUMMARY_ITEMS = 5000;
+
+/**
+ * Throws out summary rows that cannot describe a real car.
+ *
+ * The browser works these out and the browser can be made to say anything, so
+ * until now the only thing standing behind them was that they described the
+ * sender's own car to the sender. A public board changes that: a row here can
+ * cost somebody else their place. The checks are deliberately loose — they
+ * reject the impossible rather than the unusual — and a row that fails is
+ * dropped on its own rather than failing the upload, because one odd trip
+ * should not cost someone the month it came in.
+ */
+function plausibleSpan(
+	item: { startTime: unknown; endTime: unknown },
+	record: ExportRecord
+): boolean {
+	if (typeof item.startTime !== 'number' || typeof item.endTime !== 'number') return false;
+	if (!Number.isFinite(item.startTime) || !Number.isFinite(item.endTime)) return false;
+	if (item.endTime < item.startTime) return false;
+	// A day either side of the export's own window, since a span may legitimately
+	// straddle its edge.
+	return item.startTime >= record.startTime - 86400 && item.endTime <= record.endTime + 86400;
+}
+
+function withinOrNull(value: unknown, max: number): boolean {
+	return (
+		value === null || value === undefined || (typeof value === 'number' && Math.abs(value) <= max)
+	);
+}
+
+export function sanitizeSummary(summary: ExportSummary, record: ExportRecord): ExportSummary {
+	const trips = summary.trips.slice(0, MAX_SUMMARY_ITEMS).filter((trip) => {
+		if (!plausibleSpan(trip, record)) return false;
+		if (trip.movingSeconds > trip.endTime - trip.startTime + 60) return false;
+		if (!withinOrNull(trip.distanceKm, 2000)) return false;
+		if (!withinOrNull(trip.maxSpeed, 300)) return false;
+		if (!withinOrNull(trip.peakAccel, 3) || !withinOrNull(trip.peakBrake, 3)) return false;
+		if (!withinOrNull(trip.peakLateral, 3)) return false;
+		if (typeof trip.odoStart === 'number' && typeof trip.odoEnd === 'number') {
+			if (trip.odoEnd < trip.odoStart) return false;
+		}
+		// Distance and time have to agree with each other: a car that covered
+		// the ground faster than this did not cover it.
+		const hours = (trip.endTime - trip.startTime) / 3600;
+		if (typeof trip.distanceKm === 'number' && hours > 0 && trip.distanceKm / hours > 400) {
+			return false;
+		}
+		return true;
+	});
+
+	const charging = summary.charging.slice(0, MAX_SUMMARY_ITEMS).filter((session) => {
+		if (!plausibleSpan(session, record)) return false;
+		if (!withinOrNull(session.kwhDelivered, 500)) return false;
+		if (!withinOrNull(session.maxKw, 1000)) return false;
+		return true;
+	});
+
+	return { ...summary, trips, charging };
+}
+
 /**
  * Starts an upload: the record and its summary land, the buffers follow, and
  * only then is it marked complete. Re-uploading the same export replaces it,
@@ -158,7 +221,8 @@ export async function beginExport(
 	id: string,
 	record: ExportRecord,
 	summary: ExportSummary,
-	isDemo: boolean
+	isDemo: boolean,
+	timeZone: string | null = null
 ): Promise<void> {
 	const used = await accountBytes(db, userId, id);
 	if (used + record.storedBytes > MAX_ACCOUNT_BYTES) {
@@ -168,14 +232,15 @@ export async function beginExport(
 	await run(
 		db,
 		`INSERT INTO exports (user_id, id, vin, vmodel, version, start_time, end_time, rows, days,
-			distance_km, trips, stored_bytes, is_demo, record_json, uploaded_at, complete)
-		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)
+			distance_km, trips, stored_bytes, is_demo, record_json, uploaded_at, complete, time_zone)
+		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?)
 		 ON CONFLICT (user_id, id) DO UPDATE SET
 			vin = excluded.vin, vmodel = excluded.vmodel, version = excluded.version,
 			start_time = excluded.start_time, end_time = excluded.end_time, rows = excluded.rows,
 			days = excluded.days, distance_km = excluded.distance_km, trips = excluded.trips,
 			stored_bytes = excluded.stored_bytes, is_demo = excluded.is_demo,
-			record_json = excluded.record_json, uploaded_at = excluded.uploaded_at, complete = 0`,
+			record_json = excluded.record_json, uploaded_at = excluded.uploaded_at, complete = 0,
+			time_zone = excluded.time_zone`,
 		userId,
 		id,
 		record.vin,
@@ -190,10 +255,11 @@ export async function beginExport(
 		record.storedBytes,
 		isDemo ? 1 : 0,
 		JSON.stringify(record),
-		now()
+		now(),
+		timeZone
 	);
 
-	await writeSummary(db, userId, id, record.vin, record.vmodel, summary);
+	await writeSummary(db, userId, id, record.vin, record.vmodel, sanitizeSummary(summary, record));
 }
 
 /**

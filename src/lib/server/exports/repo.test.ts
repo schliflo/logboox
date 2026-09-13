@@ -10,7 +10,7 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { ExportRecord } from '$lib/history/codec';
 import type { ExportSummary } from '$lib/data/analytics/summary';
-import { tripSummary } from '$lib/leaderboard/testing';
+import { sessionSummary, tripSummary } from '$lib/leaderboard/testing';
 import { migratedDb, type TestDb } from '../testing/sqlite-d1';
 import { all, one } from '../db';
 import { findOrCreateUser } from '../auth/users';
@@ -220,5 +220,90 @@ describe('keeping an export', () => {
 
 		expect(await all(db, 'SELECT * FROM trips')).toHaveLength(0);
 		expect(await listExports(db, userId)).toHaveLength(0);
+	});
+});
+
+describe('what a summary may claim', () => {
+	it('keeps the trips a car could actually have made', async () => {
+		await beginExport(
+			db,
+			userId,
+			'DA0001',
+			record(),
+			summary({ trips: [trip(JULY + 86400, 41000)] }),
+			false
+		);
+		expect(await all(db, 'SELECT * FROM trips')).toHaveLength(1);
+	});
+
+	it('drops a trip that claims a place it was never in', async () => {
+		await beginExport(
+			db,
+			userId,
+			'DA0001',
+			record(),
+			summary({
+				trips: [
+					trip(JULY + 86400, 41000),
+					// A year before the export covers.
+					tripSummary({ startTime: JULY - 400 * 86400, odoStart: 1, odoEnd: 2 })
+				]
+			}),
+			false
+		);
+		expect(await all(db, 'SELECT * FROM trips')).toHaveLength(1);
+	});
+
+	it('drops a drive no car has done, and keeps the rest of the month', async () => {
+		const impossible = tripSummary({
+			startTime: JULY + 2 * 86400,
+			endTime: JULY + 2 * 86400 + 1800,
+			distanceKm: 900,
+			odoStart: 41000,
+			odoEnd: 41900
+		});
+		await beginExport(
+			db,
+			userId,
+			'DA0001',
+			record(),
+			summary({ trips: [trip(JULY + 86400, 41000), impossible] }),
+			false
+		);
+
+		const rows = await all<{ distance_km: number }>(db, 'SELECT distance_km FROM trips');
+		expect(rows).toHaveLength(1);
+		expect(rows[0].distance_km).toBe(20);
+	});
+
+	it('drops an odometer that ran backwards', async () => {
+		await beginExport(
+			db,
+			userId,
+			'DA0001',
+			record(),
+			summary({
+				trips: [tripSummary({ startTime: JULY + 86400, odoStart: 41000, odoEnd: 40000 })]
+			}),
+			false
+		);
+		expect(await all(db, 'SELECT * FROM trips')).toHaveLength(0);
+	});
+
+	it('drops a charge larger than any battery', async () => {
+		await beginExport(
+			db,
+			userId,
+			'DA0001',
+			record(),
+			summary({
+				charging: [
+					sessionSummary({ startTime: JULY + 86400, kwhDelivered: 9000 }),
+					sessionSummary({ startTime: JULY + 2 * 86400, kwhDelivered: 45 })
+				]
+			}),
+			false
+		);
+		expect(await all(db, 'SELECT * FROM charging_sessions')).toHaveLength(1);
 	});
 });

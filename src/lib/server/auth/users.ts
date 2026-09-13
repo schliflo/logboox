@@ -16,6 +16,12 @@ export interface User {
 	reminded_at: number | null;
 	auto_sync: number;
 	unsubscribe_token_hash: string;
+	username: string | null;
+	username_changed_at: number | null;
+	board_notify: number;
+	board_mailed_at: number | null;
+	board_unsubscribe_token_hash: string | null;
+	roundup_mailed_year: number | null;
 }
 
 /** Addresses differ only by case and stray spaces far more often than by intent. */
@@ -60,7 +66,13 @@ export async function findOrCreateUser(
 		reminder_after_days: 25,
 		reminded_at: null,
 		auto_sync: 1,
-		unsubscribe_token_hash: await hashToken(unsubscribeToken)
+		unsubscribe_token_hash: await hashToken(unsubscribeToken),
+		username: null,
+		username_changed_at: null,
+		board_notify: 1,
+		board_mailed_at: null,
+		board_unsubscribe_token_hash: null,
+		roundup_mailed_year: null
 	};
 
 	await run(
@@ -89,6 +101,8 @@ export interface UserSettings {
 	reminderEnabled?: boolean;
 	reminderAfterDays?: number;
 	autoSync?: boolean;
+	/** Being told when a trip would rank. Separate from the export reminder. */
+	boardNotify?: boolean;
 }
 
 /** Bounds are the product's, not the database's: a reminder is useless outside them. */
@@ -117,6 +131,10 @@ export async function updateSettings(db: Db, id: string, patch: UserSettings): P
 		sets.push('auto_sync = ?');
 		values.push(patch.autoSync ? 1 : 0);
 	}
+	if (patch.boardNotify !== undefined) {
+		sets.push('board_notify = ?');
+		values.push(patch.boardNotify ? 1 : 0);
+	}
 
 	if (sets.length === 0) return;
 	values.push(id);
@@ -124,19 +142,39 @@ export async function updateSettings(db: Db, id: string, patch: UserSettings): P
 }
 
 /**
+ * The kinds of mail this app sends, each with its own way out.
+ *
+ * They keep separate tokens on purpose. One shared token, rotated per message,
+ * would mean that unsubscribing from a leaderboard nudge quietly broke the
+ * unsubscribe link in every export reminder — and the two have nothing to do
+ * with each other.
+ */
+export type MailKind = 'reminders' | 'leaderboard';
+
+const TOKEN_COLUMN: Record<MailKind, string> = {
+	reminders: 'unsubscribe_token_hash',
+	leaderboard: 'board_unsubscribe_token_hash'
+};
+
+/**
  * A fresh unsubscribe token for the next message, and the hash that will
  * recognise it.
  *
  * Rotated per message rather than stored in readable form. Only the hash is
  * ever written down, which means the link in an old mail stops working once a
- * newer one has been sent — no loss, since every reminder carries a current
- * one, and it keeps the table free of anything that opens a door.
+ * newer one of the same kind has been sent — no loss, since every message
+ * carries a current one, and it keeps the table free of anything that opens a
+ * door.
  */
-export async function rotateUnsubscribeToken(db: Db, userId: string): Promise<string> {
+export async function rotateUnsubscribeToken(
+	db: Db,
+	userId: string,
+	kind: MailKind = 'reminders'
+): Promise<string> {
 	const token = randomToken();
 	await run(
 		db,
-		'UPDATE users SET unsubscribe_token_hash = ? WHERE id = ?',
+		`UPDATE users SET ${TOKEN_COLUMN[kind]} = ? WHERE id = ?`,
 		await hashToken(token),
 		userId
 	);
@@ -147,10 +185,14 @@ export async function rotateUnsubscribeToken(db: Db, userId: string): Promise<st
  * The user behind an unsubscribe link. Hashed lookup, so the link in a mail
  * client's history is not a key to anything but this one switch.
  */
-export async function findUserByUnsubscribeToken(db: Db, token: string): Promise<User | null> {
+export async function findUserByUnsubscribeToken(
+	db: Db,
+	token: string,
+	kind: MailKind = 'reminders'
+): Promise<User | null> {
 	return one<User>(
 		db,
-		'SELECT * FROM users WHERE unsubscribe_token_hash = ?',
+		`SELECT * FROM users WHERE ${TOKEN_COLUMN[kind]} = ?`,
 		await hashToken(token)
 	);
 }
@@ -168,7 +210,9 @@ export async function deleteUser(db: Db, id: string): Promise<void> {
 		'charging_sessions',
 		'vehicles',
 		'annotations',
-		'shares'
+		'shares',
+		'board_candidates',
+		'board_entries'
 	]) {
 		await run(db, `DELETE FROM ${table} WHERE user_id = ?`, id);
 	}

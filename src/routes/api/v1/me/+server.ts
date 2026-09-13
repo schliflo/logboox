@@ -7,6 +7,7 @@ import type { RequestHandler } from './$types';
 import { one } from '$lib/server/db';
 import { deletePrefix } from '$lib/server/exports/r2';
 import { deleteUser, updateSettings } from '$lib/server/auth/users';
+import { listOwn, listPending } from '$lib/server/leaderboard/repo';
 import { maybeStorage, requireDb } from '$lib/server/context';
 import { fail, json, readJson } from '$lib/server/response';
 import { MAX_ACCOUNT_BYTES } from '$lib/server/exports/limits';
@@ -28,13 +29,19 @@ export const GET: RequestHandler = async (event) => {
 			createdAt: auth.user.created_at,
 			autoSync: auth.user.auto_sync === 1,
 			reminderEnabled: auth.user.reminder_enabled === 1,
-			reminderAfterDays: auth.user.reminder_after_days
+			reminderAfterDays: auth.user.reminder_after_days,
+			username: auth.user.username,
+			boardNotify: auth.user.board_notify === 1
 		},
 		via: auth.via,
 		storage: {
 			exports: totals?.n ?? 0,
 			usedBytes: totals?.bytes ?? 0,
 			quotaBytes: MAX_ACCOUNT_BYTES
+		},
+		leaderboard: {
+			pending: await listPending(db, auth.user.id),
+			entries: await listOwn(db, auth.user.id)
 		}
 	});
 };
@@ -48,6 +55,7 @@ export const PATCH: RequestHandler = async (event) => {
 		autoSync?: unknown;
 		reminderEnabled?: unknown;
 		reminderAfterDays?: unknown;
+		boardNotify?: unknown;
 	}>(event.request);
 	if (!body) return fail(400, 'Expected a JSON body.');
 
@@ -56,7 +64,8 @@ export const PATCH: RequestHandler = async (event) => {
 			autoSync: typeof body.autoSync === 'boolean' ? body.autoSync : undefined,
 			reminderEnabled: typeof body.reminderEnabled === 'boolean' ? body.reminderEnabled : undefined,
 			reminderAfterDays:
-				typeof body.reminderAfterDays === 'number' ? body.reminderAfterDays : undefined
+				typeof body.reminderAfterDays === 'number' ? body.reminderAfterDays : undefined,
+			boardNotify: typeof body.boardNotify === 'boolean' ? body.boardNotify : undefined
 		});
 	} catch (error) {
 		return fail(400, error instanceof Error ? error.message : 'That setting was not understood.');
