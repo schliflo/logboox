@@ -8,6 +8,7 @@
 	import BigStat from '$lib/components/charts/BigStat.svelte';
 	import TripDetail from '$lib/components/app/TripDetail.svelte';
 	import TripNotes from '$lib/components/app/TripNotes.svelte';
+	import ShareButton from '$lib/components/app/ShareButton.svelte';
 	import { data } from '$lib/state/dataset.svelte';
 	import { logbook } from '$lib/state/logbook.svelte';
 	import { settings } from '$lib/state/settings.svelte';
@@ -111,6 +112,24 @@
 				All trips
 			</Button>
 			<span class="text-sm text-muted-foreground">{fullDateTime(trip.startTime)}</span>
+			<div class="ml-auto">
+				<ShareButton
+					kind="trip"
+					startTime={trip.startTime}
+					endTime={trip.endTime}
+					meta={{
+						distanceKm: trip.distanceKm,
+						duration: trip.duration,
+						movingSeconds: trip.movingSeconds,
+						maxSpeed: trip.maxSpeed,
+						avgSpeed: trip.avgSpeed,
+						energyKwh: trip.energyKwh - trip.regenKwh,
+						regenShare: trip.regenShare,
+						socStart: trip.socStart,
+						socEnd: trip.socEnd
+					}}
+				/>
+			</div>
 		</div>
 
 		<div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -172,7 +191,12 @@
 				</Card.Description>
 			</Card.Header>
 			<Card.Content>
-				<TripDetail {trip} />
+				<TripDetail
+					source={data.dataset!}
+					from={trip.start}
+					to={trip.end}
+					syncKey={`trip-${trip.index}`}
+				/>
 			</Card.Content>
 		</Card.Root>
 

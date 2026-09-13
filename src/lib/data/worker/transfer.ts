@@ -18,6 +18,7 @@ import { summarize } from '../analytics/summary';
 import { decodeExport } from '../../history/codec';
 import { getExport, putExport } from '../../history/db';
 import type { ExportRecord, StoredBlob } from '../../history/codec';
+import type { Dataset } from '../store/columnar';
 import { unpackDataset } from './protocol';
 
 /** Several at once, because these are small and latency dominates. */
@@ -148,4 +149,36 @@ export async function downloadExport(id: string, onProgress?: TransferProgress):
 	});
 
 	await putExport(record, blobs);
+}
+
+/**
+ * Opens an export someone published, without keeping it.
+ *
+ * The same buffers and the same decoder as a kept export, but it never reaches
+ * storage: a month that arrived through a link belongs to whoever sent it, and
+ * filling a reader's browser with it because they clicked once would be a
+ * peculiar thing to do. It lives as long as the tab.
+ */
+export async function openSharedExport(
+	shareId: string,
+	onProgress?: TransferProgress
+): Promise<Dataset> {
+	const response = await fetch(`/api/v1/shares/${encodeURIComponent(shareId)}/record`);
+	const record = (await expectOk(response, 'Reading the shared export')) as ExportRecord;
+
+	const names = [TIME_BLOB, ...record.columns.map((column) => column.key)];
+	const blobs: StoredBlob[] = [];
+	let done = 0;
+	onProgress?.(0, names.length);
+
+	await pool(names, async (name) => {
+		const part = await fetch(
+			`/api/v1/shares/${encodeURIComponent(shareId)}/blobs/${encodeURIComponent(name)}`
+		);
+		if (!part.ok) throw new TransferError(`The shared export is missing ${name}.`);
+		blobs.push({ id: record.id, name, bytes: await part.arrayBuffer() });
+		onProgress?.(++done, names.length);
+	});
+
+	return unpackDataset(decodeExport(record, blobs));
 }

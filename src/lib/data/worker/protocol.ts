@@ -50,7 +50,8 @@ export type WorkerRequest =
 	| { type: 'open'; ids: string[]; timeZone: string }
 	| { type: 'backup'; ids: string[] }
 	| { type: 'sync'; ids: string[]; timeZone: string }
-	| { type: 'fetch'; ids: string[] };
+	| { type: 'fetch'; ids: string[] }
+	| { type: 'openShare'; shareId: string; timeZone: string };
 
 export type WorkerResponse =
 	| {

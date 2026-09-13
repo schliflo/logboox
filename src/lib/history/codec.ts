@@ -78,7 +78,7 @@ const DTYPE_BYTES: Record<Dtype, number> = { u8: 1, i8: 1, u16: 2, i16: 2, u32: 
  * of that. fflate stays as the fallback for anywhere `CompressionStream` is
  * missing, and the two formats are the same gzip either way.
  */
-async function compress(buffer: ArrayBuffer): Promise<Uint8Array> {
+export async function compress(buffer: ArrayBuffer): Promise<Uint8Array> {
 	if (typeof CompressionStream === 'undefined') {
 		return gzipSync(new Uint8Array(buffer), { level: 6 });
 	}
@@ -87,14 +87,14 @@ async function compress(buffer: ArrayBuffer): Promise<Uint8Array> {
 }
 
 /** The exact bytes behind a view, without the buffer it may be a window on. */
-function exactBuffer(view: Uint8Array): ArrayBuffer {
+export function exactBuffer(view: Uint8Array): ArrayBuffer {
 	if (view.byteOffset === 0 && view.byteLength === view.buffer.byteLength) {
 		return view.buffer as ArrayBuffer;
 	}
 	return view.buffer.slice(view.byteOffset, view.byteOffset + view.byteLength) as ArrayBuffer;
 }
 
-function decompress(bytes: ArrayBuffer): ArrayBuffer {
+export function decompress(bytes: ArrayBuffer): ArrayBuffer {
 	return exactBuffer(gunzipSync(new Uint8Array(bytes)));
 }
 

@@ -12,7 +12,7 @@
 
 import { goto } from '$app/navigation';
 import { toast } from 'svelte-sonner';
-import { loadDemo, loadFiles, openKept, type LoadProgress } from '../data/client';
+import { loadDemo, loadFiles, openKept, openShared, type LoadProgress } from '../data/client';
 import type { KeptOutcome } from '../data/worker/protocol';
 import type { DerivedData } from '../data/analytics';
 import type { Dataset } from '../data/store/columnar';
@@ -24,7 +24,7 @@ import { settings } from './settings.svelte';
 type Status = 'empty' | 'loading' | 'ready' | 'error';
 
 /** Where the data on screen came from, which is what the labels report. */
-export type SourceKind = 'fresh' | 'reopened' | 'merged';
+export type SourceKind = 'fresh' | 'reopened' | 'merged' | 'shared';
 
 export interface DataSource {
 	kind: SourceKind;
@@ -211,6 +211,24 @@ class DatasetStore {
 			});
 			// Straight to the dashboard: the opening sequence is for the moment
 			// an export is first read, not for every time it is picked up again.
+			await goto('/dash/overview');
+		} catch (error) {
+			this.fail(error);
+		}
+	}
+
+	/**
+	 * Opens an export someone published. It is held for the life of the tab and
+	 * never kept: it is not this reader's data, and a link should not quietly
+	 * fill their browser with someone else's month.
+	 */
+	async openSharedExport(shareId: string) {
+		this.begin();
+		try {
+			const result = await openShared(shareId, settings.timeZone, (progress) => {
+				this.progress = progress;
+			});
+			this.settle(result.dataset, result.derived, { kind: 'shared', ids: [shareId], demo: false });
 			await goto('/dash/overview');
 		} catch (error) {
 			this.fail(error);

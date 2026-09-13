@@ -22,7 +22,7 @@ import { generateDemoDataset } from '../../demo/generator';
 import { backupFileName, readBackup, writeBackup, type BackupEntry } from '../../history/archive';
 import { decodeExport, encodeExport, sourceFromExport } from '../../history/codec';
 import { getExport, putExport, storageAvailable } from '../../history/db';
-import { downloadExport, uploadExport } from './transfer';
+import { downloadExport, openSharedExport, uploadExport } from './transfer';
 import {
 	packDataset,
 	unpackDataset,
@@ -282,6 +282,16 @@ self.addEventListener('message', async (event: MessageEvent<WorkerRequest>) => {
 			case 'fetch':
 				await handleTransfer('fetch', request.ids, '');
 				break;
+			case 'openShare': {
+				const dataset = await openSharedExport(request.shareId, (loaded, total) => {
+					post({ type: 'progress', phase: 'downloading', loaded, total });
+				});
+				post({ type: 'progress', phase: 'analyzing', loaded: 1, total: 1 });
+				const derived = analyze(dataset, request.timeZone);
+				const { packed, transfer } = packDataset(dataset);
+				post({ type: 'ready', dataset: packed, derived, kept: null }, transfer);
+				break;
+			}
 		}
 	} catch (error) {
 		post({

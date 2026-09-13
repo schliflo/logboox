@@ -45,10 +45,14 @@
 
 	/** What is on screen: a fresh drop, a kept export, or several joined up. */
 	const sourceLabel = $derived.by(() => {
+		if (data.source.kind === 'shared') return 'Shared export';
 		if (data.source.kind === 'merged') return `${data.source.ids.length} exports merged`;
 		if (data.isDemo) return 'Demonstration month';
 		return data.source.kind === 'reopened' ? 'Kept export' : 'Your export';
 	});
+
+	/** Someone else's export carries no identifier worth revealing. */
+	const shared = $derived(data.source.kind === 'shared');
 
 	onMount(() => {
 		// The dataset is not reloaded on navigation, so a deep link opened cold
@@ -63,7 +67,9 @@
 	// import each other.
 	$effect(() => {
 		const vin = data.dataset?.vin;
-		if (vin) logbook.open(vin);
+		// Not for a shared export: those notes belong to whoever owns the car,
+		// and this reader's own logbook has nothing to say about it.
+		if (vin && data.source.kind !== 'shared') logbook.open(vin);
 		else logbook.reset();
 	});
 </script>
@@ -127,14 +133,16 @@
 
 			<Sidebar.Footer>
 				<div class="space-y-2 px-2 pb-2 group-data-[collapsible=icon]:hidden">
-					<button
-						type="button"
-						class="w-full text-left font-mono text-[11px] text-muted-foreground transition-colors hover:text-foreground"
-						onclick={() => (settings.revealVin = !settings.revealVin)}
-						title={settings.revealVin ? 'Hide the VIN' : 'Reveal the VIN'}
-					>
-						{settings.revealVin ? data.dataset?.vin : maskVin(data.dataset?.vin ?? '')}
-					</button>
+					{#if !shared}
+						<button
+							type="button"
+							class="w-full text-left font-mono text-[11px] text-muted-foreground transition-colors hover:text-foreground"
+							onclick={() => (settings.revealVin = !settings.revealVin)}
+							title={settings.revealVin ? 'Hide the VIN' : 'Reveal the VIN'}
+						>
+							{settings.revealVin ? data.dataset?.vin : maskVin(data.dataset?.vin ?? '')}
+						</button>
+					{/if}
 					<a href="/wrapped" class="block text-xs text-muted-foreground hover:text-foreground">
 						Replay the highlights
 					</a>
@@ -161,6 +169,8 @@
 						<Badge variant="secondary">Merged · {data.source.ids.length}</Badge>
 					{:else if data.source.kind === 'reopened'}
 						<Badge variant="secondary">Reopened</Badge>
+					{:else if shared}
+						<Badge variant="secondary">Shared with you</Badge>
 					{/if}
 
 					<AccountMenu variant="ghost" />

@@ -205,3 +205,18 @@ export async function fetchFromAccount(
 ): Promise<TransferResult> {
 	return expect<TransferResult>(await run({ type: 'fetch', ids }, onProgress), 'transferred');
 }
+
+/**
+ * Opens an export someone published. It is read into memory and nowhere else:
+ * a month that arrived through a link is not this browser's to keep.
+ */
+export async function openShared(
+	shareId: string,
+	timeZone: string,
+	onProgress?: (progress: LoadProgress) => void
+): Promise<DatasetResult> {
+	return expect<DatasetResult>(
+		await run({ type: 'openShare', shareId, timeZone }, onProgress),
+		'dataset'
+	);
+}

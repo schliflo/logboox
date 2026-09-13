@@ -18,6 +18,7 @@
 	import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
 	import { Badge } from '$lib/components/ui/badge';
 	import { Button, buttonVariants } from '$lib/components/ui/button';
+	import { api } from '$lib/api/client';
 	import { data } from '$lib/state/dataset.svelte';
 	import { account } from '$lib/state/account.svelte';
 	import { history, type LibraryEntry, type VehicleGroup } from '$lib/state/history.svelte';
@@ -28,6 +29,7 @@
 	import CloudOffIcon from '@lucide/svelte/icons/cloud-off';
 	import CloudUploadIcon from '@lucide/svelte/icons/cloud-upload';
 	import CloudDownloadIcon from '@lucide/svelte/icons/cloud-download';
+	import ShareIcon from '@lucide/svelte/icons/share-2';
 	import DownloadIcon from '@lucide/svelte/icons/download';
 	import EllipsisIcon from '@lucide/svelte/icons/ellipsis';
 	import LayersIcon from '@lucide/svelte/icons/layers';
@@ -116,6 +118,38 @@
 					description: 'They will still be here if this browser forgets everything.'
 				}
 			);
+		}
+	}
+
+	/**
+	 * Publishes a whole export. It costs no storage: the link points at the
+	 * objects the account already holds, and the record it serves has the
+	 * vehicle identification number taken out of it.
+	 */
+	async function shareExport(entry: LibraryEntry) {
+		try {
+			const created = await api<{ url: string }>('/api/v1/shares', {
+				method: 'POST',
+				body: {
+					kind: 'export',
+					vmodel: entry.vmodel,
+					exportId: entry.id,
+					startTime: entry.startTime,
+					endTime: entry.endTime,
+					timeZone: settings.timeZone,
+					meta: { days: entry.days, distanceKm: entry.distanceKm, trips: entry.trips }
+				}
+			});
+			await navigator.clipboard.writeText(created.url).catch(() => {});
+			toast('Link copied', {
+				description: 'Anyone with it can read this export. Revoke it from your account.',
+				duration: 8000
+			});
+		} catch (error) {
+			toast('The link could not be made', {
+				description: error instanceof Error ? error.message : undefined,
+				closeButton: true
+			});
 		}
 	}
 

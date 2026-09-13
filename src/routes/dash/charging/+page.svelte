@@ -6,11 +6,11 @@
 	import { Button } from '$lib/components/ui/button';
 	import { Badge } from '$lib/components/ui/badge';
 	import BigStat from '$lib/components/charts/BigStat.svelte';
-	import UPlotChart, { type ChartSeries } from '$lib/components/charts/UPlotChart.svelte';
+	import SessionDetail from '$lib/components/app/SessionDetail.svelte';
+	import ShareButton from '$lib/components/app/ShareButton.svelte';
 	import Histogram from '$lib/components/charts/Histogram.svelte';
 	import { data } from '$lib/state/dataset.svelte';
 	import { settings } from '$lib/state/settings.svelte';
-	import { decodeRange } from '$lib/data/store/columnar';
 	import { dateTime, duration, num, fullDateTime, hourLabel } from '$lib/utils/format';
 	import { localHour } from '$lib/data/analytics/charging';
 	import ArrowLeftIcon from '@lucide/svelte/icons/arrow-left';
@@ -27,38 +27,6 @@
 			? charging.sessions[index]
 			: null;
 	});
-
-	const sessionX = $derived.by(() => {
-		if (!selected) return new Float64Array(0);
-		const out = new Float64Array(selected.end - selected.start + 1);
-		for (let i = 0; i < out.length; i++) out[i] = dataset.time[selected.start + i];
-		return out;
-	});
-
-	function sessionSeries(
-		key: string,
-		label: string,
-		color: string,
-		unit: string
-	): ChartSeries | null {
-		if (!selected) return null;
-		const column = dataset.columns.get(key);
-		if (!column || column.nonNull === 0) return null;
-		return {
-			label,
-			color,
-			unit,
-			fill: true,
-			values: decodeRange(column, selected.start, selected.end + 1)
-		};
-	}
-
-	const powerPanel = $derived(
-		sessionSeries('ldcu_chrgpwr', 'Charging power', '--viz-charge', 'kW')
-	);
-	const socPanel = $derived(
-		sessionSeries('ldcu_bms_soc_disp', 'State of charge', '--viz-soc', '%')
-	);
 
 	/** When sessions start, in the viewer's own hours. */
 	const startHours = $derived.by(() => {
@@ -78,6 +46,21 @@
 				All sessions
 			</Button>
 			<span class="text-sm text-muted-foreground">{fullDateTime(selected.startTime)}</span>
+			<div class="ml-auto">
+				<ShareButton
+					kind="charging"
+					startTime={selected.startTime}
+					endTime={selected.endTime}
+					meta={{
+						duration: selected.duration,
+						kwhDelivered: selected.kwhDelivered,
+						maxKw: selected.maxKw,
+						isDc: selected.isDc,
+						socStart: selected.socStart,
+						socEnd: selected.socEnd
+					}}
+				/>
+			</div>
 		</div>
 
 		<div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -137,19 +120,13 @@
 					Power tapers as the battery fills; the flat top is the charger's limit.
 				</Card.Description>
 			</Card.Header>
-			<Card.Content class="space-y-4">
-				{#if powerPanel}
-					<figure class="space-y-1">
-						<figcaption class="text-xs text-muted-foreground">Charging power (kW)</figcaption>
-						<UPlotChart x={sessionX} series={[powerPanel]} height={180} syncKey="charge" />
-					</figure>
-				{/if}
-				{#if socPanel}
-					<figure class="space-y-1">
-						<figcaption class="text-xs text-muted-foreground">State of charge (%)</figcaption>
-						<UPlotChart x={sessionX} series={[socPanel]} height={150} syncKey="charge" />
-					</figure>
-				{/if}
+			<Card.Content>
+				<SessionDetail
+					source={dataset}
+					from={selected.start}
+					to={selected.end}
+					syncKey={`charge-${selected.index}`}
+				/>
 			</Card.Content>
 		</Card.Root>
 	</div>
