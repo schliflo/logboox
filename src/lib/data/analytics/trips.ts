@@ -124,6 +124,35 @@ function candidateSpans(dataset: Dataset, awake: Span[]): Span[] {
 	});
 }
 
+/**
+ * The largest median of three consecutive readings.
+ *
+ * A peak is the one number a single wrong sample can win outright, and the
+ * force signals are the ones to worry about: signed 16-bit CAN values with no
+ * "not available" code, so a corrupt frame is indistinguishable from a real
+ * reading and lands at some absurd fraction of a g. Taking the middle of every
+ * three consecutive readings costs nothing at 1 Hz — a real launch lasts
+ * seconds — and a lone bad frame can no longer be the answer.
+ */
+class MedianPeak {
+	private first = NaN;
+	private second = NaN;
+	private seen = 0;
+	max = 0;
+
+	push(value: number): void {
+		if (this.seen >= 2) {
+			const low = Math.min(this.first, this.second);
+			const high = Math.max(this.first, this.second);
+			const median = Math.max(low, Math.min(high, value));
+			if (median > this.max) this.max = median;
+		}
+		this.first = this.second;
+		this.second = value;
+		this.seen++;
+	}
+}
+
 export function detectTrips(dataset: Dataset): Trip[] {
 	const awake = segmentAwake(dataset.time);
 	const spans = candidateSpans(dataset, awake);
@@ -141,9 +170,9 @@ export function detectTrips(dataset: Dataset): Trip[] {
 		let maxSpeed = 0;
 		let maxSpeedIndex = span.start;
 		let movingSeconds = 0;
-		let peakAccel = 0;
-		let peakBrake = 0;
-		let peakLateral = 0;
+		const accel = new MedianPeak();
+		const brake = new MedianPeak();
+		const lateral = new MedianPeak();
 
 		for (let i = span.start; i <= span.end; i++) {
 			if (speed) {
@@ -162,16 +191,15 @@ export function detectTrips(dataset: Dataset): Trip[] {
 			if (longAccel) {
 				const a = valueAt(longAccel, i);
 				if (!Number.isNaN(a)) {
-					if (a > peakAccel) peakAccel = a;
-					if (-a > peakBrake) peakBrake = -a;
+					// Braking is the same signal the other way up, and the median of
+					// the negated readings is the negated median, so this stays exact.
+					accel.push(a);
+					brake.push(-a);
 				}
 			}
 			if (latAccel) {
 				const a = valueAt(latAccel, i);
-				if (!Number.isNaN(a)) {
-					const mag = Math.abs(a);
-					if (mag > peakLateral) peakLateral = mag;
-				}
+				if (!Number.isNaN(a)) lateral.push(Math.abs(a));
 			}
 		}
 
@@ -212,9 +240,9 @@ export function detectTrips(dataset: Dataset): Trip[] {
 				distanceKm >= 1 && Number.isFinite(energy.discharged)
 					? ((energy.discharged - energy.charged) / distanceKm) * 100
 					: NaN,
-			peakAccel,
-			peakBrake,
-			peakLateral
+			peakAccel: accel.max,
+			peakBrake: brake.max,
+			peakLateral: lateral.max
 		};
 	});
 }

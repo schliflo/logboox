@@ -10,6 +10,7 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { ExportRecord } from '$lib/history/codec';
 import type { ExportSummary } from '$lib/data/analytics/summary';
+import { tripSummary } from '$lib/leaderboard/testing';
 import { migratedDb, type TestDb } from '../testing/sqlite-d1';
 import { all, one } from '../db';
 import { findOrCreateUser } from '../auth/users';
@@ -76,21 +77,7 @@ function summary(overrides: Partial<ExportSummary> = {}): ExportSummary {
 }
 
 function trip(startTime: number, odoStart: number) {
-	return {
-		startTime,
-		endTime: startTime + 1800,
-		odoStart,
-		odoEnd: odoStart + 20,
-		distanceKm: 20,
-		movingSeconds: 1500,
-		avgSpeed: 48,
-		maxSpeed: 110,
-		socStart: 80,
-		socEnd: 74,
-		energyKwh: 4,
-		regenKwh: 0.6,
-		consumption: 17
-	};
+	return tripSummary({ startTime, odoStart, odoEnd: odoStart + 20 });
 }
 
 beforeEach(async () => {

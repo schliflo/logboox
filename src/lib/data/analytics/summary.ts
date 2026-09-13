@@ -29,6 +29,18 @@ export interface TripSummary {
 	energyKwh: number | null;
 	regenKwh: number | null;
 	consumption: number | null;
+	peakAccel: number | null;
+	peakBrake: number | null;
+	peakLateral: number | null;
+	/**
+	 * Samples per second of the span, at most 1.
+	 *
+	 * The car stops logging while it sleeps, and a span it slept through still
+	 * reports the distance the odometer moved either side of the nap. Anything
+	 * worked out per kilometre or per second is flattered by that, so the
+	 * ratios are only trustworthy where this is close to 1.
+	 */
+	coverage: number;
 }
 
 export interface SessionSummary {
@@ -40,6 +52,8 @@ export interface SessionSummary {
 	kwhDelivered: number | null;
 	maxKw: number | null;
 	isDc: boolean;
+	/** As for a trip — and routinely low here, since cars nap mid-charge. */
+	coverage: number;
 }
 
 export interface VehicleState {
@@ -60,6 +74,18 @@ export interface ExportSummary {
 /** JSON has no NaN, and a null reading must not arrive as a zero. */
 function finite(value: number): number | null {
 	return Number.isFinite(value) ? value : null;
+}
+
+/**
+ * How much of a span the car was awake for.
+ *
+ * Sample count over wall-clock seconds. Both are already known — the span
+ * carries the indices it was found between — so this costs nothing and saves
+ * the server from having to trust a ratio it cannot check.
+ */
+function coverageOf(span: { start: number; end: number; duration: number }): number {
+	const samples = span.end - span.start + 1;
+	return Math.min(1, samples / (span.duration + 1));
 }
 
 /** The last real reading of a signal, which is the car's state as of the export. */
@@ -88,7 +114,11 @@ export function summarize(dataset: Dataset, derived: DerivedData): ExportSummary
 			socEnd: finite(trip.socEnd),
 			energyKwh: finite(trip.energyKwh),
 			regenKwh: finite(trip.regenKwh),
-			consumption: finite(trip.consumption)
+			consumption: finite(trip.consumption),
+			peakAccel: finite(trip.peakAccel),
+			peakBrake: finite(trip.peakBrake),
+			peakLateral: finite(trip.peakLateral),
+			coverage: coverageOf(trip)
 		})),
 		charging: derived.charging.sessions.map((session) => ({
 			startTime: session.startTime,
@@ -98,7 +128,8 @@ export function summarize(dataset: Dataset, derived: DerivedData): ExportSummary
 			socEnd: finite(session.socEnd),
 			kwhDelivered: finite(session.kwhDelivered),
 			maxKw: finite(session.maxKw),
-			isDc: session.isDc
+			isDc: session.isDc,
+			coverage: coverageOf(session)
 		})),
 		vehicle: {
 			vin: dataset.vin,
