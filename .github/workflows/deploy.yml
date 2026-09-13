@@ -26,9 +26,30 @@ jobs:
   check:
     uses: ./.github/workflows/ci.yml
 
+  migrate:
+    name: Database migrations
+    needs: check
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 26
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # Applied before the Worker that depends on them ships. Migrations here
+      # only ever add; a deploy is never rolled back into an older schema.
+      - uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: d1 migrations apply logboox --remote
+
   production:
     name: logboox.app
-    needs: check
+    needs: migrate
     runs-on: ubuntu-latest
     environment:
       name: production
@@ -42,11 +63,40 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm build
+      # The secret travels with the deploy, so it is managed in one place
+      # rather than drifting between the dashboard and this repository.
       - uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           command: deploy
+          secrets: |
+            CRON_SECRET
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+
+  cron:
+    name: Reminder Worker
+    needs: production
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 26
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: deploy --config cron/wrangler.jsonc
+          secrets: |
+            CRON_SECRET
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
 
   legacy:
     name: Old workers.dev address

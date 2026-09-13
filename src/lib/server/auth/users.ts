@@ -124,6 +124,26 @@ export async function updateSettings(db: Db, id: string, patch: UserSettings): P
 }
 
 /**
+ * A fresh unsubscribe token for the next message, and the hash that will
+ * recognise it.
+ *
+ * Rotated per message rather than stored in readable form. Only the hash is
+ * ever written down, which means the link in an old mail stops working once a
+ * newer one has been sent — no loss, since every reminder carries a current
+ * one, and it keeps the table free of anything that opens a door.
+ */
+export async function rotateUnsubscribeToken(db: Db, userId: string): Promise<string> {
+	const token = randomToken();
+	await run(
+		db,
+		'UPDATE users SET unsubscribe_token_hash = ? WHERE id = ?',
+		await hashToken(token),
+		userId
+	);
+	return token;
+}
+
+/**
  * The user behind an unsubscribe link. Hashed lookup, so the link in a mail
  * client's history is not a key to anything but this one switch.
  */
