@@ -10,6 +10,19 @@
 const CRAWLER_ONLY = /\/(og\.png|robots\.txt|sitemap\.xml)$/;
 
 /**
+ * Files fetched the first time somebody wants them, and not before.
+ *
+ * The PDF writer and the typeface it embeds come to a few hundred kilobytes
+ * spent on a format most people never pick, so they stay out of the store every
+ * visitor fills on arrival. The worker caches them like anything else once they
+ * have been used; before that, a PDF export with no connection fails with a
+ * message instead of a broken download. Everything else — the CSV and the
+ * spreadsheet, which are written by code the app already carries — still works
+ * offline.
+ */
+const ON_DEMAND = /\/(Inter-[\w.-]+\.ttf|[\w-]*pdf[\w.-]*\.js)$/i;
+
+/**
  * Paths that must always reach the server.
  *
  * The API and the reminder trigger speak to a database, and a share page shows
@@ -30,10 +43,12 @@ export function isNetworkOnly(pathname: string, base = ''): boolean {
 /**
  * Everything worth having before the connection goes: the hashed build output,
  * the static files and the prerendered pages, minus what only search engines
- * and link previews fetch.
+ * and link previews fetch, and minus what is better fetched on demand.
  */
 export function precacheList(build: string[], files: string[], prerendered: string[]): string[] {
-	const wanted = [...build, ...files, ...prerendered].filter((path) => !CRAWLER_ONLY.test(path));
+	const wanted = [...build, ...files, ...prerendered].filter(
+		(path) => !CRAWLER_ONLY.test(path) && !ON_DEMAND.test(path)
+	);
 	return Array.from(new Set(wanted));
 }
 

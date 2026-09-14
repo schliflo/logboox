@@ -2,9 +2,11 @@ import { defineConfig } from 'vitest/config';
 import tailwindcss from '@tailwindcss/vite';
 import adapter from '@sveltejs/adapter-cloudflare';
 import { sveltekit } from '@sveltejs/kit/vite';
+import { wasmModules } from './tooling/wasm-modules.ts';
 
 export default defineConfig({
 	plugins: [
+		wasmModules(),
 		tailwindcss(),
 		sveltekit({
 			compilerOptions: {

@@ -28,6 +28,25 @@ describe('precacheList', () => {
 		expect(list).toEqual(['/icon-192.png', '/']);
 	});
 
+	it('leaves out the PDF writer and its font, which are fetched when first used', () => {
+		const list = precacheList(
+			[
+				'/_app/immutable/chunks/export-pdf.abc.js',
+				'/_app/immutable/assets/Inter-Regular.def.ttf',
+				'/_app/immutable/assets/Inter-SemiBold.ghi.ttf',
+				'/_app/immutable/chunks/index.jkl.js'
+			],
+			[],
+			['/']
+		);
+		expect(list).toEqual(['/_app/immutable/chunks/index.jkl.js', '/']);
+	});
+
+	it('keeps a chunk whose name merely contains the letters of a format', () => {
+		const list = precacheList(['/_app/immutable/chunks/upload.abc.js'], [], []);
+		expect(list).toEqual(['/_app/immutable/chunks/upload.abc.js']);
+	});
+
 	it('lists a path once even when several sources name it', () => {
 		const list = precacheList(['/a.js', '/a.js'], ['/a.js'], ['/']);
 		expect(list).toEqual(['/a.js', '/']);
