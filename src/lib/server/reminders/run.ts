@@ -19,6 +19,7 @@ import { pruneSessions } from '../auth/session';
 import { rotateUnsubscribeToken } from '../auth/users';
 import { deleteExport, staleUploads } from '../exports/repo';
 import { deletePrefix, exportPrefix } from '../exports/r2';
+import { sendBoardNudges, sendYearRoundups } from '../leaderboard/nudges';
 
 /** Once a week at most, however far past due someone is. */
 export const REPEAT_AFTER_SECONDS = 7 * 86400;
@@ -72,6 +73,10 @@ export interface ReminderReport {
 	sweptUploads: number;
 	prunedLinks: number;
 	prunedSessions: number;
+	/** People told that something of theirs would stand on a board. */
+	nudged: number;
+	/** Year-in-review messages, sent once a year has closed for good. */
+	roundups: number;
 }
 
 /**
@@ -115,10 +120,18 @@ export async function sendReminders(
 		}
 	}
 
+	// The other thing a daily run is for. Kept after the reminders because a
+	// missed export is the more consequential of the two: the window closes on
+	// it for good, whereas a place on a board is only ever a nice-to-have.
+	const nudges = await sendBoardNudges(db, mailer, origin);
+	const roundups = await sendYearRoundups(db, mailer, origin);
+
 	return {
 		considered: due.length,
 		sent,
 		failed,
+		nudged: nudges.sent,
+		roundups: roundups.sent,
 		...(await sweep(db, storage))
 	};
 }
