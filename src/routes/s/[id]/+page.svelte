@@ -23,6 +23,7 @@
 	import { apiBytes } from '$lib/api/client';
 	import { data as dataset } from '$lib/state/dataset.svelte';
 	import { decodeSlice, type Slice, type SliceManifest } from '$lib/share/slice';
+	import { shareHeading, shareImageAlt, shareSummary } from '$lib/share/describe';
 	import { TIME_BLOB } from '$lib/history/codec';
 	import { duration, num, percent } from '$lib/utils/format';
 	import ArrowRightIcon from '@lucide/svelte/icons/arrow-right';
@@ -53,22 +54,19 @@
 		}).format(new Date(share.startTime * 1000))
 	);
 
-	const heading = $derived(
-		share.title ||
-			(share.kind === 'trip'
-				? `A ${num(Number(meta.distanceKm ?? 0), 1)} km drive`
-				: share.kind === 'charging'
-					? `A ${num(Number(meta.kwhDelivered ?? 0), 1)} kWh charge`
-					: 'A month of driving')
-	);
+	// Shared with the card the link previews as, so the two cannot drift apart.
+	const described = $derived({
+		kind: share.kind,
+		model: share.model,
+		title: share.title,
+		meta: share.meta
+	});
 
-	const card = $derived(
-		share.kind === 'trip'
-			? `${num(Number(meta.distanceKm ?? 0), 1)} km in ${duration(Number(meta.duration ?? 0), 'short')}, second by second, from an XPeng ${share.model}.`
-			: share.kind === 'charging'
-				? `${num(Number(meta.kwhDelivered ?? 0), 1)} kWh at up to ${num(Number(meta.maxKw ?? 0), 1)} kW, from an XPeng ${share.model}.`
-				: `A month of driving from an XPeng ${share.model}.`
-	);
+	const heading = $derived(shareHeading(described));
+	const card = $derived(shareSummary(described));
+
+	// A month has no one curve to draw, so it keeps the site's card.
+	const cardImage = $derived(share.kind === 'export' ? undefined : `${data.canonical}/og.png`);
 
 	onMount(async () => {
 		if (share.kind === 'export') return;
@@ -95,6 +93,8 @@
 	cardTitle={heading}
 	cardDescription={card}
 	canonicalUrl={data.canonical}
+	image={cardImage}
+	imageAlt={shareImageAlt(described)}
 	noindex
 />
 

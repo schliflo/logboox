@@ -7,10 +7,12 @@
   and the highlights deck render nothing until a file has been dropped in, so
   they ask to be left out of the index while staying crawlable.
 
-  A shared trip is the one page whose card says something of its own, and it
-  overrides the title and description for that. It keeps the site's image: a
-  card drawn from someone's telemetry would be a picture of their week, handed
-  to whichever service the link was pasted into.
+  A shared trip and a leaderboard month are the pages whose cards say something
+  of their own: they override the title, the description and the image, and the
+  image is drawn on demand from what the page shows. Everything else keeps the
+  site's card. Nothing drawn this way carries a vehicle identification number,
+  an odometer or an e-mail address — a link travels further than the person who
+  pasted it expects, and a card is the part of it strangers see.
 -->
 <script lang="ts">
 	import {
@@ -35,6 +37,10 @@
 		cardDescription?: string;
 		/** An absolute URL, for a page that is not where it was prerendered. */
 		canonicalUrl?: string;
+		/** A card image of this page's own, absolute or root-relative. */
+		image?: string;
+		/** What that image shows, for a reader who cannot see it. */
+		imageAlt?: string;
 	}
 
 	let {
@@ -44,12 +50,15 @@
 		noindex = false,
 		cardTitle,
 		cardDescription,
-		canonicalUrl
+		canonicalUrl,
+		image: ownImage,
+		imageAlt: ownImageAlt
 	}: Props = $props();
 
 	const fullTitle = $derived(pageTitle(title));
 	const canonical = $derived(canonicalUrl ?? absolute(path));
-	const image = $derived(absolute(OG_IMAGE) ?? OG_IMAGE);
+	const image = $derived(ownImage ?? absolute(OG_IMAGE) ?? OG_IMAGE);
+	const imageDescription = $derived(ownImage ? (ownImageAlt ?? cardTitle ?? '') : OG_IMAGE_ALT);
 	const cardHeading = $derived(cardTitle ?? fullTitle);
 	const cardBody = $derived(cardDescription ?? description);
 </script>
@@ -77,11 +86,11 @@
 	<meta property="og:image:type" content="image/png" />
 	<meta property="og:image:width" content="1200" />
 	<meta property="og:image:height" content="630" />
-	<meta property="og:image:alt" content={OG_IMAGE_ALT} />
+	<meta property="og:image:alt" content={imageDescription} />
 
 	<meta name="twitter:card" content="summary_large_image" />
 	<meta name="twitter:title" content={cardHeading} />
 	<meta name="twitter:description" content={cardBody} />
 	<meta name="twitter:image" content={image} />
-	<meta name="twitter:image:alt" content={OG_IMAGE_ALT} />
+	<meta name="twitter:image:alt" content={imageDescription} />
 </svelte:head>

@@ -17,6 +17,7 @@
 	import { monthLabel } from '$lib/leaderboard/periods';
 	import { dateOnly, num } from '$lib/utils/format';
 	import { account } from '$lib/state/account.svelte';
+	import { absolute } from '$lib/seo';
 	import ArrowLeftIcon from '@lucide/svelte/icons/arrow-left';
 	import ArrowRightIcon from '@lucide/svelte/icons/arrow-right';
 	import TrophyIcon from '@lucide/svelte/icons/trophy';
@@ -84,6 +85,8 @@
 	title="Leaderboards · {heading}"
 	description="What XPeng drivers have put their name to this month: the fastest charge, the longest drive, the most efficient run."
 	path="/leaderboard/{data.period}"
+	image={absolute(`/leaderboard/${data.period}/og.png`) ?? undefined}
+	imageAlt="The names and figures leading the LogbooX boards for {heading}."
 />
 
 <main class="mx-auto min-h-svh max-w-4xl space-y-6 px-6 py-12">
