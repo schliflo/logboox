@@ -157,6 +157,42 @@ describe('detectTrips', () => {
 		expect(trips[0].movingSeconds).toBeGreaterThan(500);
 	});
 
+	it('reports the forces it felt, and ignores a single wild frame', () => {
+		const n = 600;
+		// A firm launch at 0.5 g, and one corrupt reading of 3 g — physically
+		// impossible, indistinguishable from a real one in the raw signal, and
+		// exactly what a public board must not be won with.
+		const longAccel = new Array(n).fill(0.1);
+		longAccel[10] = 0.5;
+		longAccel[11] = 0.5;
+		longAccel[12] = 0.5;
+		longAccel[400] = 3;
+		const lateral = new Array(n).fill(0.05);
+		lateral[200] = 0.45;
+		lateral[201] = 0.45;
+		lateral[202] = 0.45;
+
+		const dataset = makeDataset(ramp(1000, n + 400), {
+			ldcu_currentgearlev: [
+				...new Array(100).fill(GEAR.PARK),
+				...new Array(n).fill(GEAR.DRIVE),
+				...new Array(300).fill(GEAR.PARK)
+			],
+			esp_vehspd: [...new Array(100).fill(0), ...new Array(n).fill(60), ...new Array(300).fill(0)],
+			cdcu_totalodometer: [
+				...new Array(100).fill(1000),
+				...Array.from({ length: n }, (_, i) => 1000 + Math.floor((i * 10) / n)),
+				...new Array(300).fill(1010)
+			],
+			esp_vehlongaccel: [...new Array(100).fill(0), ...longAccel, ...new Array(300).fill(0)],
+			esp_vehlateralaccel: [...new Array(100).fill(0), ...lateral, ...new Array(300).fill(0)]
+		});
+
+		const [trip] = detectTrips(dataset);
+		expect(trip.peakAccel).toBeCloseTo(0.5, 2);
+		expect(trip.peakLateral).toBeCloseTo(0.45, 2);
+	});
+
 	it('ignores shuffling that covers no ground', () => {
 		const dataset = makeDataset(ramp(0, 200), {
 			ldcu_currentgearlev: [...new Array(50).fill(GEAR.REVERSE), ...new Array(150).fill(GEAR.PARK)],

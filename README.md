@@ -6,10 +6,14 @@ behaviour, driving style, and a plain account of what the file reveals about
 your daily life. It runs at [logboox.app](https://logboox.app), and used to be
 called XPeng Data Export Browser.
 
-Everything runs in the browser. There is no server to send anything to: the app
-is a set of static files, and the export is parsed by a worker inside the page.
-Exports are kept on your own device so they can be reopened later, and several
-of them can be read as one continuous record.
+Everything runs in the browser. The export is parsed by a worker inside the
+page, kept on your own device so it can be reopened later, and several exports
+can be read as one continuous record.
+
+Signing in is optional and changes none of that. An account holds a copy of an
+export so it outlives the browser, reminds you before the thirty-day window
+closes, serves your own data over an API, and can publish a single trip at a
+link. Everything the app does without one, it still does without one.
 
 ## What it looks like
 
@@ -81,6 +85,43 @@ pnpm check        # types
 pnpm build        # production build
 ```
 
+## Signing in, or not
+
+There is no account until you ask for one, and nothing about reading an export
+changes when you have one. What it adds:
+
+- **Exports that outlive this browser.** A copy in the account, restored to any
+  browser you sign in on. Browser storage is cleared by accident; Safari
+  discards it after a week away.
+- **A reminder before the window closes.** XPeng hands out a rolling thirty
+  days on request, and a month nobody asked for cannot be recovered later. The
+  reminder counts from where your newest export stops, not from when you
+  imported it.
+- **An API over your own data**, with tokens you make and revoke yourself — see
+  [docs/api.md](docs/api.md), which includes a Home Assistant example.
+- **A link to one trip or charging session**, or a whole export. Shares carry
+  the model of the car and never its identification number, and revoking one
+  takes effect immediately.
+
+Signing in is by e-mail alone: a link, good once, for fifteen minutes. There is
+no password to lose. Deleting the account removes every byte it holds and
+leaves what is in this browser alone.
+
+## Comments and a Fahrtenbuch
+
+The export contains no location data whatsoever, so where a journey went is the
+one thing only the driver knows. Each trip takes an origin, a destination, a
+purpose and a comment, and the whole month downloads as a CSV a tax office
+would recognise.
+
+This works signed out; an account only carries the notes to the next device.
+
+Typing a place twice should be the last time. If the previous trip ended at
+41 207 km and this one starts there, the car has not moved, so where that trip
+ended is offered as where this one begins. Beyond that, suggestions come from
+trips already labelled: the same distance, the same hour, the same sort of day,
+and the reverse of a known journey.
+
 ## Keeping exports
 
 Every export you open is kept in this browser, in IndexedDB, as the parsed
@@ -132,19 +173,18 @@ offline — and reload.
 
 ## Deploying to Cloudflare Workers
 
-Every route is prerendered and there are no server routes, so the Worker only
-serves static assets. `wrangler.jsonc` names the Worker `logboox` and attaches
-the custom domain; the zone for logboox.app has to be in the same Cloudflare
-account.
+Merging to `main` deploys, through
+[`.github/workflows/deploy.yml`](.github/workflows/deploy.yml): checks, then
+database migrations, then logboox.app, the reminder Worker, and the old
+address, in that order. **[docs/deploying.md](docs/deploying.md)** covers the
+one-time setup — the database, the bucket, the sender domain, the API token —
+and the manual commands for when the workflow cannot run.
 
-```sh
-wrangler login
-pnpm run deploy   # build, then wrangler deploy
-```
-
-`run` is not optional there: `deploy` is one of pnpm's own commands, so `pnpm
-deploy` reaches pnpm rather than this script and fails. Names carrying a colon
-are safe, which is why `pnpm deploy:legacy` below needs no `run`.
+Almost every route is still prerendered, and the app still reads an export
+without a server. What the Worker adds is the account API under `/api`, the
+reminder trigger under `/internal`, and the shared pages under `/s` — the only
+route rendered per request, because a link preview is built by a scraper that
+runs no JavaScript.
 
 The app answers on logboox.app alone. `workers_dev` is off, because a second
 address would be a second origin, keeping its own copy of every export and its
@@ -224,13 +264,21 @@ src/lib/data/
   parse/       streaming CSV reader, ZIP, ordering, alignment, merging
   store/       columnar storage and the min/max pyramid the charts read
   analytics/   trips, charging, battery, driving style, doors, facts
-  worker/      the worker and its message protocol
+  worker/      the worker, its protocol, and account transfers
 src/lib/history/             kept exports: storage, compression, backup archive
+src/lib/logbook/             notes on trips: binding, suggestions, CSV
+src/lib/share/               slicing one trip out of a month, and back
+src/lib/server/              accounts: auth, exports, shares, reminders, mail
+src/hooks.server.ts          who is asking, and whether they may ask this way
+migrations/                  the account database, in order
+cron/                        the Worker that asks for reminders once a day
 src/lib/demo/  synthetic month generator
 src/lib/offline/             what the service worker keeps, and how it finds it
 src/service-worker.ts        the service worker itself
 src/lib/components/charts/   uPlot wrapper, calendar, punchcard, g-g diagram
-src/routes/    landing, the opening sequence, and the dashboard sections
+src/routes/    landing, the opening sequence, the dashboard, the account
+src/routes/api/v1/           the account API; docs/api.md describes it
+src/routes/s/                public share pages, the one route rendered per request
 src/lib/seo.ts               site metadata, shared by every page
 static/                      icons, the social card, the manifest
 design/og-card.html          source for the social card; render it at 1200x630
@@ -248,6 +296,13 @@ answers, the demo generator against the ground truth it was built from, what
 the service worker decides to keep, and the storage layer end to end — the
 compression round trip, merging exports that overlap, the backup archive, and
 the database itself against `fake-indexeddb`.
+
+The server is covered the same way, against real SQL rather than a mock: the
+migrations that ship are applied to Node's own SQLite, and the sign-in flow,
+the export and quota rules, the reminder conditions and the share slices run
+against that. What is worth reading there is the logbook suite — a note has to
+stay attached to its trip when merging two exports moves the trip's boundaries,
+and must never attach to the wrong one.
 
 If a `.samples/` directory is present it is also checked against a real export
 end to end; that directory is git-ignored, because a real export identifies a

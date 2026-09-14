@@ -7,10 +7,19 @@
 	import { Badge } from '$lib/components/ui/badge';
 	import BigStat from '$lib/components/charts/BigStat.svelte';
 	import TripDetail from '$lib/components/app/TripDetail.svelte';
+	import TripNotes from '$lib/components/app/TripNotes.svelte';
+	import ShareButton from '$lib/components/app/ShareButton.svelte';
+	import BoardBanner from '$lib/components/app/BoardBanner.svelte';
 	import { data } from '$lib/state/dataset.svelte';
-	import { dateTime, duration, num, percent, fullDateTime } from '$lib/utils/format';
+	import { logbook } from '$lib/state/logbook.svelte';
+	import { settings } from '$lib/state/settings.svelte';
+	import ExportMenu from '$lib/components/app/ExportMenu.svelte';
+	import { logbookDocument } from '$lib/logbook/document';
+	import { dateTime, duration, maskVin, num, percent, fullDateTime } from '$lib/utils/format';
 	import ArrowLeftIcon from '@lucide/svelte/icons/arrow-left';
 	import ArrowUpDownIcon from '@lucide/svelte/icons/arrow-up-down';
+	import ArrowRightIcon from '@lucide/svelte/icons/arrow-right';
+	import MessageIcon from '@lucide/svelte/icons/message-square-text';
 
 	const stats = $derived(data.derived!);
 
@@ -25,9 +34,50 @@
 	type SortKey = 'startTime' | 'distanceKm' | 'duration' | 'maxSpeed' | 'consumption';
 	let sortKey = $state<SortKey>('startTime');
 	let ascending = $state(false);
+	let onlyUnlabelled = $state(false);
+
+	const notes = $derived(logbook.bound.byTrip);
+	const unlabelled = $derived(stats.trips.length - logbook.labelled);
+
+	/** The next trip with nowhere written against it, after this one. */
+	const nextUnlabelled = $derived.by(() => {
+		if (!trip) return null;
+		const after = stats.trips
+			.filter((other) => other.startTime > trip.startTime)
+			.sort((a, b) => a.startTime - b.startTime);
+		const found = after.find((other) => {
+			const note = notes.get(other.startTime);
+			return !note?.origin && !note?.destination;
+		});
+		return found ?? null;
+	});
+
+	function route(startTime: number): string {
+		const note = notes.get(startTime);
+		if (!note?.origin && !note?.destination) return '';
+		return [note?.origin || '?', note?.destination || '?'].join(' → ');
+	}
+
+	const vehicle = $derived(
+		[
+			data.dataset?.vmodel,
+			settings.revealVin ? data.dataset?.vin : maskVin(data.dataset?.vin ?? '')
+		]
+			.filter(Boolean)
+			.join(' · ')
+	);
+
+	const book = $derived(
+		logbookDocument(stats.trips, notes, settings.timeZone, vehicle, settings.pricePerKwh)
+	);
 
 	const sorted = $derived.by(() => {
-		const list = [...stats.trips];
+		const list = onlyUnlabelled
+			? stats.trips.filter((row) => {
+					const note = notes.get(row.startTime);
+					return !note?.origin && !note?.destination;
+				})
+			: [...stats.trips];
 		list.sort((a, b) => {
 			const left = a[sortKey];
 			const right = b[sortKey];
@@ -64,7 +114,27 @@
 				All trips
 			</Button>
 			<span class="text-sm text-muted-foreground">{fullDateTime(trip.startTime)}</span>
+			<div class="ml-auto">
+				<ShareButton
+					kind="trip"
+					startTime={trip.startTime}
+					endTime={trip.endTime}
+					meta={{
+						distanceKm: trip.distanceKm,
+						duration: trip.duration,
+						movingSeconds: trip.movingSeconds,
+						maxSpeed: trip.maxSpeed,
+						avgSpeed: trip.avgSpeed,
+						energyKwh: trip.energyKwh - trip.regenKwh,
+						regenShare: trip.regenShare,
+						socStart: trip.socStart,
+						socEnd: trip.socEnd
+					}}
+				/>
+			</div>
 		</div>
+
+		<BoardBanner startTime={trip.startTime} />
 
 		<div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
 			<Card.Root>
@@ -125,9 +195,29 @@
 				</Card.Description>
 			</Card.Header>
 			<Card.Content>
-				<TripDetail {trip} />
+				<TripDetail
+					source={data.dataset!}
+					from={trip.start}
+					to={trip.end}
+					syncKey={`trip-${trip.index}`}
+				/>
 			</Card.Content>
 		</Card.Root>
+
+		<TripNotes {trip} />
+
+		{#if nextUnlabelled}
+			<div class="flex justify-end">
+				<Button
+					variant="outline"
+					size="sm"
+					onclick={() => goto(`/dash/trips?trip=${nextUnlabelled.index}`)}
+				>
+					Next unlabelled trip
+					<ArrowRightIcon class="size-4" />
+				</Button>
+			</div>
+		{/if}
 
 		<Card.Root>
 			<Card.Header>
@@ -197,10 +287,39 @@
 
 		<Card.Root>
 			<Card.Header>
-				<Card.Title>Every trip</Card.Title>
-				<Card.Description>
-					Segmented from gear and odometer movement. Select one to see it in detail.
-				</Card.Description>
+				<div class="flex flex-wrap items-start justify-between gap-3">
+					<div>
+						<Card.Title>Every trip</Card.Title>
+						<Card.Description>
+							Segmented from gear and odometer movement. Select one to see it in detail, and to say
+							where it went.
+						</Card.Description>
+					</div>
+					<div class="flex items-center gap-2">
+						{#if unlabelled > 0 && unlabelled < stats.trips.length}
+							<Button
+								variant={onlyUnlabelled ? 'default' : 'ghost'}
+								size="sm"
+								onclick={() => (onlyUnlabelled = !onlyUnlabelled)}
+							>
+								{unlabelled} unlabelled
+							</Button>
+						{/if}
+						<ExportMenu
+							kind="fahrtenbuch"
+							variant="ghost"
+							title={book.title}
+							subtitle={book.subtitle}
+							columns={book.columns}
+							rows={book.rows}
+							totals={book.totals}
+							notes={book.notes}
+							timeZone={settings.timeZone}
+							from={book.from}
+							to={book.to}
+						/>
+					</div>
+				</div>
 			</Card.Header>
 			<Card.Content>
 				<div class="overflow-x-auto">
@@ -219,6 +338,7 @@
 										</button>
 									</Table.Head>
 								{/each}
+								<Table.Head>Route</Table.Head>
 								<Table.Head class="text-right">Charge</Table.Head>
 							</Table.Row>
 						</Table.Header>
@@ -236,6 +356,18 @@
 									<Table.Cell class="text-right tabular-nums">{num(row.maxSpeed)}</Table.Cell>
 									<Table.Cell class="text-right tabular-nums">
 										{Number.isFinite(row.consumption) ? num(row.consumption, 1) : '—'}
+									</Table.Cell>
+									<Table.Cell class="max-w-56">
+										{#if route(row.startTime)}
+											<span class="flex items-center gap-1.5">
+												<span class="truncate">{route(row.startTime)}</span>
+												{#if notes.get(row.startTime)?.comment}
+													<MessageIcon class="size-3.5 shrink-0 text-muted-foreground" />
+												{/if}
+											</span>
+										{:else}
+											<span class="text-muted-foreground">—</span>
+										{/if}
 									</Table.Cell>
 									<Table.Cell class="text-right">
 										{#if Number.isFinite(row.socStart)}

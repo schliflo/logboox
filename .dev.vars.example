@@ -1,0 +1,7 @@
+# Local secrets for `pnpm dev` and `pnpm preview`. Copy to `.dev.vars`.
+#
+# In production these are set with `wrangler secret put`, or by the deploy
+# workflow from the repository's own secrets. `.dev.vars` is git-ignored.
+
+# Shared with the cron Worker, which uses it to ask this one to send reminders.
+CRON_SECRET=local-development-cron-secret

@@ -1,26 +1,30 @@
 /**
  * The loaded export, held in memory for the life of the tab.
  *
- * Nothing is uploaded: no server, no cookies, no analytics. A copy is kept in
- * this browser's own storage so the export can be reopened later — and that
- * copy is the only thing that outlives the tab. Removing it is a click, and
- * nothing about it ever leaves the device.
+ * Reading an export involves no server: it is parsed by a worker in this page,
+ * and a copy is kept in this browser's own storage so it can be reopened
+ * later. Removing that copy is a click.
+ *
+ * A signed-in reader may additionally keep a copy in their account, which is
+ * the only way anything here travels. That is opt-in, per export, and lives
+ * behind `sync` — never on the path a first-time reader takes.
  */
 
 import { goto } from '$app/navigation';
 import { toast } from 'svelte-sonner';
-import { loadDemo, loadFiles, openKept, type LoadProgress } from '../data/client';
+import { loadDemo, loadFiles, openKept, openShared, type LoadProgress } from '../data/client';
 import type { KeptOutcome } from '../data/worker/protocol';
 import type { DerivedData } from '../data/analytics';
 import type { Dataset } from '../data/store/columnar';
 import { PyramidCache } from '../data/store/decimate';
+import { account } from './account.svelte';
 import { history } from './history.svelte';
 import { settings } from './settings.svelte';
 
 type Status = 'empty' | 'loading' | 'ready' | 'error';
 
 /** Where the data on screen came from, which is what the labels report. */
-export type SourceKind = 'fresh' | 'reopened' | 'merged';
+export type SourceKind = 'fresh' | 'reopened' | 'merged' | 'shared';
 
 export interface DataSource {
 	kind: SourceKind;
@@ -105,6 +109,36 @@ class DatasetStore {
 				closeButton: true
 			});
 		}
+
+		await this.copyToAccount(kept.id);
+	}
+
+	/**
+	 * Copies a freshly imported export up, when someone is signed in and has
+	 * asked for that. It runs after the dashboard is already on screen and
+	 * failure is reported rather than thrown: the export is readable either
+	 * way, and an upload is not something to be waited on.
+	 *
+	 * The demonstration month is never copied. It is generated from a seed, so
+	 * an account holding it would be storing something anyone can regenerate
+	 * under a VIN every demo reader shares.
+	 */
+	private async copyToAccount(id: string) {
+		if (!account.signedIn || !account.user?.autoSync) return;
+		if (this.source.demo) return;
+
+		try {
+			const result = await history.sync([id]);
+			if (result.failed.length > 0) {
+				toast('This export was not copied to your account', {
+					description: result.failed[0].reason,
+					closeButton: true
+				});
+			}
+		} catch {
+			// Reported by the library the next time it is listed; nothing here
+			// is worth interrupting a first read for.
+		}
 	}
 
 	async load(files: File[]) {
@@ -177,6 +211,24 @@ class DatasetStore {
 			});
 			// Straight to the dashboard: the opening sequence is for the moment
 			// an export is first read, not for every time it is picked up again.
+			await goto('/dash/overview');
+		} catch (error) {
+			this.fail(error);
+		}
+	}
+
+	/**
+	 * Opens an export someone published. It is held for the life of the tab and
+	 * never kept: it is not this reader's data, and a link should not quietly
+	 * fill their browser with someone else's month.
+	 */
+	async openSharedExport(shareId: string) {
+		this.begin();
+		try {
+			const result = await openShared(shareId, settings.timeZone, (progress) => {
+				this.progress = progress;
+			});
+			this.settle(result.dataset, result.derived, { kind: 'shared', ids: [shareId], demo: false });
 			await goto('/dash/overview');
 		} catch (error) {
 			this.fail(error);

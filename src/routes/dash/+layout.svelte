@@ -10,13 +10,16 @@
 	import { Input } from '$lib/components/ui/input';
 	import { Switch } from '$lib/components/ui/switch';
 	import MadeBy from '$lib/components/app/MadeBy.svelte';
+	import AccountMenu from '$lib/components/app/AccountMenu.svelte';
 	import Seo from '$lib/components/app/Seo.svelte';
 	import { SITE_NAME } from '$lib/seo';
 	import { data } from '$lib/state/dataset.svelte';
+	import { logbook } from '$lib/state/logbook.svelte';
 	import { settings } from '$lib/state/settings.svelte';
 	import { maskVin, dateOnly } from '$lib/utils/format';
 	import LayoutIcon from '@lucide/svelte/icons/layout-dashboard';
 	import RouteIcon from '@lucide/svelte/icons/route';
+	import BookIcon from '@lucide/svelte/icons/book-marked';
 	import ZapIcon from '@lucide/svelte/icons/zap';
 	import BatteryIcon from '@lucide/svelte/icons/battery-charging';
 	import GaugeIcon from '@lucide/svelte/icons/gauge';
@@ -30,6 +33,7 @@
 	const sections = [
 		{ href: '/dash/overview', label: 'Overview', icon: LayoutIcon },
 		{ href: '/dash/trips', label: 'Trips', icon: RouteIcon },
+		{ href: '/dash/logbook', label: 'Logbook', icon: BookIcon },
 		{ href: '/dash/charging', label: 'Charging', icon: ZapIcon },
 		{ href: '/dash/battery', label: 'Battery', icon: BatteryIcon },
 		{ href: '/dash/driving', label: 'Driving style', icon: GaugeIcon },
@@ -43,16 +47,32 @@
 
 	/** What is on screen: a fresh drop, a kept export, or several joined up. */
 	const sourceLabel = $derived.by(() => {
+		if (data.source.kind === 'shared') return 'Shared export';
 		if (data.source.kind === 'merged') return `${data.source.ids.length} exports merged`;
 		if (data.isDemo) return 'Demonstration month';
 		return data.source.kind === 'reopened' ? 'Kept export' : 'Your export';
 	});
+
+	/** Someone else's export carries no identifier worth revealing. */
+	const shared = $derived(data.source.kind === 'shared');
 
 	onMount(() => {
 		// The dataset is not reloaded on navigation, so a deep link opened cold
 		// has nothing to show and belongs back at the start — where the exports
 		// kept in this browser are listed, ready to open again.
 		if (!data.isReady) goto('/');
+	});
+
+	// Notes belong to the car rather than to the export they were written
+	// against, so they are read once a dataset is open and its VIN is known.
+	// Loaded here rather than by the dataset store, which would make the two
+	// import each other.
+	$effect(() => {
+		const vin = data.dataset?.vin;
+		// Not for a shared export: those notes belong to whoever owns the car,
+		// and this reader's own logbook has nothing to say about it.
+		if (vin && data.source.kind !== 'shared') logbook.open(vin);
+		else logbook.reset();
 	});
 </script>
 
@@ -115,14 +135,16 @@
 
 			<Sidebar.Footer>
 				<div class="space-y-2 px-2 pb-2 group-data-[collapsible=icon]:hidden">
-					<button
-						type="button"
-						class="w-full text-left font-mono text-[11px] text-muted-foreground transition-colors hover:text-foreground"
-						onclick={() => (settings.revealVin = !settings.revealVin)}
-						title={settings.revealVin ? 'Hide the VIN' : 'Reveal the VIN'}
-					>
-						{settings.revealVin ? data.dataset?.vin : maskVin(data.dataset?.vin ?? '')}
-					</button>
+					{#if !shared}
+						<button
+							type="button"
+							class="w-full text-left font-mono text-[11px] text-muted-foreground transition-colors hover:text-foreground"
+							onclick={() => (settings.revealVin = !settings.revealVin)}
+							title={settings.revealVin ? 'Hide the VIN' : 'Reveal the VIN'}
+						>
+							{settings.revealVin ? data.dataset?.vin : maskVin(data.dataset?.vin ?? '')}
+						</button>
+					{/if}
 					<a href="/wrapped" class="block text-xs text-muted-foreground hover:text-foreground">
 						Replay the highlights
 					</a>
@@ -149,7 +171,11 @@
 						<Badge variant="secondary">Merged · {data.source.ids.length}</Badge>
 					{:else if data.source.kind === 'reopened'}
 						<Badge variant="secondary">Reopened</Badge>
+					{:else if shared}
+						<Badge variant="secondary">Shared with you</Badge>
 					{/if}
+
+					<AccountMenu variant="ghost" />
 
 					<Popover.Root>
 						<Popover.Trigger class={buttonVariants({ variant: 'ghost', size: 'icon' })}>

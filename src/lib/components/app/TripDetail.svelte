@@ -9,42 +9,52 @@
   There is no gear panel: the car has a single-speed reduction gear, so the
   selector only ever says which way it is pointing, which the speed trace and
   the trip itself already make plain.
+
+  The samples are handed in rather than read from the open dataset, so the same
+  panels draw a trip from a month held in memory and a trip that arrived on its
+  own through a public link.
 -->
 <script lang="ts">
 	import UPlotChart, { type ChartSeries } from '$lib/components/charts/UPlotChart.svelte';
-	import { data } from '$lib/state/dataset.svelte';
-	import { decodeRange } from '$lib/data/store/columnar';
+	import { decodeRange, type Column } from '$lib/data/store/columnar';
 	import { instantPowerKw } from '$lib/data/analytics/energy';
-	import type { Trip } from '$lib/data/analytics/trips';
 
-	interface Props {
-		trip: Trip;
+	export interface SampleSource {
+		time: Uint32Array;
+		columns: Map<string, Column>;
 	}
 
-	let { trip }: Props = $props();
+	interface Props {
+		source: SampleSource;
+		/** Inclusive sample indices into `source`. */
+		from: number;
+		to: number;
+		/** Shared between these panels, and nothing else on the page. */
+		syncKey: string;
+	}
 
-	const dataset = $derived(data.dataset!);
+	let { source, from, to, syncKey }: Props = $props();
 
 	/** A trip is at most a couple of hours, so its samples plot directly. */
 	const x = $derived.by(() => {
-		const out = new Float64Array(trip.end - trip.start + 1);
-		for (let i = 0; i < out.length; i++) out[i] = dataset.time[trip.start + i];
+		const out = new Float64Array(to - from + 1);
+		for (let i = 0; i < out.length; i++) out[i] = source.time[from + i];
 		return out;
 	});
 
 	function column(key: string): Float64Array | null {
-		const found = dataset.columns.get(key);
+		const found = source.columns.get(key);
 		if (!found || found.nonNull === 0) return null;
-		return decodeRange(found, trip.start, trip.end + 1);
+		return decodeRange(found, from, to + 1);
 	}
 
 	const powerSeries = $derived.by(() => {
-		const volt = dataset.columns.get('bms_battvolt');
-		const current = dataset.columns.get('bms_battcurr');
+		const volt = source.columns.get('bms_battvolt');
+		const current = source.columns.get('bms_battcurr');
 		if (!volt || !current) return null;
-		const out = new Float64Array(trip.end - trip.start + 1);
+		const out = new Float64Array(to - from + 1);
 		for (let i = 0; i < out.length; i++) {
-			out[i] = instantPowerKw(volt, current, trip.start + i);
+			out[i] = instantPowerKw(volt, current, from + i);
 		}
 		return out;
 	});
@@ -106,9 +116,6 @@
 
 		return built;
 	});
-
-	// One key per trip so panels sync with each other but not across trips.
-	const syncKey = $derived(`trip-${trip.index}`);
 </script>
 
 <div class="space-y-4">

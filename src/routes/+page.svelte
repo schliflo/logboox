@@ -7,6 +7,7 @@
 	import { Badge } from '$lib/components/ui/badge';
 	import MadeBy from '$lib/components/app/MadeBy.svelte';
 	import MovedNotice from '$lib/components/app/MovedNotice.svelte';
+	import AccountMenu from '$lib/components/app/AccountMenu.svelte';
 	import Seo from '$lib/components/app/Seo.svelte';
 	import { data } from '$lib/state/dataset.svelte';
 	import ShieldIcon from '@lucide/svelte/icons/shield-check';
@@ -51,6 +52,10 @@
 				<ParseProgress />
 			</div>
 		{:else}
+			<div class="mb-8 flex justify-end">
+				<AccountMenu />
+			</div>
+
 			<MovedNotice />
 
 			<header class="mx-auto max-w-3xl text-center">
@@ -120,15 +125,20 @@
 				<div class="space-y-3">
 					<h2 class="flex items-center gap-2 text-lg font-medium">
 						<ShieldIcon class="size-5 text-primary" />
-						Nothing leaves this tab
+						Nothing leaves this tab unless you ask
 					</h2>
 					<p class="text-sm leading-relaxed text-muted-foreground">
-						There is no server to send anything to. The files are read by a worker inside this page
-						— no upload, no analytics, nothing that travels. What the app does keep, it keeps here:
-						a copy goes into this browser's own storage so an export can be reopened without
-						dropping the files in again, and one click removes it. Your vehicle identification
-						number appears on every row of the export; here it stays masked unless you ask to see
-						it.
+						The files are read by a worker inside this page — no upload, no analytics, nothing that
+						travels. What the app keeps, it keeps here: a copy goes into this browser's own storage
+						so an export can be reopened without dropping the files in again, and one click removes
+						it. Your vehicle identification number appears on every row of the export; here it stays
+						masked unless you ask to see it.
+					</p>
+					<p class="text-sm leading-relaxed text-muted-foreground">
+						Signing in is the one exception, and it is optional. An account can hold a copy of an
+						export so it outlives this browser, and can publish a single trip if you choose to share
+						one. Nothing is copied to it by itself the first time; the switch is yours, and deleting
+						the account takes every byte with it.
 					</p>
 				</div>
 
@@ -158,6 +168,18 @@
 						target="_blank"
 						rel="noreferrer noopener">MIT licence</a
 					>. Not affiliated with XPeng. Your export stays on this device.
+				</p>
+				<p class="text-xs text-muted-foreground">
+					<a href="/legal/imprint" class="underline underline-offset-4 hover:text-foreground">
+						Imprint
+					</a>
+					·
+					<a href="/legal/privacy" class="underline underline-offset-4 hover:text-foreground">
+						Privacy
+					</a>
+					·
+					<a href="/legal/terms" class="underline underline-offset-4 hover:text-foreground">Terms</a
+					>
 				</p>
 			</footer>
 		{/if}

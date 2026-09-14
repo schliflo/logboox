@@ -7,6 +7,7 @@
 	"description": "LogbooX — explore an XPeng EU Data Act vehicle export entirely in the browser.",
 	"repository": "https://github.com/schliflo/logboox",
 	"type": "module",
+	"packageManager": "pnpm@12.3.4",
 	"scripts": {
 		"dev": "vite dev",
 		"build": "vite build",
@@ -14,6 +15,9 @@
 		"preview:legacy": "wrangler dev .svelte-kit/cloudflare/_worker.js --port 4173 --env legacy",
 		"deploy": "pnpm build && wrangler deploy",
 		"deploy:legacy": "PUBLIC_MOVED_TO=https://logboox.app vite build && wrangler deploy --env legacy",
+		"deploy:cron": "wrangler deploy --config cron/wrangler.jsonc",
+		"db:migrate": "wrangler d1 migrations apply logboox --remote",
+		"db:migrate:local": "wrangler d1 migrations apply logboox --local",
 		"prepare": "svelte-kit sync || echo ''",
 		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
 		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
@@ -52,9 +56,12 @@
 	},
 	"dependencies": {
 		"@lucide/svelte": "^1.38.0",
+		"@pdf-lib/fontkit": "1.1.1",
+		"@resvg/resvg-wasm": "2.6.2",
 		"fflate": "^0.8.3",
 		"layerchart": "^2.3.1",
 		"mode-watcher": "^1.1.0",
+		"pdf-lib": "1.17.1",
 		"uplot": "^1.6.32"
 	}
 }

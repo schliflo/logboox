@@ -1,0 +1,125 @@
+# Deploys logboox.app on every merge to main.
+#
+# The same build that CI checks is what ships. Each target is its own job so
+# the Actions tab reads as a list of what went where, and `concurrency` keeps
+# two merges from racing for the custom domain.
+#
+# Order matters: production must be deployed before legacy. Wrangler attaches
+# the custom domain to whichever Worker claims it last, and the legacy Worker's
+# empty `routes` list does not detach an already-attached domain — only
+# redeploying production reclaims it.
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: production
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    uses: ./.github/workflows/ci.yml
+
+  migrate:
+    name: Database migrations
+    needs: check
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 26
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # Applied before the Worker that depends on them ships. Migrations here
+      # only ever add; a deploy is never rolled back into an older schema.
+      - uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: d1 migrations apply logboox --remote
+
+  production:
+    name: logboox.app
+    needs: migrate
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: https://logboox.app
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 26
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+      # The secret travels with the deploy, so it is managed in one place
+      # rather than drifting between the dashboard and this repository.
+      - uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: deploy
+          secrets: |
+            CRON_SECRET
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+
+  cron:
+    name: Reminder Worker
+    needs: production
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 26
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: deploy --config cron/wrangler.jsonc
+          secrets: |
+            CRON_SECRET
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+
+  legacy:
+    name: Old workers.dev address
+    needs: production
+    runs-on: ubuntu-latest
+    environment:
+      name: legacy
+      url: https://xpeng-data-export-browser.schliflo.workers.dev
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 26
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # Serves the full app with a notice pointing at logboox.app, so exports
+      # kept on the old origin can still be backed up and carried over.
+      - run: pnpm build
+        env:
+          PUBLIC_MOVED_TO: https://logboox.app
+      - uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: deploy --env legacy

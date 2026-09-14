@@ -10,13 +10,68 @@
 const CRAWLER_ONLY = /\/(og\.png|robots\.txt|sitemap\.xml)$/;
 
 /**
+ * Paths that must always reach the server.
+ *
+ * The API and the reminder trigger speak to a database, and a share page shows
+ * something that lives on the server and can be revoked — none of it means
+ * anything from a store of files written at deploy time. Served from the cache
+ * they would not merely be stale: an unknown path falls back to the landing
+ * page, so a share link would quietly render the front door instead of saying
+ * it could not be reached.
+ */
+const NETWORK_ONLY = /^\/(api|internal|s|leaderboard)(\/|$)/;
+
+/** True when a request must be left to the network, worker or no worker. */
+export function isNetworkOnly(pathname: string, base = ''): boolean {
+	const path = base && pathname.startsWith(base) ? pathname.slice(base.length) : pathname;
+	return NETWORK_ONLY.test(path || '/');
+}
+
+/**
  * Everything worth having before the connection goes: the hashed build output,
  * the static files and the prerendered pages, minus what only search engines
  * and link previews fetch.
+ *
+ * What can wait until somebody asks for it is a separate question, answered by
+ * `deferrals` — it depends on how the build split the code, which is not
+ * something a list of URLs can be read for.
  */
 export function precacheList(build: string[], files: string[], prerendered: string[]): string[] {
 	const wanted = [...build, ...files, ...prerendered].filter((path) => !CRAWLER_ONLY.test(path));
 	return Array.from(new Set(wanted));
+}
+
+/**
+ * Where the build publishes the files that exist for one rarely-used feature.
+ *
+ * Written by `tooling/on-demand.ts`, which is the only thing that can know:
+ * chunk names are hashes, and which of them belong to the PDF writer is a fact
+ * about how the code was split rather than about what anything is called.
+ *
+ * Outside `_app/immutable`, so it is revalidated rather than kept for a year —
+ * it names *this* build's hashed files. It needs no rule in `_headers` for
+ * that: everything outside that folder is already served `must-revalidate`, and
+ * the worker asks for it with `cache: 'reload'` besides.
+ */
+export function onDemandUrl(base: string): string {
+	return `${base}/_app/on-demand.json`;
+}
+
+/**
+ * What to leave for later, read from that file.
+ *
+ * Anything unexpected — a missing file, a stale one, something that is not a
+ * list of strings — means an empty set, and the worker stores the lot. Getting
+ * this wrong should cost a larger first download, never a broken install, and
+ * never a file the app turns out to need offline.
+ */
+export function deferrals(base: string, published: unknown): Set<string> {
+	if (!Array.isArray(published)) return new Set();
+	return new Set(
+		published
+			.filter((path): path is string => typeof path === 'string' && path.startsWith('/'))
+			.map((path) => `${base}${path}`)
+	);
 }
 
 /**
