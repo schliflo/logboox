@@ -18,6 +18,44 @@ export interface AccountUser {
 	autoSync: boolean;
 	reminderEnabled: boolean;
 	reminderAfterDays: number;
+	/** The name places on a board are published under; null until one is chosen. */
+	username: string | null;
+	boardNotify: boolean;
+}
+
+/** A place on a public board this account could take, and has not answered yet. */
+export interface BoardCandidate {
+	id: string;
+	board: string;
+	month: string;
+	kind: 'trip' | 'charging';
+	value: number;
+	rank: number;
+	locksAt: number;
+	startTime: number;
+	vin: string;
+	detail: Record<string, number | boolean | null>;
+	createdAt: number;
+	seen: boolean;
+}
+
+/** A place this account holds. */
+export interface BoardEntry {
+	id: string;
+	board: string;
+	month: string;
+	value: number;
+	rank: number;
+	shareId: string | null;
+	claimedAt: number;
+	startTime: number;
+	vin: string;
+	locked: boolean;
+}
+
+export interface LeaderboardState {
+	pending: BoardCandidate[];
+	entries: BoardEntry[];
 }
 
 export interface StorageUsage {
@@ -30,6 +68,7 @@ interface MeResponse {
 	user: AccountUser;
 	via: 'session' | 'token';
 	storage: StorageUsage;
+	leaderboard?: LeaderboardState;
 }
 
 type Status = 'unknown' | 'anonymous' | 'signed-in';
@@ -38,6 +77,7 @@ class AccountStore {
 	status = $state<Status>('unknown');
 	user = $state<AccountUser | null>(null);
 	storage = $state<StorageUsage | null>(null);
+	leaderboard = $state<LeaderboardState>({ pending: [], entries: [] });
 	busy = $state(false);
 	error = $state<string | null>(null);
 	/** Set once a link has been asked for, so the form can say so. */
@@ -59,6 +99,7 @@ class AccountStore {
 			const me = await api<MeResponse>('/api/v1/me');
 			this.user = me.user;
 			this.storage = me.storage;
+			this.leaderboard = me.leaderboard ?? { pending: [], entries: [] };
 			this.status = 'signed-in';
 		} catch (error) {
 			this.user = null;
@@ -108,13 +149,91 @@ class AccountStore {
 			this.user = null;
 			this.storage = null;
 			this.status = 'anonymous';
+			this.leaderboard = { pending: [], entries: [] };
 			this.linkSentTo = null;
 			this.busy = false;
 		}
 	}
 
+	/** A place is waiting on an answer for this exact trip or session. */
+	candidateFor(vin: string, startTime: number): BoardCandidate | null {
+		return (
+			this.leaderboard.pending.find(
+				(candidate) => candidate.vin === vin && candidate.startTime === startTime
+			) ?? null
+		);
+	}
+
+	/** A place already taken for this exact trip or session. */
+	entryFor(vin: string, startTime: number): BoardEntry | null {
+		return (
+			this.leaderboard.entries.find(
+				(entry) => entry.vin === vin && entry.startTime === startTime
+			) ?? null
+		);
+	}
+
+	/**
+	 * Chooses the name places are published under.
+	 *
+	 * Not optimistic, unlike the switches: this one is refused often enough —
+	 * taken, reserved, changed too recently — that showing it as done and then
+	 * taking it back would be the wrong way round.
+	 */
+	async setUsername(username: string): Promise<void> {
+		const result = await api<{ username: string }>('/api/v1/leaderboard/username', {
+			method: 'PUT',
+			body: { username }
+		});
+		if (this.user) this.user = { ...this.user, username: result.username };
+	}
+
+	/** Tells the server these have been seen, so no mail goes out about them. */
+	async markSeen(): Promise<void> {
+		const ids = this.leaderboard.pending.filter((c) => !c.seen).map((c) => c.id);
+		if (ids.length === 0) return;
+		this.leaderboard = {
+			...this.leaderboard,
+			pending: this.leaderboard.pending.map((c) => ({ ...c, seen: true }))
+		};
+		try {
+			await api('/api/v1/leaderboard/candidates/seen', { method: 'POST', body: { ids } });
+		} catch {
+			// Nothing on screen depends on this; at worst a nudge arrives later.
+		}
+	}
+
+	async dismiss(id: string): Promise<void> {
+		await api(`/api/v1/leaderboard/candidates/${encodeURIComponent(id)}/dismiss`, {
+			method: 'POST'
+		});
+		this.leaderboard = {
+			...this.leaderboard,
+			pending: this.leaderboard.pending.filter((c) => c.id !== id)
+		};
+	}
+
+	async claim(candidateId: string, shareId?: string | null): Promise<{ rank: number }> {
+		const result = await api<{ entry: BoardEntry; rank: number }>('/api/v1/leaderboard/claims', {
+			method: 'POST',
+			body: { candidateId, shareId: shareId ?? undefined }
+		});
+		await this.refresh();
+		return { rank: result.rank };
+	}
+
+	async removeEntry(id: string): Promise<void> {
+		await api(`/api/v1/leaderboard/entries/${encodeURIComponent(id)}`, { method: 'DELETE' });
+		this.leaderboard = {
+			...this.leaderboard,
+			entries: this.leaderboard.entries.filter((entry) => entry.id !== id)
+		};
+	}
+
 	async updateSettings(
-		patch: Partial<Pick<AccountUser, 'autoSync' | 'reminderEnabled' | 'reminderAfterDays'>>
+		patch: Partial<
+			Pick<AccountUser, 'autoSync' | 'reminderEnabled' | 'reminderAfterDays' | 'boardNotify'>
+		>
 	) {
 		if (!this.user) return;
 		const previous = { ...this.user };
@@ -132,6 +251,7 @@ class AccountStore {
 		await api('/api/v1/me', { method: 'DELETE' });
 		this.user = null;
 		this.storage = null;
+		this.leaderboard = { pending: [], entries: [] };
 		this.status = 'anonymous';
 	}
 }

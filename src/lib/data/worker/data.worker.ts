@@ -22,7 +22,7 @@ import { generateDemoDataset } from '../../demo/generator';
 import { backupFileName, readBackup, writeBackup, type BackupEntry } from '../../history/archive';
 import { decodeExport, encodeExport, sourceFromExport } from '../../history/codec';
 import { getExport, putExport, storageAvailable } from '../../history/db';
-import { downloadExport, openSharedExport, uploadExport } from './transfer';
+import { downloadExport, openSharedExport, uploadExport, type BoardCandidate } from './transfer';
 import {
 	packDataset,
 	unpackDataset,
@@ -221,6 +221,7 @@ async function handleTransfer(
 	const phase = direction === 'sync' ? 'uploading' : 'downloading';
 	const done: string[] = [];
 	const failed: Array<{ id: string; reason: string }> = [];
+	const candidates: BoardCandidate[] = [];
 
 	for (let i = 0; i < ids.length; i++) {
 		const id = ids[i];
@@ -238,7 +239,7 @@ async function handleTransfer(
 			};
 			report(0, 1);
 
-			if (direction === 'sync') await uploadExport(id, timeZone, report);
+			if (direction === 'sync') candidates.push(...(await uploadExport(id, timeZone, report)));
 			else await downloadExport(id, report);
 
 			done.push(id);
@@ -250,7 +251,7 @@ async function handleTransfer(
 		}
 	}
 
-	post({ type: 'transferred', ids: done, failed });
+	post({ type: 'transferred', ids: done, failed, candidates });
 }
 
 self.addEventListener('message', async (event: MessageEvent<WorkerRequest>) => {

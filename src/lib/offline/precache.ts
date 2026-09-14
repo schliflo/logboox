@@ -19,7 +19,7 @@ const CRAWLER_ONLY = /\/(og\.png|robots\.txt|sitemap\.xml)$/;
  * page, so a share link would quietly render the front door instead of saying
  * it could not be reached.
  */
-const NETWORK_ONLY = /^\/(api|internal|s)(\/|$)/;
+const NETWORK_ONLY = /^\/(api|internal|s|leaderboard)(\/|$)/;
 
 /** True when a request must be left to the network, worker or no worker. */
 export function isNetworkOnly(pathname: string, base = ''): boolean {

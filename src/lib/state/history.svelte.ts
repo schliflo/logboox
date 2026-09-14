@@ -14,12 +14,20 @@
  */
 
 import { browser } from '$app/environment';
+import { goto } from '$app/navigation';
+import { toast } from 'svelte-sonner';
 import { ApiError, api } from '../api/client';
-import { fetchFromAccount, syncToAccount, type LoadProgress } from '../data/client';
+import {
+	fetchFromAccount,
+	syncToAccount,
+	type LoadProgress,
+	type TransferResult
+} from '../data/client';
 import { backupKept } from '../data/client';
 import { estimateOpen, type ExportRecord } from '../history/codec';
 import { clearExports, deleteExports, listExports, storageAvailable } from '../history/db';
 import { downloadBlob } from '../utils/download';
+import { boardById } from '../leaderboard/boards';
 import { account } from './account.svelte';
 import { settings } from './settings.svelte';
 
@@ -88,6 +96,36 @@ function entryFromRecord(record: ExportRecord, remote: boolean): LibraryEntry {
 
 function entryFromRemote(remote: RemoteExport): LibraryEntry {
 	return { ...remote, local: false, remote: true };
+}
+
+/**
+ * Says that something in what was just uploaded would stand on a public board.
+ *
+ * Once, however many boards it is, and with somewhere to go rather than an
+ * instruction — nothing has been published, and the whole point is that the
+ * next move is theirs. It waits to be dismissed for the same reason: an
+ * upload finishes while somebody is reading their own month, and a notice
+ * that vanishes on its own is one they never saw.
+ */
+function announceCandidates(candidates: TransferResult['candidates']): void {
+	if (candidates.length === 0) return;
+
+	const first = candidates[0];
+	const board = boardById(first.board);
+	const ordinal = `#${first.rank}`;
+
+	const title =
+		candidates.length === 1
+			? `Your ${board ? board.label.toLowerCase() : 'trip'} would be ${ordinal} this month`
+			: `${candidates.length} of your trips would make this month\u2019s boards`;
+
+	toast(title, {
+		description:
+			'Nothing has been published. Have a look and decide whether to put your name to it.',
+		duration: Number.POSITIVE_INFINITY,
+		closeButton: true,
+		action: { label: 'See', onClick: () => goto('/account#leaderboard') }
+	});
 }
 
 class HistoryStore {
@@ -256,6 +294,7 @@ class HistoryStore {
 			});
 			await this.refreshRemote();
 			await account.refresh();
+			announceCandidates(result.candidates);
 			return { ids: result.ids, failed: result.failed };
 		} finally {
 			this.transfer = null;

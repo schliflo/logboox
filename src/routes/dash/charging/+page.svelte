@@ -8,6 +8,7 @@
 	import BigStat from '$lib/components/charts/BigStat.svelte';
 	import SessionDetail from '$lib/components/app/SessionDetail.svelte';
 	import ShareButton from '$lib/components/app/ShareButton.svelte';
+	import BoardBanner from '$lib/components/app/BoardBanner.svelte';
 	import Histogram from '$lib/components/charts/Histogram.svelte';
 	import { data } from '$lib/state/dataset.svelte';
 	import { settings } from '$lib/state/settings.svelte';
@@ -62,6 +63,8 @@
 				/>
 			</div>
 		</div>
+
+		<BoardBanner startTime={selected.startTime} />
 
 		<div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
 			<Card.Root>

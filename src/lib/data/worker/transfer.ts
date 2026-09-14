@@ -58,6 +58,25 @@ export interface TransferProgress {
 }
 
 /**
+ * A place the account could take on a public board, offered by the server once
+ * an upload is complete. Nothing is published by its existence.
+ */
+export interface BoardCandidate {
+	id: string;
+	board: string;
+	month: string;
+	kind: 'trip' | 'charging';
+	value: number;
+	rank: number;
+	locksAt: number;
+	startTime: number;
+	vin: string;
+	detail: Record<string, number | boolean | null>;
+	createdAt: number;
+	seen: boolean;
+}
+
+/**
  * Copies one kept export into the account: the record and its summary first,
  * then every buffer, then the acknowledgement that turns it into a listed
  * export. Until that last step it is invisible, so a failure halfway leaves
@@ -67,7 +86,7 @@ export async function uploadExport(
 	id: string,
 	timeZone: string,
 	onProgress?: TransferProgress
-): Promise<void> {
+): Promise<BoardCandidate[]> {
 	const entry = await getExport(id);
 	if (!entry) throw new TransferError('That export is no longer kept in this browser.');
 
@@ -80,7 +99,14 @@ export async function uploadExport(
 			method: 'PUT',
 			credentials: 'same-origin',
 			headers: { 'content-type': 'application/json' },
-			body: JSON.stringify({ record: entry.record, summary, isDemo: entry.record.isDemo })
+			// The zone travels with the export: which month a drive belongs to
+			// depends on where it was driven, and only this side knows that.
+			body: JSON.stringify({
+				record: entry.record,
+				summary,
+				isDemo: entry.record.isDemo,
+				timeZone
+			})
 		}),
 		'Opening the upload'
 	);
@@ -104,13 +130,17 @@ export async function uploadExport(
 		onProgress?.(++done, entry.blobs.length);
 	});
 
-	await expectOk(
+	// Finishing is also when the server works out whether any of this would
+	// stand on a board, and says so in its reply.
+	const finished = (await expectOk(
 		await fetch(`/api/v1/exports/${encodeURIComponent(id)}/complete`, {
 			method: 'POST',
 			credentials: 'same-origin'
 		}),
 		'Finishing the upload'
-	);
+	)) as { candidates?: BoardCandidate[] } | null;
+
+	return finished?.candidates ?? [];
 }
 
 /**

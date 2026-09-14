@@ -15,12 +15,14 @@
 	import { Button, buttonVariants } from '$lib/components/ui/button';
 	import { Input } from '$lib/components/ui/input';
 	import { Label } from '$lib/components/ui/label';
+	import { Badge } from '$lib/components/ui/badge';
 	import { account } from '$lib/state/account.svelte';
 	import CloudIcon from '@lucide/svelte/icons/cloud';
 	import MailIcon from '@lucide/svelte/icons/mail';
 	import UserIcon from '@lucide/svelte/icons/circle-user';
 	import LogOutIcon from '@lucide/svelte/icons/log-out';
 	import SettingsIcon from '@lucide/svelte/icons/settings';
+	import TrophyIcon from '@lucide/svelte/icons/trophy';
 
 	interface Props {
 		/** Ghost suits a dashboard header; outline suits the landing page. */
@@ -58,6 +60,9 @@
 		email = '';
 	}
 
+	/** Places offered and not yet answered; nothing is published while they wait. */
+	const waiting = $derived(account.leaderboard.pending.length);
+
 	async function signOut() {
 		await account.signOut();
 		toast('Signed out', {
@@ -72,6 +77,12 @@
 			<DropdownMenu.Trigger class={buttonVariants({ variant, size: 'sm' })}>
 				<UserIcon class="size-4" />
 				<span class="hidden max-w-[16ch] truncate sm:inline">{account.user.email}</span>
+				{#if waiting > 0}
+					<span
+						class="size-2 rounded-full bg-primary"
+						title="{waiting} place{waiting === 1 ? '' : 's'} waiting on you"
+					></span>
+				{/if}
 			</DropdownMenu.Trigger>
 			<DropdownMenu.Content align="end" class="w-56">
 				<DropdownMenu.Label class="truncate font-normal text-muted-foreground">
@@ -82,6 +93,14 @@
 					<SettingsIcon class="size-4" />
 					Account
 				</DropdownMenu.Item>
+				<DropdownMenu.Item onSelect={() => goto('/leaderboard')}>
+					<TrophyIcon class="size-4" />
+					Leaderboard
+					{#if waiting > 0}
+						<Badge variant="secondary" class="ml-auto tabular-nums">{waiting}</Badge>
+					{/if}
+				</DropdownMenu.Item>
+				<DropdownMenu.Separator />
 				<DropdownMenu.Item onSelect={signOut}>
 					<LogOutIcon class="size-4" />
 					Sign out
@@ -154,7 +173,15 @@
 
 					<p class="text-xs leading-relaxed text-muted-foreground">
 						An account changes nothing about how your export is read: it is still parsed in this
-						tab. Nothing is copied to it unless you ask for that.
+						tab. Nothing is copied to it unless you ask for that. Signing in means accepting the
+						<a href="/legal/terms" class="underline underline-offset-4 hover:text-foreground">
+							terms
+						</a>
+						; the
+						<a href="/legal/privacy" class="underline underline-offset-4 hover:text-foreground">
+							privacy notice
+						</a>
+						says what an account stores.
 					</p>
 				{/if}
 			</Dialog.Content>

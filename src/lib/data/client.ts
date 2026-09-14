@@ -21,6 +21,7 @@ import {
 } from './worker/protocol';
 import type { DerivedData } from './analytics';
 import type { Dataset } from './store/columnar';
+import type { BoardCandidate } from './worker/transfer';
 
 export interface LoadProgress {
 	phase: ParsePhase;
@@ -54,6 +55,8 @@ export interface TransferResult {
 	/** Exports that made it. */
 	ids: string[];
 	failed: Array<{ id: string; reason: string }>;
+	/** Places on a public board this upload turned out to be good enough for. */
+	candidates: BoardCandidate[];
 }
 
 export type WorkerResult = DatasetResult | RestoreResult | BackupResult | TransferResult;
@@ -113,7 +116,12 @@ function run(
 					cleanup();
 					break;
 				case 'transferred':
-					resolve({ kind: 'transferred', ids: message.ids, failed: message.failed });
+					resolve({
+						kind: 'transferred',
+						ids: message.ids,
+						failed: message.failed,
+						candidates: message.candidates ?? []
+					});
 					cleanup();
 					break;
 				case 'error':

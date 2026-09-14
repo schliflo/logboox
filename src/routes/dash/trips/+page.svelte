@@ -9,6 +9,7 @@
 	import TripDetail from '$lib/components/app/TripDetail.svelte';
 	import TripNotes from '$lib/components/app/TripNotes.svelte';
 	import ShareButton from '$lib/components/app/ShareButton.svelte';
+	import BoardBanner from '$lib/components/app/BoardBanner.svelte';
 	import { data } from '$lib/state/dataset.svelte';
 	import { logbook } from '$lib/state/logbook.svelte';
 	import { settings } from '$lib/state/settings.svelte';
@@ -131,6 +132,8 @@
 				/>
 			</div>
 		</div>
+
+		<BoardBanner startTime={trip.startTime} />
 
 		<div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
 			<Card.Root>

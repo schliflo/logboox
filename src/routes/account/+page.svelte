@@ -19,6 +19,7 @@
 	import Seo from '$lib/components/app/Seo.svelte';
 	import MadeBy from '$lib/components/app/MadeBy.svelte';
 	import ApiTokens from '$lib/components/app/ApiTokens.svelte';
+	import BoardPlaces from '$lib/components/app/BoardPlaces.svelte';
 	import SharedLinks from '$lib/components/app/SharedLinks.svelte';
 	import { account } from '$lib/state/account.svelte';
 	import { ACCOUNTS_ENABLED } from '$lib/features';
@@ -163,6 +164,8 @@
 				</div>
 			</Card.Content>
 		</Card.Root>
+
+		<BoardPlaces />
 
 		<SharedLinks />
 

@@ -11,6 +11,7 @@ import type { ColumnSpec, TypedArray } from '../schema/columns';
 import type { Column, CoverageWindow, Dataset } from '../store/columnar';
 import type { DerivedData } from '../analytics';
 import type { StreamId } from '../schema/streams';
+import type { BoardCandidate } from './transfer';
 
 export interface PackedColumn {
 	spec: ColumnSpec;
@@ -65,8 +66,16 @@ export type WorkerResponse =
 	| { type: 'ready'; dataset: PackedDataset; derived: DerivedData; kept: KeptOutcome | null }
 	| { type: 'restored'; ids: string[]; skipped: string[] }
 	| { type: 'backup'; chunks: Uint8Array[]; name: string }
-	/** What the account now holds, and what would not go or come. */
-	| { type: 'transferred'; ids: string[]; failed: Array<{ id: string; reason: string }> }
+	/**
+	 * What the account now holds, what would not go or come, and any place on
+	 * a public board the upload turned out to be worth.
+	 */
+	| {
+			type: 'transferred';
+			ids: string[];
+			failed: Array<{ id: string; reason: string }>;
+			candidates?: BoardCandidate[];
+	  }
 	| { type: 'error'; message: string; hint?: string };
 
 export type ParsePhase =
