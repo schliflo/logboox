@@ -62,6 +62,13 @@
 	 */
 	function extras(boardId: string, detail: Record<string, number | boolean | null>): string {
 		const parts: string[] = [];
+		// A month says how it was made up, which a single trip has no need to.
+		if (typeof detail.trips === 'number') {
+			parts.push(`${num(detail.trips, 0)} ${detail.trips === 1 ? 'trip' : 'trips'}`);
+		}
+		if (typeof detail.longestKm === 'number' && detail.longestKm > 0) {
+			parts.push(`longest ${num(detail.longestKm, 0)} km`);
+		}
 		if (boardId !== 'longest-drive' && typeof detail.distanceKm === 'number') {
 			parts.push(`${num(detail.distanceKm, 0)} km`);
 		}

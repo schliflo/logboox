@@ -14,14 +14,25 @@ import {
 	formatValue,
 	meetsFloor,
 	scoreOf,
+	totalFor,
 	valueFor,
-	type Board
+	type ItemBoard,
+	type MonthBoard
 } from './boards';
 import { sessionSummary, tripSummary } from './testing';
 
-function board(id: string): Board {
+/** A board scored on one trip or session, which is all but one of them. */
+function board(id: string): ItemBoard {
 	const found = boardById(id);
 	if (!found) throw new Error(`no board ${id}`);
+	if (found.scope !== 'item') throw new Error(`${id} is scored over a month`);
+	return found;
+}
+
+function monthBoard(id: string): MonthBoard {
+	const found = boardById(id);
+	if (!found) throw new Error(`no board ${id}`);
+	if (found.scope !== 'month') throw new Error(`${id} is scored on one trip`);
 	return found;
 }
 
@@ -250,8 +261,11 @@ describe('what a board tells the public', () => {
 		// an odometer reading and an exact timestamp are not — between them they
 		// name a car and put it somewhere.
 		for (const b of BOARDS) {
-			const item = b.kind === 'trip' ? tripSummary() : sessionSummary();
-			for (const key of Object.keys(b.detail(item))) {
+			const detail =
+				b.scope === 'month'
+					? b.detail([tripSummary(), tripSummary()])
+					: b.detail(b.kind === 'trip' ? tripSummary() : sessionSummary());
+			for (const key of Object.keys(detail)) {
 				expect(key).not.toMatch(/vin|odo|user|email|startTime|endTime/i);
 			}
 		}

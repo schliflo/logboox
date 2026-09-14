@@ -101,6 +101,25 @@ export function locksAt(month: string): number {
 	return nextMonth + GRACE_DAYS * 86400;
 }
 
+/**
+ * A range of instants certain to contain the month, in every zone.
+ *
+ * Widened by a day at each end, because a month's boundary moves by up to
+ * fourteen hours between zones and a query bounded by UTC would drop the first
+ * evening in Auckland or the last in Honolulu. Whoever asks narrows the result
+ * with `monthOf` in the driver's own zone; this is only here to keep a query
+ * from reading every trip an account has ever recorded.
+ */
+export function monthWindow(month: string): { from: number; to: number } {
+	const value = parts(month);
+	if (!value) return { from: 0, to: 0 };
+	const day = 86400;
+	return {
+		from: Date.UTC(value.year, value.month - 1, 1) / 1000 - day,
+		to: Date.UTC(value.year, value.month, 1) / 1000 + day
+	};
+}
+
 /** Whether a month still accepts claims. A month yet to happen counts as open. */
 export function isMonthOpen(month: string, now: number): boolean {
 	const at = locksAt(month);

@@ -71,6 +71,33 @@ function longDrive(startTime: number, km: number) {
 	});
 }
 
+/**
+ * Trips as an upload leaves them, which is where the month boards read from.
+ *
+ * The real path writes these in `beginExport`; a month total has to come off
+ * the table rather than off the upload in hand, so a test of one has to put
+ * them there.
+ */
+async function store(trips: ReturnType<typeof tripSummary>[], exportId = 'e1') {
+	for (const trip of trips) {
+		await run(
+			db,
+			`INSERT INTO trips (user_id, vin, start_time, end_time, export_id, odo_start, odo_end, distance_km, summary_json)
+			 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+			 ON CONFLICT (user_id, vin, start_time) DO UPDATE SET distance_km = excluded.distance_km`,
+			userId,
+			'L1NTEST00000000001',
+			trip.startTime,
+			trip.endTime,
+			exportId,
+			trip.odoStart,
+			trip.odoEnd,
+			trip.distanceKm,
+			JSON.stringify(trip)
+		);
+	}
+}
+
 /** The offer standing on one particular board. */
 async function pendingOn(id: string, board: string, now = SOON) {
 	const found = (await listPending(db, id, now)).filter((c) => c.board === board);
@@ -261,6 +288,134 @@ describe('spotting a place', () => {
 			SOON
 		);
 		expect(found.filter((c) => c.board === 'longest-drive')).toEqual([]);
+	});
+});
+
+describe('a month on the board', () => {
+	/** A day's driving: several trips rather than one long one. */
+	function day(offset: number, km: number) {
+		return longDrive(SEPTEMBER + offset * 86400, km);
+	}
+
+	it('adds up every kilometre of the month, not just the best trip', async () => {
+		const trips = [day(0, 210), day(1, 180), day(2, 240)];
+		await store(trips);
+
+		const found = await detectCandidates(db, userId, summary({ trips }), ZONE, SOON);
+		const month = found.filter((c) => c.board === 'monthly-distance');
+
+		expect(month).toHaveLength(1);
+		expect(month[0].value).toBe(630);
+		expect(month[0].month).toBe('2026-09');
+		expect(month[0].detail.trips).toBe(3);
+	});
+
+	it('adds up a month that arrived in two separate exports', async () => {
+		// The point of reading the table rather than the upload: XPeng hands out
+		// a file at a time, and a month does not respect their boundaries.
+		const first = [day(0, 300)];
+		const second = [day(10, 400)];
+		await store(first, 'e1');
+		await store(second, 'e2');
+
+		const found = await detectCandidates(db, userId, summary({ trips: second }), ZONE, SOON);
+		expect(found.find((c) => c.board === 'monthly-distance')?.value).toBe(700);
+	});
+
+	it('counts a re-uploaded month once', async () => {
+		const trips = [day(0, 300), day(1, 400)];
+		await store(trips, 'e1');
+		await store(trips, 'e2');
+
+		const found = await detectCandidates(db, userId, summary({ trips }), ZONE, SOON);
+		expect(found.find((c) => c.board === 'monthly-distance')?.value).toBe(700);
+	});
+
+	it('leaves a quiet month off', async () => {
+		const trips = [day(0, 120), day(1, 140)];
+		await store(trips);
+
+		const found = await detectCandidates(db, userId, summary({ trips }), ZONE, SOON);
+		expect(found.find((c) => c.board === 'monthly-distance')).toBeUndefined();
+	});
+
+	it('settles which month a late-night drive belongs to in the driver’s zone', async () => {
+		// 23:30 on the last day of September in Berlin is already October in UTC.
+		const lastNight = Math.floor(Date.UTC(2026, 8, 30, 21, 30) / 1000);
+		const trips = [longDrive(lastNight, 600)];
+		await store(trips);
+
+		const found = await detectCandidates(db, userId, summary({ trips }), ZONE, SOON);
+		const month = found.find((c) => c.board === 'monthly-distance');
+		expect(month?.month).toBe('2026-09');
+		expect(month?.value).toBe(600);
+	});
+
+	it('counts a month the car mostly slept through', async () => {
+		// Distance is the odometer at each end, so a trip too sparsely sampled
+		// to be ranked for efficiency still says truthfully how far it went.
+		const trips = [
+			tripSummary({ ...day(0, 300), coverage: 0.2 }),
+			tripSummary({ ...day(1, 400), coverage: 0.1 })
+		];
+		await store(trips);
+
+		const found = await detectCandidates(db, userId, summary({ trips }), ZONE, SOON);
+		expect(found.find((c) => c.board === 'monthly-distance')?.value).toBe(700);
+		// …and is still not ranked on anything computed per kilometre.
+		expect(found.find((c) => c.board === 'efficient-drive')).toBeUndefined();
+	});
+
+	it('ignores an odometer that jumped', async () => {
+		const trips = [day(0, 600), tripSummary({ ...day(1, 9000), endTime: SEPTEMBER + 86400 + 600 })];
+		await store(trips);
+
+		const found = await detectCandidates(db, userId, summary({ trips }), ZONE, SOON);
+		expect(found.find((c) => c.board === 'monthly-distance')?.value).toBe(600);
+	});
+
+	it('says nothing about a month that has closed', async () => {
+		const trips = [day(0, 900)];
+		await store(trips);
+
+		const afterLock = locksAt('2026-09') + 60;
+		const found = await detectCandidates(db, userId, summary({ trips }), ZONE, afterLock);
+		expect(found.find((c) => c.board === 'monthly-distance')).toBeUndefined();
+	});
+
+	it('can be claimed, and appears with the rest', async () => {
+		const named = await account('driver@example.com', 'nordlicht');
+		const trips = [day(0, 400), day(1, 500)];
+		for (const trip of trips) {
+			await run(
+				db,
+				`INSERT INTO trips (user_id, vin, start_time, end_time, export_id, odo_start, odo_end, distance_km, summary_json)
+				 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+				named,
+				'L1NTEST00000000002',
+				trip.startTime,
+				trip.endTime,
+				'e1',
+				trip.odoStart,
+				trip.odoEnd,
+				trip.distanceKm,
+				JSON.stringify(trip)
+			);
+		}
+
+		const found = await detectCandidates(
+			db,
+			named,
+			{ ...summary({ trips }), vehicle: { ...summary().vehicle, vin: 'L1NTEST00000000002' } },
+			ZONE,
+			SOON
+		);
+		const candidate = found.find((c) => c.board === 'monthly-distance')!;
+		await claim(db, named, candidate.id, null, SOON);
+
+		const listings = await monthBoards(db, '2026-09');
+		const board = listings.find((listing) => listing.board === 'monthly-distance');
+		expect(board?.entries[0]).toMatchObject({ username: 'nordlicht', value: 900, rank: 1 });
 	});
 });
 

@@ -110,18 +110,22 @@ export interface BoardNudgeFacts {
  * be, and the message exists only because the person was not looking at the
  * app when it happened. So it leads with the fact and offers a door, rather
  * than asking anyone to come back and engage with anything.
+ *
+ * Worded around the board rather than around a trip, because not every board is
+ * won by one: a month's mileage is a place too, and "one of your trips" would
+ * be describing something the reader never did.
  */
 export function boardNudgeMail(to: string, facts: BoardNudgeFacts): Message {
 	const first = facts.places[0];
 	const several = facts.places.length > 1;
 
 	const subject = several
-		? `${facts.places.length} of your trips would make a LogbooX board`
-		: `Your ${first.board.toLowerCase()} would be #${first.rank} this month`;
+		? `${facts.places.length} places are waiting for you on the LogbooX boards`
+		: `You would be #${first.rank} for ${first.board.toLowerCase()} — ${first.month}`;
 
 	const opening = several
 		? `${facts.places.length} things in your account would stand on a board this month. Nothing has been published — they are waiting for you to say whether you want them there.`
-		: `Your ${first.board.toLowerCase()} of ${first.reading} would be #${first.rank} on the ${first.month} board. Nothing has been published — it is waiting for you to say whether you want it there.`;
+		: `${first.reading} would be #${first.rank} for ${first.board.toLowerCase()} on the ${first.month} board. Nothing has been published — it is waiting for you to say whether you want it there.`;
 
 	const list = facts.places
 		.map((place) => `  #${place.rank}  ${place.board} — ${place.reading} (${place.month})`)

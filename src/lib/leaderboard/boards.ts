@@ -30,7 +30,8 @@ export type BoardId =
 	| 'efficient-drive'
 	| 'best-regen'
 	| 'hardest-launch'
-	| 'most-grip';
+	| 'most-grip'
+	| 'monthly-distance';
 
 /** How many places a board shows, and how far down still counts as ranking. */
 export const TOP_N = 25;
@@ -51,9 +52,8 @@ export interface BoardEntryDetail {
 	[key: string]: number | boolean | null;
 }
 
-export interface Board {
+interface BoardBase {
 	id: BoardId;
-	kind: BoardKind;
 	/** What the board is called, in the app's own voice. */
 	label: string;
 	/** One line under the heading, saying what is being measured. */
@@ -64,11 +64,41 @@ export interface Board {
 	lowerIsBetter: boolean;
 	/** The worst value still worth listing. */
 	floor: number;
+}
+
+/** A board won by one trip or one charging session. Most of them. */
+export interface ItemBoard extends BoardBase {
+	scope: 'item';
+	kind: BoardKind;
 	/** The number, or null when this item cannot stand on this board at all. */
 	value(item: TripSummary | SessionSummary): number | null;
 	/** The numbers printed beside the value. Never anything identifying. */
 	detail(item: TripSummary | SessionSummary): BoardEntryDetail;
 }
+
+/** The least a month has to say for itself to be ranked on a month board. */
+export interface MonthTrip {
+	startTime: number;
+	endTime: number;
+	distanceKm: number | null;
+}
+
+/**
+ * A board won by a whole month rather than by one moment in it.
+ *
+ * The month is assembled from every trip the account holds, not from whichever
+ * upload happened to arrive last: an export can cover half a month, and half a
+ * month is not what this board is asking about.
+ */
+export interface MonthBoard extends BoardBase {
+	scope: 'month';
+	kind: 'trip';
+	/** The figure for a month's trips, or null when there is not enough of it. */
+	total(trips: MonthTrip[]): number | null;
+	detail(trips: MonthTrip[]): BoardEntryDetail;
+}
+
+export type Board = ItemBoard | MonthBoard;
 
 function number(value: unknown): value is number {
 	return typeof value === 'number' && Number.isFinite(value);
@@ -89,15 +119,26 @@ function covered(item: TripSummary | SessionSummary): boolean {
 	return number(item.coverage) && item.coverage >= MIN_COVERAGE;
 }
 
-/** A trip long enough, complete enough, and not moving impossibly fast. */
-function drivable(trip: TripSummary, minKm: number): boolean {
-	if (!covered(trip)) return false;
+/**
+ * A trip whose distance is believable, whatever the sampling was like.
+ *
+ * Distance is the odometer at one end subtracted from the odometer at the
+ * other, so unlike everything else here it survives the car sleeping through
+ * the middle — which is why coverage is not part of this check and is asked for
+ * separately by the boards that compute something per kilometre.
+ */
+function measured(trip: MonthTrip, minKm = 0): boolean {
 	if (!number(trip.distanceKm) || trip.distanceKm < minKm || trip.distanceKm > 2000) return false;
-	const hours = duration(trip) / 3600;
+	const hours = (trip.endTime - trip.startTime) / 3600;
 	if (hours <= 0) return false;
 	// A car that covered the distance faster than this did not: either the
 	// odometer jumped or the timeline has a hole the coverage check missed.
 	return trip.distanceKm / hours <= 160;
+}
+
+/** A trip long enough, complete enough, and not moving impossibly fast. */
+function drivable(trip: TripSummary, minKm: number): boolean {
+	return covered(trip) && measured(trip, minKm);
 }
 
 function gForce(value: number | null | undefined): number | null {
@@ -114,6 +155,7 @@ const tripDetail = (trip: TripSummary): BoardEntryDetail => ({
 export const BOARDS: Board[] = [
 	{
 		id: 'peak-charge',
+		scope: 'item',
 		kind: 'charging',
 		label: 'Fastest charge',
 		blurb: 'The highest power a car actually took, at the plug.',
@@ -140,6 +182,7 @@ export const BOARDS: Board[] = [
 	},
 	{
 		id: 'biggest-charge',
+		scope: 'item',
 		kind: 'charging',
 		label: 'Biggest charge',
 		blurb: 'The most energy taken in one session, however long it took.',
@@ -167,6 +210,7 @@ export const BOARDS: Board[] = [
 	},
 	{
 		id: 'longest-drive',
+		scope: 'item',
 		kind: 'trip',
 		label: 'Longest drive',
 		blurb: 'The furthest anyone went in a single trip, without stopping long enough to end it.',
@@ -186,6 +230,7 @@ export const BOARDS: Board[] = [
 	},
 	{
 		id: 'efficient-drive',
+		scope: 'item',
 		kind: 'trip',
 		label: 'Most efficient drive',
 		blurb: 'The least energy used per hundred kilometres, over a trip long enough to mean it.',
@@ -204,6 +249,7 @@ export const BOARDS: Board[] = [
 	},
 	{
 		id: 'best-regen',
+		scope: 'item',
 		kind: 'trip',
 		label: 'Best regeneration',
 		blurb: 'The largest share of energy put back into the battery on the way.',
@@ -233,6 +279,7 @@ export const BOARDS: Board[] = [
 	},
 	{
 		id: 'hardest-launch',
+		scope: 'item',
 		kind: 'trip',
 		label: 'Hardest launch',
 		blurb: 'The strongest pull away from a standstill, measured by the car itself.',
@@ -248,6 +295,7 @@ export const BOARDS: Board[] = [
 	},
 	{
 		id: 'most-grip',
+		scope: 'item',
 		kind: 'trip',
 		label: 'Most grip used',
 		blurb: 'The hardest cornering of the trip, sideways force through the tyres.',
@@ -260,6 +308,31 @@ export const BOARDS: Board[] = [
 			return covered(trip) ? gForce(trip.peakLateral) : null;
 		},
 		detail: tripDetail
+	},
+	{
+		id: 'monthly-distance',
+		scope: 'month',
+		kind: 'trip',
+		label: 'Furthest in a month',
+		blurb: 'Every kilometre driven in the month, added up.',
+		unit: 'km',
+		digits: 0,
+		lowerIsBetter: false,
+		// A month worth mentioning. Below this it is a board of everybody who
+		// owns a car rather than of anybody who drove one.
+		floor: 500,
+		total: (trips) => {
+			const driven = trips.filter((trip) => measured(trip));
+			if (driven.length === 0) return null;
+			return driven.reduce((sum, trip) => sum + (trip.distanceKm ?? 0), 0);
+		},
+		detail: (trips) => {
+			const driven = trips.filter((trip) => measured(trip));
+			return {
+				trips: driven.length,
+				longestKm: driven.reduce((most, trip) => Math.max(most, trip.distanceKm ?? 0), 0)
+			};
+		}
 	}
 ];
 
@@ -287,8 +360,15 @@ export function meetsFloor(board: Board, value: number): boolean {
 }
 
 /** The item's value for this board, or null when it cannot stand on it. */
-export function valueFor(board: Board, item: TripSummary | SessionSummary): number | null {
+export function valueFor(board: ItemBoard, item: TripSummary | SessionSummary): number | null {
 	const value = board.value(item);
+	if (value === null || !Number.isFinite(value)) return null;
+	return meetsFloor(board, value) ? value : null;
+}
+
+/** A month's value for a month board, or null when the month falls short. */
+export function totalFor(board: MonthBoard, trips: MonthTrip[]): number | null {
+	const value = board.total(trips);
 	if (value === null || !Number.isFinite(value)) return null;
 	return meetsFloor(board, value) ? value : null;
 }

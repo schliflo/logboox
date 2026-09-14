@@ -11,6 +11,7 @@
 import { browser } from '$app/environment';
 import { ApiError, api } from '../api/client';
 import { ACCOUNTS_ENABLED } from '../features';
+import { boardById } from '../leaderboard/boards';
 
 export interface AccountUser {
 	email: string;
@@ -155,20 +156,34 @@ class AccountStore {
 		}
 	}
 
-	/** A place is waiting on an answer for this exact trip or session. */
+	/**
+	 * A place is waiting on an answer for this exact trip or session.
+	 *
+	 * Month boards are left out on purpose. A month's total is filed under the
+	 * first trip in it, which makes that trip no more the reason for the place
+	 * than any of the others — offering it there would be telling somebody their
+	 * drive to the shops on the 2nd had won something. Those offers are made on
+	 * the account page, where the month is the subject.
+	 */
 	candidateFor(vin: string, startTime: number): BoardCandidate | null {
 		return (
 			this.leaderboard.pending.find(
-				(candidate) => candidate.vin === vin && candidate.startTime === startTime
+				(candidate) =>
+					candidate.vin === vin &&
+					candidate.startTime === startTime &&
+					boardById(candidate.board)?.scope !== 'month'
 			) ?? null
 		);
 	}
 
-	/** A place already taken for this exact trip or session. */
+	/** A place already taken for this exact trip or session. See above. */
 	entryFor(vin: string, startTime: number): BoardEntry | null {
 		return (
 			this.leaderboard.entries.find(
-				(entry) => entry.vin === vin && entry.startTime === startTime
+				(entry) =>
+					entry.vin === vin &&
+					entry.startTime === startTime &&
+					boardById(entry.board)?.scope !== 'month'
 			) ?? null
 		);
 	}

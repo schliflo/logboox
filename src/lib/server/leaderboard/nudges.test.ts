@@ -147,7 +147,10 @@ describe('telling someone what is waiting', () => {
 
 		expect(report.sent).toBe(1);
 		expect(mailer.sent).toHaveLength(1);
-		expect(mailer.sent[0].subject).toContain('3 of your trips');
+		// Named by the count of places rather than of trips: a month's mileage is
+		// a place too, and it is not a trip.
+		expect(mailer.sent[0].subject).toContain('3 places');
+		expect(mailer.sent[0].subject).not.toMatch(/trip/i);
 	});
 
 	it('keeps a week between messages, however much turns up', async () => {

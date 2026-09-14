@@ -9,7 +9,7 @@
  *
  * Everything is ranked on `score` rather than `value`, which is the value
  * turned so that larger always wins. One index and one comparison then serve
- * seven boards, including the one where using less is better.
+ * every board, including the one where using less is better.
  */
 
 import type { ExportSummary, SessionSummary, TripSummary } from '$lib/data/analytics/summary';
@@ -18,13 +18,15 @@ import {
 	TOP_N,
 	boardById,
 	scoreOf,
+	totalFor,
 	valueFor,
 	type Board,
 	type BoardEntryDetail,
 	type BoardId,
-	type BoardKind
+	type BoardKind,
+	type MonthTrip
 } from '$lib/leaderboard/boards';
-import { isMonthOpen, locksAt, monthOf, monthKey } from '$lib/leaderboard/periods';
+import { isMonthOpen, locksAt, monthOf, monthKey, monthWindow } from '$lib/leaderboard/periods';
 import { all, now as currentTime, one, rowId, run, type Db, type Statement } from '../db';
 
 export interface CandidateRow {
@@ -134,18 +136,101 @@ function toCandidate(row: CandidateRow): Candidate {
 	};
 }
 
-/** The best item this export offers each board, per month it is still open for. */
-function bestPerBoard(
+interface Found {
+	board: Board;
+	month: string;
+	/** The instant the row is filed under; for a month, its earliest trip. */
+	startTime: number;
+	value: number;
+	detail: BoardEntryDetail;
+}
+
+/** The months this export touches that are still taking claims. */
+function openMonths(summary: ExportSummary, timeZone: string, now: number): Set<string> {
+	const months = new Set<string>();
+	for (const trip of summary.trips) {
+		const month = monthOf(trip.startTime, timeZone);
+		if (isMonthOpen(month, now)) months.add(month);
+	}
+	return months;
+}
+
+/**
+ * What a month board makes of each month this upload touched.
+ *
+ * Read back out of the `trips` table rather than off the upload, because an
+ * export can cover half a month and half a month is not what the board is
+ * asking about. The table is keyed on the trip's start, so a month spread over
+ * several exports adds up once and a re-upload of the same weeks does not
+ * double it.
+ */
+async function monthTotals(
+	db: Db,
+	userId: string,
+	vin: string,
+	board: Board & { scope: 'month' },
 	summary: ExportSummary,
 	timeZone: string,
 	now: number
-): Array<{ board: Board; month: string; item: TripSummary | SessionSummary; value: number }> {
-	const best = new Map<
-		string,
-		{ board: Board; month: string; item: TripSummary | SessionSummary; value: number }
-	>();
+): Promise<Found[]> {
+	const found: Found[] = [];
+
+	for (const month of openMonths(summary, timeZone, now)) {
+		const window = monthWindow(month);
+		const rows = await all<{ start_time: number; end_time: number; distance_km: number | null }>(
+			db,
+			`SELECT start_time, end_time, distance_km FROM trips
+			 WHERE user_id = ? AND vin = ? AND start_time >= ? AND start_time < ?`,
+			userId,
+			vin,
+			window.from,
+			window.to
+		);
+
+		// The window is widened to cover every zone, so the month itself is
+		// settled here, in the driver's own.
+		const trips: MonthTrip[] = rows
+			.filter((row) => monthOf(row.start_time, timeZone) === month)
+			.map((row) => ({
+				startTime: row.start_time,
+				endTime: row.end_time,
+				distanceKm: row.distance_km
+			}));
+
+		const value = totalFor(board, trips);
+		if (value === null || trips.length === 0) continue;
+
+		found.push({
+			board,
+			month,
+			startTime: Math.min(...trips.map((trip) => trip.startTime)),
+			value,
+			detail: board.detail(trips)
+		});
+	}
+
+	return found;
+}
+
+/** The best this export offers each board, per month it is still open for. */
+async function bestPerBoard(
+	db: Db,
+	userId: string,
+	summary: ExportSummary,
+	timeZone: string,
+	now: number
+): Promise<Found[]> {
+	const best = new Map<string, Found>();
+	const monthly: Found[] = [];
 
 	for (const board of BOARDS) {
+		if (board.scope === 'month') {
+			monthly.push(
+				...(await monthTotals(db, userId, summary.vehicle.vin, board, summary, timeZone, now))
+			);
+			continue;
+		}
+
 		const items: Array<TripSummary | SessionSummary> =
 			board.kind === 'trip' ? summary.trips : summary.charging;
 
@@ -159,12 +244,18 @@ function bestPerBoard(
 			const key = `${board.id}|${month}`;
 			const found = best.get(key);
 			if (!found || scoreOf(board, value) > scoreOf(board, found.value)) {
-				best.set(key, { board, month, item, value });
+				best.set(key, {
+					board,
+					month,
+					startTime: item.startTime,
+					value,
+					detail: board.detail(item)
+				});
 			}
 		}
 	}
 
-	return [...best.values()];
+	return [...best.values(), ...monthly];
 }
 
 /**
@@ -185,8 +276,8 @@ export async function detectCandidates(
 	const vmodel = summary.vehicle.vmodel;
 	const wanted: Array<{ row: CandidateRow; statement: Statement }> = [];
 
-	for (const found of bestPerBoard(summary, timeZone, now)) {
-		const { board, month, item, value } = found;
+	for (const found of await bestPerBoard(db, userId, summary, timeZone, now)) {
+		const { board, month, value } = found;
 		const score = scoreOf(board, value);
 
 		// Nothing to say when they already hold this place with something better.
@@ -220,10 +311,10 @@ export async function detectCandidates(
 			locks_at: locksAt(month),
 			kind: board.kind,
 			vin,
-			start_time: item.startTime,
+			start_time: found.startTime,
 			value,
 			score,
-			detail_json: JSON.stringify(board.detail(item)),
+			detail_json: JSON.stringify(found.detail),
 			vmodel,
 			rank_at_detection: rank,
 			created_at: now,
