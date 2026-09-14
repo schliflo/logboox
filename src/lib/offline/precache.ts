@@ -12,15 +12,22 @@ const CRAWLER_ONLY = /\/(og\.png|robots\.txt|sitemap\.xml)$/;
 /**
  * Files fetched the first time somebody wants them, and not before.
  *
- * The PDF writer and the typeface it embeds come to a few hundred kilobytes
- * spent on a format most people never pick, so they stay out of the store every
- * visitor fills on arrival. The worker caches them like anything else once they
- * have been used; before that, a PDF export with no connection fails with a
- * message instead of a broken download. Everything else — the CSV and the
- * spreadsheet, which are written by code the app already carries — still works
- * offline.
+ * The typefaces the PDF export embeds are ninety kilobytes serving a format
+ * most people never pick, and no part of the app itself uses them — the pages
+ * are set in the variable woff2 beside them. So they stay out of the store
+ * every visitor fills on arrival. The worker caches them like anything else
+ * once they have been used; before that, a PDF export with no connection fails
+ * with a message rather than a broken download. The CSV and the spreadsheet are
+ * written by code the app already carries and still work offline.
+ *
+ * The PDF writer's own chunk is not listed here, because it cannot be named:
+ * SvelteKit names every chunk by hash alone, deliberately, so that a filename
+ * cannot say which pages a site has. There is no string to match on, and
+ * overriding the naming to create one turned out to cost more than the chunk
+ * does — it defeats the splitting that keeps the chunk small in the first
+ * place.
  */
-const ON_DEMAND = /\/(Inter-[\w.-]+\.ttf|[\w-]*pdf[\w.-]*\.js)$/i;
+const ON_DEMAND = /\/Inter-[\w.-]+\.ttf$/i;
 
 /**
  * Paths that must always reach the server.

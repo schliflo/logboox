@@ -28,10 +28,9 @@ describe('precacheList', () => {
 		expect(list).toEqual(['/icon-192.png', '/']);
 	});
 
-	it('leaves out the PDF writer and its font, which are fetched when first used', () => {
+	it('leaves out the typeface the PDF embeds, which is fetched when first used', () => {
 		const list = precacheList(
 			[
-				'/_app/immutable/chunks/export-pdf.abc.js',
 				'/_app/immutable/assets/Inter-Regular.def.ttf',
 				'/_app/immutable/assets/Inter-SemiBold.ghi.ttf',
 				'/_app/immutable/chunks/index.jkl.js'
@@ -42,9 +41,11 @@ describe('precacheList', () => {
 		expect(list).toEqual(['/_app/immutable/chunks/index.jkl.js', '/']);
 	});
 
-	it('keeps a chunk whose name merely contains the letters of a format', () => {
-		const list = precacheList(['/_app/immutable/chunks/upload.abc.js'], [], []);
-		expect(list).toEqual(['/_app/immutable/chunks/upload.abc.js']);
+	it('keeps the variable font the app itself is set in', () => {
+		// Only the static subsets the PDF writer embeds are deferred; the woff2
+		// every page needs must be there before the connection goes.
+		const list = precacheList(['/_app/immutable/assets/inter-latin-wght-normal.abc.woff2'], [], []);
+		expect(list).toEqual(['/_app/immutable/assets/inter-latin-wght-normal.abc.woff2']);
 	});
 
 	it('lists a path once even when several sources name it', () => {

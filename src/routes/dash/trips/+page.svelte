@@ -13,13 +13,12 @@
 	import { data } from '$lib/state/dataset.svelte';
 	import { logbook } from '$lib/state/logbook.svelte';
 	import { settings } from '$lib/state/settings.svelte';
-	import { logbookCsv, logbookFileName } from '$lib/logbook/csv';
-	import { downloadBlob } from '$lib/utils/download';
-	import { dateTime, duration, num, percent, fullDateTime } from '$lib/utils/format';
+	import ExportMenu from '$lib/components/app/ExportMenu.svelte';
+	import { logbookDocument } from '$lib/logbook/document';
+	import { dateTime, duration, maskVin, num, percent, fullDateTime } from '$lib/utils/format';
 	import ArrowLeftIcon from '@lucide/svelte/icons/arrow-left';
 	import ArrowUpDownIcon from '@lucide/svelte/icons/arrow-up-down';
 	import ArrowRightIcon from '@lucide/svelte/icons/arrow-right';
-	import DownloadIcon from '@lucide/svelte/icons/download';
 	import MessageIcon from '@lucide/svelte/icons/message-square-text';
 
 	const stats = $derived(data.derived!);
@@ -59,16 +58,18 @@
 		return [note?.origin || '?', note?.destination || '?'].join(' → ');
 	}
 
-	function downloadLogbook() {
-		const rows = [...stats.trips]
-			.sort((a, b) => a.startTime - b.startTime)
-			.map((row) => ({ trip: row, note: notes.get(row.startTime) }));
-		const csv = logbookCsv(rows, settings.timeZone);
-		downloadBlob(
-			logbookFileName(stats.startTime, stats.endTime, settings.timeZone),
-			new Blob([csv], { type: 'text/csv;charset=utf-8' })
-		);
-	}
+	const vehicle = $derived(
+		[
+			data.dataset?.vmodel,
+			settings.revealVin ? data.dataset?.vin : maskVin(data.dataset?.vin ?? '')
+		]
+			.filter(Boolean)
+			.join(' · ')
+	);
+
+	const book = $derived(
+		logbookDocument(stats.trips, notes, settings.timeZone, vehicle, settings.pricePerKwh)
+	);
 
 	const sorted = $derived.by(() => {
 		const list = onlyUnlabelled
@@ -304,10 +305,19 @@
 								{unlabelled} unlabelled
 							</Button>
 						{/if}
-						<Button variant="ghost" size="sm" onclick={downloadLogbook}>
-							<DownloadIcon class="size-4" />
-							Download logbook
-						</Button>
+						<ExportMenu
+							kind="fahrtenbuch"
+							variant="ghost"
+							title={book.title}
+							subtitle={book.subtitle}
+							columns={book.columns}
+							rows={book.rows}
+							totals={book.totals}
+							notes={book.notes}
+							timeZone={settings.timeZone}
+							from={book.from}
+							to={book.to}
+						/>
 					</div>
 				</div>
 			</Card.Header>

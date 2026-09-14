@@ -10,9 +10,19 @@
 	import ShareButton from '$lib/components/app/ShareButton.svelte';
 	import BoardBanner from '$lib/components/app/BoardBanner.svelte';
 	import Histogram from '$lib/components/charts/Histogram.svelte';
+	import ExportMenu from '$lib/components/app/ExportMenu.svelte';
 	import { data } from '$lib/state/dataset.svelte';
 	import { settings } from '$lib/state/settings.svelte';
-	import { dateTime, duration, num, fullDateTime, hourLabel } from '$lib/utils/format';
+	import { CHARGING_COLUMNS } from '$lib/export/columns';
+	import {
+		dateTime,
+		duration,
+		maskVin,
+		measure,
+		num,
+		fullDateTime,
+		hourLabel
+	} from '$lib/utils/format';
 	import { localHour } from '$lib/data/analytics/charging';
 	import ArrowLeftIcon from '@lucide/svelte/icons/arrow-left';
 
@@ -28,6 +38,37 @@
 			? charging.sessions[index]
 			: null;
 	});
+
+	/**
+	 * Every session, oldest first, with the price the cost estimate uses.
+	 *
+	 * The whole list rather than the page on screen: somebody downloading this
+	 * is reconciling it against invoices, and half of it is no use for that.
+	 */
+	const exportRows = $derived(
+		[...charging.sessions]
+			.sort((a, b) => a.startTime - b.startTime)
+			.map((session) => ({ session, pricePerKwh: settings.pricePerKwh }))
+	);
+
+	const exportVehicle = $derived(
+		[dataset.vmodel, settings.revealVin ? dataset.vin : maskVin(dataset.vin)]
+			.filter(Boolean)
+			.join(' · ')
+	);
+
+	const exportTotals = $derived([
+		{ label: 'Sessions', value: `${num(charging.sessions.length)}` },
+		{ label: 'Energy delivered', value: measure(charging.totalKwh, 'kWh', 1) },
+		...(settings.pricePerKwh > 0
+			? [
+					{
+						label: 'Estimated cost',
+						value: `${num(charging.totalKwh * settings.pricePerKwh, 2)} at ${num(settings.pricePerKwh, 2)} per kWh`
+					}
+				]
+			: [])
+	]);
 
 	/** When sessions start, in the viewer's own hours. */
 	const startHours = $derived.by(() => {
@@ -210,10 +251,26 @@
 
 		<Card.Root>
 			<Card.Header>
-				<Card.Title>Every session</Card.Title>
-				<Card.Description>
-					Found from the charging-power signal, joined across the naps the car takes mid-charge.
-				</Card.Description>
+				<div class="flex flex-wrap items-start justify-between gap-3">
+					<div>
+						<Card.Title>Every session</Card.Title>
+						<Card.Description>
+							Found from the charging-power signal, joined across the naps the car takes mid-charge.
+						</Card.Description>
+					</div>
+					<ExportMenu
+						kind="charging"
+						variant="ghost"
+						title="Charging sessions"
+						subtitle={exportVehicle}
+						columns={CHARGING_COLUMNS}
+						rows={exportRows}
+						totals={exportTotals}
+						timeZone={settings.timeZone}
+						from={exportRows[0]?.session.startTime ?? 0}
+						to={exportRows[exportRows.length - 1]?.session.endTime ?? 0}
+					/>
+				</div>
 			</Card.Header>
 			<Card.Content>
 				<div class="overflow-x-auto">

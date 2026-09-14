@@ -21,9 +21,11 @@
 	import { data } from '$lib/state/dataset.svelte';
 	import { logbook } from '$lib/state/logbook.svelte';
 	import { settings } from '$lib/state/settings.svelte';
+	import ExportMenu from '$lib/components/app/ExportMenu.svelte';
 	import { analyseLogbook } from '$lib/logbook/analytics';
+	import { logbookDocument } from '$lib/logbook/document';
 	import { PURPOSES, type Purpose } from '$lib/logbook/types';
-	import { dateOnly, duration, num, percent } from '$lib/utils/format';
+	import { dateOnly, duration, maskVin, num, percent } from '$lib/utils/format';
 	import BookIcon from '@lucide/svelte/icons/book-marked';
 	import ArrowRightIcon from '@lucide/svelte/icons/arrow-right';
 
@@ -32,6 +34,20 @@
 
 	const analysis = $derived(
 		analyseLogbook(stats.trips, notes, settings.timeZone, settings.pricePerKwh)
+	);
+
+	// The same book the trips page offers, assembled once so the two agree.
+	const vehicle = $derived(
+		[
+			data.dataset?.vmodel,
+			settings.revealVin ? data.dataset?.vin : maskVin(data.dataset?.vin ?? '')
+		]
+			.filter(Boolean)
+			.join(' · ')
+	);
+
+	const book = $derived(
+		logbookDocument(stats.trips, notes, settings.timeZone, vehicle, settings.pricePerKwh)
 	);
 
 	let openRoute = $state<string | null>(null);
@@ -90,6 +106,28 @@
 	</div>
 {:else}
 	<div class="mx-auto max-w-6xl space-y-6">
+		<div class="flex flex-wrap items-center justify-between gap-3">
+			<div>
+				<h1 class="text-xl font-semibold tracking-tight">Fahrtenbuch</h1>
+				<p class="text-sm text-muted-foreground">
+					{num(analysis.coverage.labelled)} of {num(analysis.coverage.trips)} trips written down, over
+					{num(analysis.coverage.km, 0)} km.
+				</p>
+			</div>
+			<ExportMenu
+				kind="fahrtenbuch"
+				title={book.title}
+				subtitle={book.subtitle}
+				columns={book.columns}
+				rows={book.rows}
+				totals={book.totals}
+				notes={book.notes}
+				timeZone={settings.timeZone}
+				from={book.from}
+				to={book.to}
+			/>
+		</div>
+
 		<div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
 			<Card.Root>
 				<Card.Content>
