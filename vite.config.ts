@@ -3,10 +3,13 @@ import tailwindcss from '@tailwindcss/vite';
 import adapter from '@sveltejs/adapter-cloudflare';
 import { sveltekit } from '@sveltejs/kit/vite';
 import { wasmModules } from './tooling/wasm-modules.ts';
+import { onDemand } from './tooling/on-demand.ts';
 
 export default defineConfig({
 	plugins: [
 		wasmModules(),
+		// The PDF writer and the typeface it embeds, left for whoever asks for one.
+		onDemand({ entry: 'src/lib/export/pdf.ts' }),
 		tailwindcss(),
 		sveltekit({
 			compilerOptions: {
@@ -43,7 +46,9 @@ export default defineConfig({
 				test: {
 					name: 'server',
 					environment: 'node',
-					include: ['src/**/*.{test,spec}.{js,ts}'],
+					// `tooling` too: the build plugins have logic worth testing, and it
+					// is the kind that only shows up in a deploy if it is not.
+					include: ['src/**/*.{test,spec}.{js,ts}', 'tooling/**/*.{test,spec}.{js,ts}'],
 					exclude: ['src/**/*.svelte.{test,spec}.{js,ts}']
 				}
 			}

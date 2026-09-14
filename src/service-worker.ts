@@ -21,9 +21,11 @@
 
 import { base, build, files, prerendered, version } from '$service-worker';
 import {
+	deferrals,
 	fetchCacheMode,
 	immutablePrefix,
 	isNetworkOnly,
+	onDemandUrl,
 	optionalFiles,
 	pageKey,
 	precacheList
@@ -87,13 +89,31 @@ sw.addEventListener('fetch', (event) => {
  * Fetches every file of this build and stores it. Any failure fails the
  * install, and the browser tries again on a later visit; only a file that
  * simply does not exist is allowed to be missing.
+ *
+ * Minus whatever the build says can wait: the PDF writer is more than a
+ * megabyte serving a button most people never press, and it is fetched and kept
+ * like anything else the first time somebody presses it. `KNOWN` still counts
+ * those files as part of this build, which is what lets that happen.
  */
 async function fill() {
 	const cache = await caches.open(STORE);
+	const later = await postponed();
 	await Promise.all([
-		...PRECACHE.map((path) => store(cache, path, false)),
+		...PRECACHE.filter((path) => !later.has(path)).map((path) => store(cache, path, false)),
 		...OPTIONAL.map((path) => store(cache, path, true))
 	]);
+}
+
+/** What this build considers deferrable, or nothing at all if it cannot say. */
+async function postponed(): Promise<Set<string>> {
+	try {
+		// Unhashed, so it must not come from a cache: it names this build's files.
+		const response = await fetch(onDemandUrl(base), { cache: 'reload' });
+		if (!response.ok) return new Set();
+		return deferrals(base, await response.json());
+	} catch {
+		return new Set();
+	}
 }
 
 async function store(cache: Cache, path: string, optional: boolean) {

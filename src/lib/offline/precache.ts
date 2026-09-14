@@ -10,26 +10,6 @@
 const CRAWLER_ONLY = /\/(og\.png|robots\.txt|sitemap\.xml)$/;
 
 /**
- * Files fetched the first time somebody wants them, and not before.
- *
- * The typefaces the PDF export embeds are ninety kilobytes serving a format
- * most people never pick, and no part of the app itself uses them — the pages
- * are set in the variable woff2 beside them. So they stay out of the store
- * every visitor fills on arrival. The worker caches them like anything else
- * once they have been used; before that, a PDF export with no connection fails
- * with a message rather than a broken download. The CSV and the spreadsheet are
- * written by code the app already carries and still work offline.
- *
- * The PDF writer's own chunk is not listed here, because it cannot be named:
- * SvelteKit names every chunk by hash alone, deliberately, so that a filename
- * cannot say which pages a site has. There is no string to match on, and
- * overriding the naming to create one turned out to cost more than the chunk
- * does — it defeats the splitting that keeps the chunk small in the first
- * place.
- */
-const ON_DEMAND = /\/Inter-[\w.-]+\.ttf$/i;
-
-/**
  * Paths that must always reach the server.
  *
  * The API and the reminder trigger speak to a database, and a share page shows
@@ -50,13 +30,48 @@ export function isNetworkOnly(pathname: string, base = ''): boolean {
 /**
  * Everything worth having before the connection goes: the hashed build output,
  * the static files and the prerendered pages, minus what only search engines
- * and link previews fetch, and minus what is better fetched on demand.
+ * and link previews fetch.
+ *
+ * What can wait until somebody asks for it is a separate question, answered by
+ * `deferrals` — it depends on how the build split the code, which is not
+ * something a list of URLs can be read for.
  */
 export function precacheList(build: string[], files: string[], prerendered: string[]): string[] {
-	const wanted = [...build, ...files, ...prerendered].filter(
-		(path) => !CRAWLER_ONLY.test(path) && !ON_DEMAND.test(path)
-	);
+	const wanted = [...build, ...files, ...prerendered].filter((path) => !CRAWLER_ONLY.test(path));
 	return Array.from(new Set(wanted));
+}
+
+/**
+ * Where the build publishes the files that exist for one rarely-used feature.
+ *
+ * Written by `tooling/on-demand.ts`, which is the only thing that can know:
+ * chunk names are hashes, and which of them belong to the PDF writer is a fact
+ * about how the code was split rather than about what anything is called.
+ *
+ * Outside `_app/immutable`, so it is revalidated rather than kept for a year —
+ * it names *this* build's hashed files. It needs no rule in `_headers` for
+ * that: everything outside that folder is already served `must-revalidate`, and
+ * the worker asks for it with `cache: 'reload'` besides.
+ */
+export function onDemandUrl(base: string): string {
+	return `${base}/_app/on-demand.json`;
+}
+
+/**
+ * What to leave for later, read from that file.
+ *
+ * Anything unexpected — a missing file, a stale one, something that is not a
+ * list of strings — means an empty set, and the worker stores the lot. Getting
+ * this wrong should cost a larger first download, never a broken install, and
+ * never a file the app turns out to need offline.
+ */
+export function deferrals(base: string, published: unknown): Set<string> {
+	if (!Array.isArray(published)) return new Set();
+	return new Set(
+		published
+			.filter((path): path is string => typeof path === 'string' && path.startsWith('/'))
+			.map((path) => `${base}${path}`)
+	);
 }
 
 /**
