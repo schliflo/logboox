@@ -19,6 +19,7 @@
 	import { maskVin, dateOnly } from '$lib/utils/format';
 	import LayoutIcon from '@lucide/svelte/icons/layout-dashboard';
 	import RouteIcon from '@lucide/svelte/icons/route';
+	import BookIcon from '@lucide/svelte/icons/book-marked';
 	import ZapIcon from '@lucide/svelte/icons/zap';
 	import BatteryIcon from '@lucide/svelte/icons/battery-charging';
 	import GaugeIcon from '@lucide/svelte/icons/gauge';
@@ -32,6 +33,7 @@
 	const sections = [
 		{ href: '/dash/overview', label: 'Overview', icon: LayoutIcon },
 		{ href: '/dash/trips', label: 'Trips', icon: RouteIcon },
+		{ href: '/dash/logbook', label: 'Logbook', icon: BookIcon },
 		{ href: '/dash/charging', label: 'Charging', icon: ZapIcon },
 		{ href: '/dash/battery', label: 'Battery', icon: BatteryIcon },
 		{ href: '/dash/driving', label: 'Driving style', icon: GaugeIcon },

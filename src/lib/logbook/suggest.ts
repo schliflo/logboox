@@ -31,11 +31,12 @@ const LOOSE_DISTANCE = 0.25;
 /** Departures within this many minutes of each other count as the same habit. */
 const SAME_HOUR_MINUTES = 90;
 
-function labelled(entry: Annotation | undefined): boolean {
+export function labelled(entry: Annotation | undefined): boolean {
 	return Boolean(entry && entry.deletedAt === null && (entry.origin || entry.destination));
 }
 
-function hourOf(startTime: number, timeZone: string): number {
+/** Minutes since local midnight, which is what a habit is measured in. */
+export function hourOf(startTime: number, timeZone: string): number {
 	const parts = new Intl.DateTimeFormat('en-GB', {
 		hour: 'numeric',
 		minute: 'numeric',
@@ -47,7 +48,7 @@ function hourOf(startTime: number, timeZone: string): number {
 	return hour * 60 + minute;
 }
 
-function isWeekend(startTime: number, timeZone: string): boolean {
+export function isWeekend(startTime: number, timeZone: string): boolean {
 	const day = new Intl.DateTimeFormat('en-GB', { weekday: 'short', timeZone }).format(
 		new Date(startTime * 1000)
 	);
