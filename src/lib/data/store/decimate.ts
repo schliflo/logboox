@@ -166,14 +166,41 @@ function rawSeries(time: Uint32Array, column: Column, from: number, to: number):
 }
 
 /**
+ * The interval between neighbouring points, as it usually is.
+ *
+ * The median rather than the mean, because the whole reason to ask is that the
+ * series has outliers in it — a handful of enormous intervals where the car
+ * slept would drag an average up past the gaps it is meant to identify.
+ */
+function typicalStep(x: ArrayLike<number>): number {
+	if (x.length < 2) return 0;
+	const steps: number[] = [];
+	for (let i = 1; i < x.length; i++) steps.push(x[i] - x[i - 1]);
+	steps.sort((a, b) => a - b);
+	return steps[steps.length >> 1];
+}
+
+/**
  * Splits a series wherever the car stopped logging, by inserting a break. A
  * line drawn straight across a night of sleep would imply the car was doing
  * something during it.
+ *
+ * `gapSeconds` is measured against the car: how long it has to go quiet before
+ * it counts as having stopped. But these series are decimated first, and a
+ * month reduced to twelve hundred points has half an hour between neighbours
+ * whatever the car was doing — so on that scale every interval looks like a
+ * gap, every point ends up alone between two breaks, and a line with no two
+ * adjacent points draws nothing at all. The threshold is therefore also held
+ * above the resolution of the series in hand: a break has to be a departure
+ * from how far apart these points already are, not merely how far apart they
+ * are.
  */
 export function breakAtGaps(series: Series, gapSeconds: number): Series {
+	const threshold = Math.max(gapSeconds, typicalStep(series.x) * 3);
+
 	let breaks = 0;
 	for (let i = 1; i < series.x.length; i++) {
-		if (series.x[i] - series.x[i - 1] > gapSeconds) breaks++;
+		if (series.x[i] - series.x[i - 1] > threshold) breaks++;
 	}
 	if (breaks === 0) return series;
 
@@ -181,7 +208,7 @@ export function breakAtGaps(series: Series, gapSeconds: number): Series {
 	const y = new Float64Array(series.y.length + breaks);
 	let out = 0;
 	for (let i = 0; i < series.x.length; i++) {
-		if (i > 0 && series.x[i] - series.x[i - 1] > gapSeconds) {
+		if (i > 0 && series.x[i] - series.x[i - 1] > threshold) {
 			x[out] = series.x[i - 1] + 1;
 			y[out] = NaN;
 			out++;

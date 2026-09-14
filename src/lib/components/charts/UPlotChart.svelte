@@ -16,7 +16,7 @@
 	import type uPlot from 'uplot';
 	import { settings } from '$lib/state/settings.svelte';
 	import ChartTooltip from './ChartTooltip.svelte';
-	import { withGaps } from './gaps';
+	import { isolatedPoints, withGaps } from './gaps';
 
 	export interface ChartSeries {
 		label: string;
@@ -180,7 +180,14 @@
 						? `color-mix(in oklab, ${cssColor(s.color, '#3987e5')} 18%, transparent)`
 						: undefined,
 					paths: s.step ? uPlotLib!.paths.stepped!({ align: 1 }) : undefined,
-					points: { show: false },
+					// A dot only where a reading has no neighbour to be joined to.
+					// Everywhere else the line says it; see `isolatedPoints`.
+					points: {
+						show: true,
+						size: 4,
+						filter: (self: uPlot, seriesIdx: number) =>
+							isolatedPoints(self.data[seriesIdx] as ReadonlyArray<number | null>)
+					},
 					spanGaps: false,
 					value: (_self: uPlot, raw: number | null) => formatValue(s, raw)
 				}))

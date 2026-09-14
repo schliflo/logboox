@@ -63,6 +63,38 @@ describe('decimation', () => {
 		expect(broken.y[3]).toBeNaN();
 	});
 
+	it('leaves a decimated month whole, whatever the gap the car defines', () => {
+		// The bug this guards: a month reduced to a few hundred points has half an
+		// hour between neighbours, so a threshold measured against the car — a
+		// minute of silence — made every single interval a gap. Every point then
+		// sat alone between two breaks, and a line needs two adjacent points to
+		// exist at all, so the chart drew nothing while its axes looked perfect.
+		const step = 2000;
+		const x = Float64Array.from({ length: 300 }, (_, i) => i * step);
+		const series = { x, y: Float64Array.from(x, (_, i) => i % 90) };
+
+		const broken = breakAtGaps(series, 60);
+		expect(broken).toBe(series);
+
+		let longest = 0;
+		let run = 0;
+		for (const value of broken.y) {
+			if (Number.isNaN(value)) run = 0;
+			else longest = Math.max(longest, ++run);
+		}
+		expect(longest).toBe(300);
+	});
+
+	it('still breaks where the car really did stop, at that resolution', () => {
+		const step = 2000;
+		const x = Float64Array.from({ length: 40 }, (_, i) => (i < 20 ? i * step : i * step + 86400));
+		const series = { x, y: Float64Array.from({ length: 40 }, (_, i) => i) };
+
+		const broken = breakAtGaps(series, 60);
+		expect([...broken.y].filter(Number.isNaN)).toHaveLength(1);
+		expect(broken.x.length).toBe(41);
+	});
+
 	it('leaves a continuous series untouched', () => {
 		const series = { x: Float64Array.from([0, 1, 2]), y: Float64Array.from([1, 2, 3]) };
 		expect(breakAtGaps(series, 60)).toBe(series);
