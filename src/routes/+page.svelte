@@ -169,6 +169,18 @@
 						rel="noreferrer noopener">MIT licence</a
 					>. Not affiliated with XPeng. Your export stays on this device.
 				</p>
+				<p class="text-xs text-muted-foreground">
+					<a href="/legal/imprint" class="underline underline-offset-4 hover:text-foreground">
+						Imprint
+					</a>
+					·
+					<a href="/legal/privacy" class="underline underline-offset-4 hover:text-foreground">
+						Privacy
+					</a>
+					·
+					<a href="/legal/terms" class="underline underline-offset-4 hover:text-foreground">Terms</a
+					>
+				</p>
 			</footer>
 		{/if}
 	</div>
