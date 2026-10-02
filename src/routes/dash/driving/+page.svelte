@@ -6,14 +6,15 @@
 	import Histogram from '$lib/components/charts/Histogram.svelte';
 	import GgDiagram from '$lib/components/charts/GgDiagram.svelte';
 	import { data } from '$lib/state/dataset.svelte';
+	import { tripLink } from '$lib/data/range';
 	import { dateTime, duration, num } from '$lib/utils/format';
 
 	const stats = $derived(data.derived!);
 
-	/** The trip a given moment belongs to, so an event can link to its context. */
+	/** When the trip a given moment belongs to started, so an event can link to its context. */
 	function tripAt(time: number): number | null {
 		const trip = stats.trips.find((t) => time >= t.startTime && time <= t.endTime);
-		return trip ? trip.index : null;
+		return trip ? trip.startTime : null;
 	}
 
 	const events = $derived([
@@ -168,7 +169,7 @@
 								{@const trip = tripAt(event.time)}
 								<Table.Row
 									class={trip !== null ? 'cursor-pointer hover:bg-muted/50' : ''}
-									onclick={() => trip !== null && goto(`/dash/trips?trip=${trip}`)}
+									onclick={() => trip !== null && goto(tripLink(trip))}
 								>
 									<Table.Cell class="py-2">
 										<span class="font-medium tabular-nums" style="color: var({group.accent})">

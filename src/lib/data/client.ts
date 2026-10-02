@@ -12,6 +12,7 @@
 // and the parser is the one thing the app cannot do without offline.
 import DataWorker from './worker/data.worker?worker&inline';
 import {
+	packDataset,
 	unpackDataset,
 	type KeptOutcome,
 	type PackedDataset,
@@ -73,7 +74,8 @@ export class DataLoadError extends Error {
 
 function run(
 	request: WorkerRequest,
-	onProgress?: (progress: LoadProgress) => void
+	onProgress?: (progress: LoadProgress) => void,
+	transfer: Transferable[] = []
 ): Promise<WorkerResult> {
 	return new Promise((resolve, reject) => {
 		const worker = new DataWorker();
@@ -136,7 +138,7 @@ function run(
 			cleanup();
 		};
 
-		worker.postMessage(request);
+		worker.postMessage(request, transfer);
 	});
 }
 
@@ -212,6 +214,19 @@ export async function fetchFromAccount(
 	onProgress?: (progress: LoadProgress) => void
 ): Promise<TransferResult> {
 	return expect<TransferResult>(await run({ type: 'fetch', ids }, onProgress), 'transferred');
+}
+
+/**
+ * Analyses a stretch of what is already open. The slice's buffers move to the
+ * worker rather than being copied, so it is unusable afterwards; what comes
+ * back is the same samples with their analysis.
+ */
+export async function analyzeView(dataset: Dataset, timeZone: string): Promise<DatasetResult> {
+	const { packed, transfer } = packDataset(dataset);
+	return expect<DatasetResult>(
+		await run({ type: 'analyze', dataset: packed, timeZone }, undefined, transfer),
+		'dataset'
+	);
 }
 
 /**

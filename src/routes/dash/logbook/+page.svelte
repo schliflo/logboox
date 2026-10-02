@@ -1,5 +1,5 @@
 <!--
-  The Fahrtenbuch, read back.
+  The logbook (Fahrtenbuch), read back.
 
   Everywhere else in this app the car is the witness. Here the driver is: none
   of these places exists in the export, and the only reason this page can say
@@ -19,6 +19,7 @@
 	import BigStat from '$lib/components/charts/BigStat.svelte';
 	import Punchcard from '$lib/components/charts/Punchcard.svelte';
 	import { data } from '$lib/state/dataset.svelte';
+	import { tripLink } from '$lib/data/range';
 	import { logbook } from '$lib/state/logbook.svelte';
 	import { settings } from '$lib/state/settings.svelte';
 	import ExportMenu from '$lib/components/app/ExportMenu.svelte';
@@ -47,11 +48,19 @@
 	);
 
 	const book = $derived(
-		logbookDocument(stats.trips, notes, settings.timeZone, vehicle, settings.pricePerKwh)
+		logbookDocument(stats.trips, notes, settings.timeZone, vehicle, settings.pricePerKwh, analysis)
 	);
 
 	let openRoute = $state<string | null>(null);
 	let selectedPlace = $state<string | null>(null);
+
+	// The analysis names trips by position in this view; a link names them by start.
+	const startOf = (index: number) => stats.trips[index].startTime;
+	const nextUnlabelled = $derived(
+		analysis.coverage.nextUnlabelled === null ? null : startOf(analysis.coverage.nextUnlabelled)
+	);
+
+	const unwritten = $derived(analysis.coverage.trips - analysis.coverage.labelled);
 
 	const place = $derived(
 		analysis.places.find((entry) => entry.place === selectedPlace) ?? analysis.places[0] ?? null
@@ -71,6 +80,10 @@
 
 	function routeId(origin: string, destination: string): string {
 		return `${origin} → ${destination}`;
+	}
+
+	function plural(count: number, one: string, many = `${one}s`): string {
+		return count === 1 ? one : many;
 	}
 
 	function purposeOf(value: Purpose | ''): string {
@@ -93,11 +106,7 @@
 				</Card.Description>
 			</Card.Header>
 			<Card.Content>
-				<Button
-					href="/dash/trips{analysis.coverage.nextUnlabelled !== null
-						? `?trip=${analysis.coverage.nextUnlabelled}`
-						: ''}"
-				>
+				<Button href={nextUnlabelled !== null ? tripLink(nextUnlabelled) : '/dash/trips'}>
 					Label a trip
 					<ArrowRightIcon class="size-4" />
 				</Button>
@@ -108,9 +117,10 @@
 	<div class="mx-auto max-w-6xl space-y-6">
 		<div class="flex flex-wrap items-center justify-between gap-3">
 			<div>
-				<h1 class="text-xl font-semibold tracking-tight">Fahrtenbuch</h1>
+				<h1 class="text-xl font-semibold tracking-tight">Logbook (Fahrtenbuch)</h1>
 				<p class="text-sm text-muted-foreground">
-					{num(analysis.coverage.labelled)} of {num(analysis.coverage.trips)} trips written down, over
+					{num(analysis.coverage.labelled)} of {num(analysis.coverage.trips)}
+					{plural(analysis.coverage.trips, 'trip')} written down, over
 					{num(analysis.coverage.km, 0)} km.
 				</p>
 			</div>
@@ -136,7 +146,10 @@
 						value={percent(analysis.coverage.labelled / Math.max(1, analysis.coverage.trips))}
 						size="sm"
 						accent="--viz-1"
-						detail="{num(analysis.coverage.labelled)} of {num(analysis.coverage.trips)} trips"
+						detail="{num(analysis.coverage.labelled)} of {num(analysis.coverage.trips)} {plural(
+							analysis.coverage.trips,
+							'trip'
+						)}"
 					/>
 				</Card.Content>
 			</Card.Root>
@@ -174,7 +187,7 @@
 						accent={analysis.coverage.unrecordedKm > 0 ? '--viz-8' : '--viz-6'}
 						detail={analysis.coverage.gaps.length === 0
 							? 'The book is continuous'
-							: `${num(analysis.coverage.gaps.length)} gaps between trips`}
+							: `${num(analysis.coverage.gaps.length)} ${plural(analysis.coverage.gaps.length, 'gap')} between trips`}
 					/>
 				</Card.Content>
 			</Card.Root>
@@ -248,10 +261,12 @@
 							grid={place.arrivalGrid}
 							label="Arrivals at {place.place}"
 							unit="arrivals"
-							formatValue={(value) => `${num(value)} arrivals`}
+							formatValue={(value) => `${num(value)} ${plural(value, 'arrival')}`}
 						/>
 						<p class="mt-2 text-xs text-muted-foreground">
-							{num(place.arrivals)} arrivals · {num(place.departures)} departures
+							{num(place.arrivals)}
+							{plural(place.arrivals, 'arrival')} · {num(place.departures)}
+							{plural(place.departures, 'departure')}
 						</p>
 					</Card.Content>
 				</Card.Root>
@@ -359,7 +374,7 @@
 												</span>
 												{#each route.tripIndices.slice(0, 12) as index (index)}
 													<a
-														href="/dash/trips?trip={index}"
+														href={tripLink(startOf(index))}
 														class="rounded border px-1.5 py-0.5 hover:bg-background"
 													>
 														Trip {index + 1}
@@ -388,11 +403,14 @@
 					{#if analysis.coverage.nextUnlabelled !== null}
 						<div class="flex flex-wrap items-center gap-3">
 							<p class="text-sm">
-								{num(analysis.coverage.trips - analysis.coverage.labelled)} trips have nothing written
-								against them.
+								{num(analysis.coverage.trips - analysis.coverage.labelled)}
+								{unwritten === 1 ? 'trip has' : 'trips have'} nothing written against {unwritten ===
+								1
+									? 'it'
+									: 'them'}.
 							</p>
 							<Button
-								href="/dash/trips?trip={analysis.coverage.nextUnlabelled}"
+								href={nextUnlabelled !== null ? tripLink(nextUnlabelled) : '/dash/trips'}
 								size="sm"
 								variant="outline"
 							>
@@ -404,9 +422,13 @@
 					{#if analysis.coverage.gaps.length > 0}
 						<div class="space-y-2">
 							<p class="text-sm">
-								{num(analysis.coverage.unrecordedKm, 0)} km sit between the end of one trip and the start
-								of the next. The car moved without the export recording it — most often because it was
-								driven while the logger was asleep, or across the seam between two exports.
+								{num(analysis.coverage.unrecordedKm, 0)} km {Math.round(
+									analysis.coverage.unrecordedKm
+								) === 1
+									? 'sits'
+									: 'sit'} between the end of one trip and the start of the next. The car moved without
+								the export recording it — most often because it was driven while the logger was asleep,
+								or across the seam between two exports.
 							</p>
 							<ul class="divide-y rounded-lg border text-xs">
 								{#each analysis.coverage.gaps.slice(0, 8) as gap (gap.after)}

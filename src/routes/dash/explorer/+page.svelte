@@ -26,6 +26,14 @@
 		to: to ?? stats.endTime
 	});
 
+	// A zoom is a pair of instants in the data it was drawn on; once the range
+	// filter swaps that data, it may point at nothing.
+	$effect(() => {
+		void dataset;
+		from = null;
+		to = null;
+	});
+
 	/** Signals grouped by what they describe, empty ones optional. */
 	const groups = $derived.by(() => {
 		const byCategory = new Map<

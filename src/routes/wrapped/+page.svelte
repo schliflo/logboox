@@ -16,7 +16,8 @@
 	import ArrowRightIcon from '@lucide/svelte/icons/arrow-right';
 	import ArrowDownIcon from '@lucide/svelte/icons/arrow-down';
 
-	const stats = $derived(data.derived);
+	// The highlights are about the whole export, whatever range the dashboard is on.
+	const stats = $derived(data.full?.derived ?? data.derived);
 
 	/** Headlines first, then habits, then the export's own oddities. */
 	const cards = $derived.by<Fact[]>(() => {

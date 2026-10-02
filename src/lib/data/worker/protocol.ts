@@ -29,6 +29,7 @@ export interface PackedDataset {
 	exportId: string;
 	available: Record<StreamId, boolean>;
 	duplicateRows: number;
+	undatedRows: number;
 	unsortedStreams: string[];
 	emptyColumns: string[];
 	rowsParsed: number;
@@ -52,7 +53,9 @@ export type WorkerRequest =
 	| { type: 'backup'; ids: string[] }
 	| { type: 'sync'; ids: string[]; timeZone: string }
 	| { type: 'fetch'; ids: string[] }
-	| { type: 'openShare'; shareId: string; timeZone: string };
+	| { type: 'openShare'; shareId: string; timeZone: string }
+	/** Analysis of a stretch already loaded, for narrowing the dashboard to it. */
+	| { type: 'analyze'; dataset: PackedDataset; timeZone: string };
 
 export type WorkerResponse =
 	| {
@@ -135,6 +138,7 @@ export function packDataset(dataset: Dataset): { packed: PackedDataset; transfer
 			exportId: dataset.exportId,
 			available: dataset.available,
 			duplicateRows: dataset.duplicateRows,
+			undatedRows: dataset.undatedRows,
 			unsortedStreams: dataset.unsortedStreams,
 			emptyColumns: dataset.emptyColumns,
 			rowsParsed: dataset.rowsParsed,
@@ -178,6 +182,7 @@ export function unpackDataset(packed: PackedDataset): Dataset {
 		exportId: packed.exportId,
 		available: packed.available,
 		duplicateRows: packed.duplicateRows,
+		undatedRows: packed.undatedRows,
 		unsortedStreams: packed.unsortedStreams,
 		emptyColumns: packed.emptyColumns,
 		rowsParsed: packed.rowsParsed,

@@ -12,6 +12,7 @@
 	import Histogram from '$lib/components/charts/Histogram.svelte';
 	import ExportMenu from '$lib/components/app/ExportMenu.svelte';
 	import { data } from '$lib/state/dataset.svelte';
+	import { sessionLink, startFromParam } from '$lib/data/range';
 	import { settings } from '$lib/state/settings.svelte';
 	import { CHARGING_COLUMNS } from '$lib/export/columns';
 	import {
@@ -30,13 +31,27 @@
 	const dataset = $derived(data.dataset!);
 	const charging = $derived(stats.charging);
 
-	const selected = $derived.by(() => {
-		const raw = page.url.searchParams.get('session');
-		if (raw === null) return null;
-		const index = Number(raw);
-		return Number.isInteger(index) && index >= 0 && index < charging.sessions.length
-			? charging.sessions[index]
-			: null;
+	// A session is named by when it started, which means the same in every range.
+	const wanted = $derived(startFromParam(page.url.searchParams.get('session')));
+	const selected = $derived(
+		wanted === null
+			? null
+			: (charging.sessions.find((session) => session.startTime === wanted) ?? null)
+	);
+
+	// A link to a session outside the range on screen widens the view to reach
+	// it. Only a link does: narrowing the range under an open session goes back
+	// to the list, rather than undoing the choice that was just made.
+	let followed: number | null = null;
+	$effect(() => {
+		if (wanted === null || selected) {
+			followed = wanted;
+		} else if (followed === wanted) {
+			void goto('/dash/charging', { replaceState: true });
+		} else {
+			followed = wanted;
+			data.reveal('charging', wanted);
+		}
 	});
 
 	/**
@@ -289,7 +304,7 @@
 							{#each charging.sessions as session (session.index)}
 								<Table.Row
 									class="cursor-pointer hover:bg-muted/50"
-									onclick={() => goto(`/dash/charging?session=${session.index}`)}
+									onclick={() => goto(sessionLink(session.startTime))}
 								>
 									<Table.Cell class="font-medium">{dateTime(session.startTime)}</Table.Cell>
 									<Table.Cell class="text-right tabular-nums">

@@ -293,6 +293,15 @@ self.addEventListener('message', async (event: MessageEvent<WorkerRequest>) => {
 				post({ type: 'ready', dataset: packed, derived, kept: null }, transfer);
 				break;
 			}
+			case 'analyze': {
+				// A view of something already open: nothing to keep, and the
+				// buffers go straight back to the page they came from.
+				const dataset = unpackDataset(request.dataset);
+				const derived = analyze(dataset, request.timeZone);
+				const { packed, transfer } = packDataset(dataset);
+				post({ type: 'ready', dataset: packed, derived, kept: null }, transfer);
+				break;
+			}
 		}
 	} catch (error) {
 		post({

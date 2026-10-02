@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
+	import { onMount, untrack } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
 	import * as Sidebar from '$lib/components/ui/sidebar';
@@ -11,6 +11,7 @@
 	import { Switch } from '$lib/components/ui/switch';
 	import MadeBy from '$lib/components/app/MadeBy.svelte';
 	import AccountMenu from '$lib/components/app/AccountMenu.svelte';
+	import RangeFilter from '$lib/components/app/RangeFilter.svelte';
 	import Seo from '$lib/components/app/Seo.svelte';
 	import { SITE_NAME } from '$lib/seo';
 	import { data } from '$lib/state/dataset.svelte';
@@ -43,6 +44,8 @@
 	];
 
 	const stats = $derived(data.derived);
+	/** The export as loaded; the range control says how much of it is on screen. */
+	const loaded = $derived(data.full?.derived ?? stats);
 	const section = $derived(sections.find((s) => s.href === page.url.pathname));
 
 	/** What is on screen: a fresh drop, a kept export, or several joined up. */
@@ -67,12 +70,16 @@
 	// against, so they are read once a dataset is open and its VIN is known.
 	// Loaded here rather than by the dataset store, which would make the two
 	// import each other.
+	// The VIN is read on its own so that narrowing the range, which swaps the
+	// dataset but not the car, does not reopen the logbook.
+	const vin = $derived(data.dataset?.vin);
 	$effect(() => {
-		const vin = data.dataset?.vin;
 		// Not for a shared export: those notes belong to whoever owns the car,
 		// and this reader's own logbook has nothing to say about it.
-		if (vin && data.source.kind !== 'shared') logbook.open(vin);
-		else logbook.reset();
+		// `open` reads the store's own state before its first await; untracked,
+		// so that a failure it records there cannot re-run this and call it again.
+		if (vin && data.source.kind !== 'shared') untrack(() => void logbook.open(vin));
+		else untrack(() => logbook.reset());
 	});
 </script>
 
@@ -83,7 +90,7 @@
 	noindex
 />
 
-{#if data.isReady && stats}
+{#if data.isReady && stats && loaded}
 	<Sidebar.Provider>
 		<Sidebar.Root collapsible="icon">
 			<Sidebar.Header>
@@ -98,11 +105,11 @@
 					<div class="flex min-w-0 flex-col group-data-[collapsible=icon]:hidden">
 						<span class="truncate text-sm font-medium">{sourceLabel}</span>
 						<span class="truncate text-xs text-muted-foreground">
-							{dateOnly(stats.startTime)} – {dateOnly(stats.endTime)}
+							{dateOnly(loaded.startTime)} – {dateOnly(loaded.endTime)}
 						</span>
-						{#if stats.sources > 1}
+						{#if loaded.sources > 1}
 							<span class="truncate text-xs text-muted-foreground">
-								{stats.recordedDays} days recorded
+								{loaded.recordedDays} days recorded
 							</span>
 						{/if}
 					</div>
@@ -159,20 +166,24 @@
 				class="sticky top-0 z-10 flex h-14 shrink-0 items-center gap-2 border-b bg-background/80 px-4 backdrop-blur"
 			>
 				<Sidebar.Trigger />
-				<h1 class="text-sm font-medium">
+				<h1 class="min-w-0 truncate text-sm font-medium">
 					{section?.label ?? 'Overview'}
 				</h1>
 
 				<div class="ml-auto flex items-center gap-2">
+					<RangeFilter />
+					<!-- On a phone the sidebar already names the source; the row is for controls. -->
 					{#if data.isDemo}
-						<Badge variant="secondary">Demo data</Badge>
+						<Badge variant="secondary" class="hidden sm:inline-flex">Demo data</Badge>
 					{/if}
 					{#if data.source.kind === 'merged'}
-						<Badge variant="secondary">Merged · {data.source.ids.length}</Badge>
+						<Badge variant="secondary" class="hidden sm:inline-flex">
+							Merged · {data.source.ids.length}
+						</Badge>
 					{:else if data.source.kind === 'reopened'}
-						<Badge variant="secondary">Reopened</Badge>
+						<Badge variant="secondary" class="hidden sm:inline-flex">Reopened</Badge>
 					{:else if shared}
-						<Badge variant="secondary">Shared with you</Badge>
+						<Badge variant="secondary" class="hidden sm:inline-flex">Shared with you</Badge>
 					{/if}
 
 					<AccountMenu variant="ghost" />

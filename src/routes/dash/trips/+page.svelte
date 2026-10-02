@@ -11,6 +11,7 @@
 	import ShareButton from '$lib/components/app/ShareButton.svelte';
 	import BoardBanner from '$lib/components/app/BoardBanner.svelte';
 	import { data } from '$lib/state/dataset.svelte';
+	import { startFromParam, tripLink } from '$lib/data/range';
 	import { logbook } from '$lib/state/logbook.svelte';
 	import { settings } from '$lib/state/settings.svelte';
 	import ExportMenu from '$lib/components/app/ExportMenu.svelte';
@@ -23,13 +24,26 @@
 
 	const stats = $derived(data.derived!);
 
-	const selectedIndex = $derived.by(() => {
-		const raw = page.url.searchParams.get('trip');
-		if (raw === null) return null;
-		const index = Number(raw);
-		return Number.isInteger(index) && index >= 0 && index < stats.trips.length ? index : null;
+	// A trip is named by when it started, which means the same in every range.
+	const wanted = $derived(startFromParam(page.url.searchParams.get('trip')));
+	const trip = $derived(
+		wanted === null ? null : (stats.trips.find((other) => other.startTime === wanted) ?? null)
+	);
+
+	// A link to a trip outside the range on screen widens the view to reach it.
+	// Only a link does: narrowing the range under an open trip goes back to the
+	// list, rather than undoing the choice that was just made.
+	let followed: number | null = null;
+	$effect(() => {
+		if (wanted === null || trip) {
+			followed = wanted;
+		} else if (followed === wanted) {
+			void goto('/dash/trips', { replaceState: true });
+		} else {
+			followed = wanted;
+			data.reveal('trip', wanted);
+		}
 	});
-	const trip = $derived(selectedIndex === null ? null : stats.trips[selectedIndex]);
 
 	type SortKey = 'startTime' | 'distanceKm' | 'duration' | 'maxSpeed' | 'consumption';
 	let sortKey = $state<SortKey>('startTime');
@@ -38,6 +52,8 @@
 
 	const notes = $derived(logbook.bound.byTrip);
 	const unlabelled = $derived(stats.trips.length - logbook.labelled);
+	// Somebody else's export has no logbook here: nothing to label, nothing to hand in.
+	const shared = $derived(data.source.kind === 'shared');
 
 	/** The next trip with nowhere written against it, after this one. */
 	const nextUnlabelled = $derived.by(() => {
@@ -206,12 +222,12 @@
 
 		<TripNotes {trip} />
 
-		{#if nextUnlabelled}
+		{#if nextUnlabelled && !shared}
 			<div class="flex justify-end">
 				<Button
 					variant="outline"
 					size="sm"
-					onclick={() => goto(`/dash/trips?trip=${nextUnlabelled.index}`)}
+					onclick={() => goto(tripLink(nextUnlabelled.startTime))}
 				>
 					Next unlabelled trip
 					<ArrowRightIcon class="size-4" />
@@ -296,7 +312,7 @@
 						</Card.Description>
 					</div>
 					<div class="flex items-center gap-2">
-						{#if unlabelled > 0 && unlabelled < stats.trips.length}
+						{#if !shared && unlabelled > 0 && unlabelled < stats.trips.length}
 							<Button
 								variant={onlyUnlabelled ? 'default' : 'ghost'}
 								size="sm"
@@ -305,19 +321,21 @@
 								{unlabelled} unlabelled
 							</Button>
 						{/if}
-						<ExportMenu
-							kind="fahrtenbuch"
-							variant="ghost"
-							title={book.title}
-							subtitle={book.subtitle}
-							columns={book.columns}
-							rows={book.rows}
-							totals={book.totals}
-							notes={book.notes}
-							timeZone={settings.timeZone}
-							from={book.from}
-							to={book.to}
-						/>
+						{#if !shared}
+							<ExportMenu
+								kind="fahrtenbuch"
+								variant="ghost"
+								title={book.title}
+								subtitle={book.subtitle}
+								columns={book.columns}
+								rows={book.rows}
+								totals={book.totals}
+								notes={book.notes}
+								timeZone={settings.timeZone}
+								from={book.from}
+								to={book.to}
+							/>
+						{/if}
 					</div>
 				</div>
 			</Card.Header>
@@ -346,7 +364,7 @@
 							{#each sorted as row (row.index)}
 								<Table.Row
 									class="cursor-pointer hover:bg-muted/50"
-									onclick={() => goto(`/dash/trips?trip=${row.index}`)}
+									onclick={() => goto(tripLink(row.startTime))}
 								>
 									<Table.Cell class="font-medium">{dateTime(row.startTime)}</Table.Cell>
 									<Table.Cell class="text-right tabular-nums">{num(row.distanceKm, 1)}</Table.Cell>

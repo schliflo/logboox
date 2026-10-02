@@ -8,14 +8,31 @@
  * A signed-in reader may additionally keep a copy in their account, which is
  * the only way anything here travels. That is opt-in, per export, and lives
  * behind `sync` — never on the path a first-time reader takes.
+ *
+ * What is on screen may be narrower than what was loaded, and usually is: an
+ * export opens on its last thirty days (or seven), see `defaultRange`. A time
+ * range is a view: the loaded export stays in `full`, a slice of it is
+ * analysed afresh, and `dataset` and `derived` are swapped for the result, so
+ * pages read them as they are and need not know a range exists. Only what
+ * names a position in the whole (links to a trip, the highlights page) has to
+ * look at `full`. Nothing kept, synced or shared is ever cut down by it.
  */
 
+import { tick } from 'svelte';
 import { goto } from '$app/navigation';
 import { toast } from 'svelte-sonner';
-import { loadDemo, loadFiles, openKept, openShared, type LoadProgress } from '../data/client';
+import {
+	analyzeView,
+	loadDemo,
+	loadFiles,
+	openKept,
+	openShared,
+	type LoadProgress
+} from '../data/client';
 import type { KeptOutcome } from '../data/worker/protocol';
 import type { DerivedData } from '../data/analytics';
-import type { Dataset } from '../data/store/columnar';
+import { restrictDataset, type Dataset } from '../data/store/columnar';
+import { defaultRange, snapToSpans, type TimeRange } from '../data/range';
 import { PyramidCache } from '../data/store/decimate';
 import { account } from './account.svelte';
 import { history } from './history.svelte';
@@ -36,13 +53,25 @@ export interface DataSource {
 class DatasetStore {
 	status = $state<Status>('empty');
 	progress = $state<LoadProgress | null>(null);
-	dataset = $state<Dataset | null>(null);
-	derived = $state<DerivedData | null>(null);
+	// Raw: both are large and only ever replaced whole, never edited in place,
+	// so there is nothing for a deep proxy to watch and a swap stays cheap.
+	dataset = $state.raw<Dataset | null>(null);
+	derived = $state.raw<DerivedData | null>(null);
 	error = $state<{ message: string; hint?: string } | null>(null);
 	source = $state<DataSource>({ kind: 'fresh', ids: [], demo: false });
 
+	/** The export exactly as loaded, whatever range is on screen. */
+	full = $state.raw<{ dataset: Dataset; derived: DerivedData } | null>(null);
+	/** The stretch on screen; null means all of it. */
+	range = $state<TimeRange | null>(null);
+	/** True while a range is being analysed; the previous view stays up meanwhile. */
+	refining = $state(false);
+
 	/** Built lazily per charted column and thrown away with the dataset. */
 	pyramids: PyramidCache | null = null;
+
+	/** Bumped by every range request, so a slower earlier answer can be told apart. */
+	private generation = 0;
 
 	get isReady(): boolean {
 		return this.status === 'ready' && this.dataset !== null && this.derived !== null;
@@ -60,15 +89,119 @@ class DatasetStore {
 		this.dataset = null;
 		this.derived = null;
 		this.pyramids = null;
+		this.clearRange();
 	}
 
 	private settle(dataset: Dataset, derived: DerivedData, source: DataSource) {
-		this.dataset = dataset;
-		this.derived = derived;
-		this.pyramids = new PyramidCache(dataset.time);
+		this.full = { dataset, derived };
+		this.show(dataset, derived);
 		this.source = source;
 		this.progress = null;
 		this.status = 'ready';
+	}
+
+	/** Swaps what the pages read. Pyramids first: pages fetch them while reacting to the dataset. */
+	private show(dataset: Dataset, derived: DerivedData) {
+		this.pyramids = new PyramidCache(dataset.time);
+		this.derived = derived;
+		this.dataset = dataset;
+	}
+
+	private clearRange() {
+		this.generation++;
+		this.full = null;
+		this.range = null;
+		this.refining = false;
+	}
+
+	/**
+	 * Narrows everything on screen to a range, or with null widens it back to
+	 * the whole export. The current view stays up while the worker analyses
+	 * the slice, and `status` never leaves 'ready': the dashboard unmounts
+	 * whatever it is showing when it does. When ranges are picked faster than
+	 * they are analysed, only the last one lands.
+	 *
+	 * `quiet` is for a range nobody asked for: a failure leaves the view as it
+	 * is without saying so.
+	 */
+	async setRange(range: TimeRange | null, { quiet = false } = {}) {
+		const full = this.full;
+		if (!full || this.status !== 'ready') return;
+
+		// A range around every sample is everything, without a copy to analyse.
+		const { time } = full.dataset;
+		if (range && range.from <= time[0] && range.to > time[time.length - 1]) range = null;
+
+		if (!range) {
+			this.generation++;
+			this.refining = false;
+			this.show(full.dataset, full.derived);
+			this.range = null;
+			return;
+		}
+
+		const ticket = ++this.generation;
+		// Slicing copies and re-summarises every column on this thread, long
+		// enough to freeze the page: say so first, and let it be drawn.
+		this.refining = true;
+		try {
+			await tick();
+			await new Promise<void>((resolve) => setTimeout(resolve));
+			if (ticket !== this.generation) return;
+
+			// A drive or a charge across midnight stays whole, with the day it began.
+			const edges = snapToSpans(range.from, range.to, [
+				...full.derived.trips,
+				...full.derived.charging.sessions
+			]);
+			const slice = restrictDataset(full.dataset, edges.from, edges.to);
+			if (slice.time.length < 2) {
+				if (!quiet) {
+					toast('Nothing was recorded then', {
+						description: `${range.label} holds too little data to show on its own.`
+					});
+				}
+				return;
+			}
+
+			const result = await analyzeView(slice, settings.timeZone);
+			if (ticket !== this.generation) return;
+			this.show(result.dataset, result.derived);
+			this.range = range;
+		} catch (error) {
+			if (ticket !== this.generation || quiet) return;
+			toast('That range could not be shown', {
+				description: error instanceof Error ? error.message : undefined,
+				closeButton: true
+			});
+		} finally {
+			if (ticket === this.generation) this.refining = false;
+		}
+	}
+
+	/**
+	 * Opens an export on its default stretch. Awaited before the first page is
+	 * shown, so the whole export is never drawn first; it is a default rather
+	 * than a choice, so when it cannot be applied the whole export stays.
+	 */
+	private async applyDefaultRange() {
+		const derived = this.full?.derived;
+		if (derived) await this.setRange(defaultRange(derived, settings.timeZone), { quiet: true });
+	}
+
+	/**
+	 * Makes sure a trip or a charging session is in the view, for a link that
+	 * names one. Ranges never cut one, so it is either wholly in or wholly
+	 * out; when it is out but exists in the export the view is widened to
+	 * everything. False when it exists nowhere.
+	 */
+	reveal(kind: 'trip' | 'charging', startTime: number): boolean {
+		const full = this.full?.derived;
+		if (!full) return false;
+		const list = kind === 'trip' ? full.trips : full.charging.sessions;
+		if (!list.some((item) => item.startTime === startTime)) return false;
+		if (this.range) void this.setRange(null);
+		return true;
 	}
 
 	private fail(error: unknown) {
@@ -166,6 +299,7 @@ class DatasetStore {
 				ids: [result.dataset.exportId],
 				demo: false
 			});
+			await this.applyDefaultRange();
 			await goto('/wrapped');
 			await this.afterKeep(result.kept);
 		} catch (error) {
@@ -184,6 +318,7 @@ class DatasetStore {
 				ids: [result.dataset.exportId],
 				demo: true
 			});
+			await this.applyDefaultRange();
 			await goto('/wrapped');
 			await this.afterKeep(result.kept);
 		} catch (error) {
@@ -209,6 +344,7 @@ class DatasetStore {
 				ids,
 				demo: known.length > 0 && known.every((entry) => entry.isDemo)
 			});
+			await this.applyDefaultRange();
 			// Straight to the dashboard: the opening sequence is for the moment
 			// an export is first read, not for every time it is picked up again.
 			await goto('/dash/overview');
@@ -229,6 +365,7 @@ class DatasetStore {
 				this.progress = progress;
 			});
 			this.settle(result.dataset, result.derived, { kind: 'shared', ids: [shareId], demo: false });
+			await this.applyDefaultRange();
 			await goto('/dash/overview');
 		} catch (error) {
 			this.fail(error);
@@ -242,6 +379,7 @@ class DatasetStore {
 		this.error = null;
 		this.progress = null;
 		this.pyramids = null;
+		this.clearRange();
 		this.source = { kind: 'fresh', ids: [], demo: false };
 	}
 }
