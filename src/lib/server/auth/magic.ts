@@ -89,7 +89,7 @@ export async function requestMagicLink(
 export async function consumeMagicLink(
 	db: Db,
 	token: string
-): Promise<{ user: User; created: boolean; unsubscribeToken: string | null } | null> {
+): Promise<{ user: User; created: boolean } | null> {
 	const hash = await hashToken(token);
 	const claimed = await run(
 		db,

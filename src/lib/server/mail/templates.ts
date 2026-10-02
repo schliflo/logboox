@@ -26,6 +26,20 @@ function escapeHtml(value: string): string {
  */
 const SITE = 'https://logboox.app';
 
+/** What the HTML footer says, for the part of the message that has no HTML. */
+const TEXT_FOOTER = `--
+${BRAND} · Imprint: ${SITE}/legal/imprint · Privacy: ${SITE}/legal/privacy`;
+
+/**
+ * `List-Unsubscribe`, so a mail client can link to the way out. It names the
+ * page, the same one the body links to. There is deliberately no
+ * `List-Unsubscribe-Post`: that promises a one-click POST, and a provider's
+ * cross-origin form POST never gets past SvelteKit's CSRF check.
+ */
+function unsubscribeHeaders(unsubscribeUrl: string): Record<string, string> {
+	return { 'List-Unsubscribe': `<${unsubscribeUrl}>` };
+}
+
 /** One typeface, one column, and a link that looks like a link. */
 function layout(body: string): string {
 	return `<!doctype html><html><body style="margin:0;padding:24px;background:#f6f6f5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#1c1c1a;line-height:1.6">
@@ -49,7 +63,9 @@ ${url}
 
 The link works once and expires in fifteen minutes.
 
-If you did not ask to sign in, nothing has happened and you can ignore this message — an account is only created when the link is opened.`;
+If you did not ask to sign in, nothing has happened and you can ignore this message — an account is only created when the link is opened.
+
+${TEXT_FOOTER}`;
 
 	const html = layout(
 		`<p style="margin:0 0 20px">${escapeHtml(opening)}</p>
@@ -62,7 +78,7 @@ If you did not ask to sign in, nothing has happened and you can ignore this mess
 }
 
 export interface ReminderFacts {
-	/** Days since the newest export in the account stops speaking for the car. */
+	/** Days since the newest export in the account ended. */
 	staleDays: number;
 	vehicles: number;
 	requestUrl: string;
@@ -75,7 +91,7 @@ export function reminderMail(to: string, facts: ReminderFacts): Message {
 
 	// The reason this mail exists at all: the window is rolling, so a month
 	// nobody asked for is a month that cannot be recovered later.
-	const opening = `Your most recent export stops ${facts.staleDays} days ago. XPeng only keeps a rolling thirty days, so anything older than that is already gone.`;
+	const opening = `Your most recent export ended ${facts.staleDays} days ago. XPeng keeps a rolling thirty days, and whatever is not requested in time is lost.`;
 
 	const text = `${opening}
 
@@ -85,7 +101,9 @@ ${facts.requestUrl}
 When it arrives, drop it into ${BRAND} and it will be joined onto what you already have:
 ${facts.appUrl}
 
-To stop these reminders: ${facts.unsubscribeUrl}`;
+To stop these reminders: ${facts.unsubscribeUrl}
+
+${TEXT_FOOTER}`;
 
 	const html = layout(
 		`<p style="margin:0 0 20px">${escapeHtml(opening)}</p>
@@ -94,7 +112,7 @@ To stop these reminders: ${facts.unsubscribeUrl}`;
 <p style="margin:0;font-size:13px;color:#6b6b66"><a href="${escapeHtml(facts.unsubscribeUrl)}" style="color:#6b6b66">Stop these reminders</a></p>`
 	);
 
-	return { to, subject, text, html };
+	return { to, subject, text, html, headers: unsubscribeHeaders(facts.unsubscribeUrl) };
 }
 
 export interface BoardNudgeFacts {
@@ -104,7 +122,7 @@ export interface BoardNudgeFacts {
 }
 
 /**
- * "One of your trips would rank."
+ * "Something of yours would rank."
  *
  * Careful about what it does not say: nothing has been published, nothing will
  * be, and the message exists only because the person was not looking at the
@@ -112,8 +130,8 @@ export interface BoardNudgeFacts {
  * than asking anyone to come back and engage with anything.
  *
  * Worded around the board rather than around a trip, because not every board is
- * won by one: a month's mileage is a place too, and "one of your trips" would
- * be describing something the reader never did.
+ * won by one: a charging session or a month's mileage is a place too, and "one
+ * of your trips" would be describing something the reader never did.
  */
 export function boardNudgeMail(to: string, facts: BoardNudgeFacts): Message {
 	const first = facts.places[0];
@@ -124,7 +142,7 @@ export function boardNudgeMail(to: string, facts: BoardNudgeFacts): Message {
 		: `You would be #${first.rank} for ${first.board.toLowerCase()} — ${first.month}`;
 
 	const opening = several
-		? `${facts.places.length} things in your account would stand on a board this month. Nothing has been published — they are waiting for you to say whether you want them there.`
+		? `${facts.places.length} things in your account would stand on a board. Nothing has been published — they are waiting for you to say whether you want them there.`
 		: `${first.reading} would be #${first.rank} for ${first.board.toLowerCase()} on the ${first.month} board. Nothing has been published — it is waiting for you to say whether you want it there.`;
 
 	const list = facts.places
@@ -142,7 +160,9 @@ A place shows the name you choose, your car's model and the number. It never
 shows your e-mail address or your vehicle identification number, and you can
 take it down again at any time.
 
-To stop these: ${facts.unsubscribeUrl}`;
+To stop these: ${facts.unsubscribeUrl}
+
+${TEXT_FOOTER}`;
 
 	const rows = facts.places
 		.map(
@@ -159,7 +179,7 @@ To stop these: ${facts.unsubscribeUrl}`;
 <p style="margin:0;font-size:13px;color:#6b6b66"><a href="${escapeHtml(facts.unsubscribeUrl)}" style="color:#6b6b66">Stop these messages</a></p>`
 	);
 
-	return { to, subject, text, html };
+	return { to, subject, text, html, headers: unsubscribeHeaders(facts.unsubscribeUrl) };
 }
 
 export interface RoundupFacts {
@@ -189,7 +209,9 @@ export function yearRoundupMail(to: string, facts: RoundupFacts): Message {
 See the year:
 ${facts.url}
 
-To stop these: ${facts.unsubscribeUrl}`;
+To stop these: ${facts.unsubscribeUrl}
+
+${TEXT_FOOTER}`;
 
 	const html = layout(
 		`<p style="margin:0 0 24px">${escapeHtml(opening)}</p>
@@ -197,5 +219,5 @@ To stop these: ${facts.unsubscribeUrl}`;
 <p style="margin:0;font-size:13px;color:#6b6b66"><a href="${escapeHtml(facts.unsubscribeUrl)}" style="color:#6b6b66">Stop these messages</a></p>`
 	);
 
-	return { to, subject, text, html };
+	return { to, subject, text, html, headers: unsubscribeHeaders(facts.unsubscribeUrl) };
 }

@@ -12,11 +12,12 @@
  */
 
 import { all, now, run, type Db } from '../db';
+import { failureStreak, logSendFailure } from '../mail/batch';
 import type { Mailer } from '../mail/mailer';
 import { reminderMail } from '../mail/templates';
+import { unsubscribeLinks } from '../mail/unsubscribe';
 import { pruneMagicLinks } from '../auth/magic';
 import { pruneSessions } from '../auth/session';
-import { rotateUnsubscribeToken } from '../auth/users';
 import { deleteExport, staleUploads } from '../exports/repo';
 import { deletePrefix, exportPrefix } from '../exports/r2';
 import { sendBoardNudges, sendYearRoundups } from '../leaderboard/nudges';
@@ -75,34 +76,53 @@ export interface ReminderReport {
 	prunedSessions: number;
 	/** People told that something of theirs would stand on a board. */
 	nudged: number;
+	nudgeFailed: number;
 	/** Year-in-review messages, sent once a year has closed for good. */
 	roundups: number;
+	roundupFailed: number;
+	/** Three sends in a row failed, so the rest of the run was not attempted. */
+	stopped: boolean;
+}
+
+/**
+ * Whether the run tried to send and nothing got through. That is what a
+ * misconfigured sender looks like, and what the cron route answers 502 to.
+ */
+export function everySendFailed(report: ReminderReport): boolean {
+	const sent = report.sent + report.nudged + report.roundups;
+	const failed = report.failed + report.nudgeFailed + report.roundupFailed;
+	return failed > 0 && sent === 0;
 }
 
 /**
  * Sends what is due and tidies up behind it.
  *
  * `reminded_at` is written *before* the message goes, so a run that dies
- * halfway through, or is retried, does not mail anyone twice. The cost of that
- * order is a reminder occasionally lost to a failed send, which is plainly the
- * better of the two mistakes.
+ * halfway through, or is retried, does not mail anyone twice. A failed send
+ * keeps its mark as well: someone the mail service refuses for good would
+ * otherwise head the queue every day and block everyone behind them. They are
+ * tried again after the usual week. After three failures in a row the sender
+ * is evidently down and the rest of the run is left alone, marks unset.
+ *
+ * `mailSecret` signs the unsubscribe link in each message.
  */
 export async function sendReminders(
 	db: Db,
 	mailer: Mailer,
 	origin: string,
+	mailSecret: string,
 	storage?: R2Bucket
 ): Promise<ReminderReport> {
 	const due = await findDue(db);
+	const streak = failureStreak();
 	let sent = 0;
 	let failed = 0;
 
 	for (const user of due) {
+		if (streak.stopped) break;
 		await run(db, 'UPDATE users SET reminded_at = ? WHERE id = ?', now(), user.id);
 
-		// Minted per message: the table keeps only a hash, so the link in the
-		// mail has to be made at the moment the mail is.
-		const token = await rotateUnsubscribeToken(db, user.id);
+		const links = await unsubscribeLinks(origin, mailSecret, user.id, 'reminders');
 
 		try {
 			await mailer.send(
@@ -111,27 +131,33 @@ export async function sendReminders(
 					vehicles: user.vehicles,
 					requestUrl: REQUEST_URL,
 					appUrl: origin,
-					unsubscribeUrl: `${origin}/unsubscribe?token=${encodeURIComponent(token)}`
+					...links
 				})
 			);
 			sent++;
-		} catch {
+			streak.succeeded();
+		} catch (error) {
+			logSendFailure('reminder', user.id, error);
 			failed++;
+			streak.failed();
 		}
 	}
 
 	// The other thing a daily run is for. Kept after the reminders because a
 	// missed export is the more consequential of the two: the window closes on
 	// it for good, whereas a place on a board is only ever a nice-to-have.
-	const nudges = await sendBoardNudges(db, mailer, origin);
-	const roundups = await sendYearRoundups(db, mailer, origin);
+	const nudges = await sendBoardNudges(db, mailer, origin, mailSecret, now(), streak);
+	const roundups = await sendYearRoundups(db, mailer, origin, mailSecret, now(), streak);
 
 	return {
 		considered: due.length,
 		sent,
 		failed,
 		nudged: nudges.sent,
+		nudgeFailed: nudges.failed,
 		roundups: roundups.sent,
+		roundupFailed: roundups.failed,
+		stopped: streak.stopped,
 		...(await sweep(db, storage))
 	};
 }
@@ -146,8 +172,9 @@ async function sweep(
 ): Promise<{ sweptUploads: number; prunedLinks: number; prunedSessions: number }> {
 	const abandoned = (await staleUploads(db)) as unknown as Array<{ id: string; user_id: string }>;
 	for (const row of abandoned) {
-		await deleteExport(db, row.user_id, row.id);
+		// Bytes before the row, so a failure leaves something the next run finds.
 		if (storage) await deletePrefix(storage, exportPrefix(row.user_id, row.id));
+		await deleteExport(db, row.user_id, row.id);
 	}
 
 	return {

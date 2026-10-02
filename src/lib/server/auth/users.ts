@@ -4,7 +4,7 @@
  */
 
 import { now, one, rowId, run, type Db } from '../db';
-import { hashToken, randomToken } from './tokens';
+import { verifyUnsubscribe } from '../mail/unsubscribe';
 
 export interface User {
 	id: string;
@@ -15,12 +15,10 @@ export interface User {
 	reminder_after_days: number;
 	reminded_at: number | null;
 	auto_sync: number;
-	unsubscribe_token_hash: string;
 	username: string | null;
 	username_changed_at: number | null;
 	board_notify: number;
 	board_mailed_at: number | null;
-	board_unsubscribe_token_hash: string | null;
 	roundup_mailed_year: number | null;
 }
 
@@ -49,14 +47,11 @@ export function findUser(db: Db, id: string): Promise<User | null> {
 export async function findOrCreateUser(
 	db: Db,
 	email: string
-): Promise<{ user: User; created: boolean; unsubscribeToken: string | null }> {
+): Promise<{ user: User; created: boolean }> {
 	const normalized = normalizeEmail(email);
 	const existing = await findUserByEmail(db, normalized);
-	if (existing) return { user: existing, created: false, unsubscribeToken: null };
+	if (existing) return { user: existing, created: false };
 
-	// One-click unsubscribe has to work from a mail client with no session, so
-	// the link carries its own secret — stored the same way as every other.
-	const unsubscribeToken = randomToken();
 	const user: User = {
 		id: rowId(),
 		email: normalized,
@@ -65,36 +60,30 @@ export async function findOrCreateUser(
 		reminder_enabled: 1,
 		reminder_after_days: 25,
 		reminded_at: null,
-		auto_sync: 1,
-		unsubscribe_token_hash: await hashToken(unsubscribeToken),
+		// Nothing is copied to the account until the reader says so.
+		auto_sync: 0,
 		username: null,
 		username_changed_at: null,
 		board_notify: 1,
 		board_mailed_at: null,
-		board_unsubscribe_token_hash: null,
 		roundup_mailed_year: null
 	};
 
 	await run(
 		db,
 		`INSERT INTO users (id, email, created_at, last_seen_at, reminder_enabled,
-			reminder_after_days, reminded_at, auto_sync, unsubscribe_token_hash)
-		 VALUES (?, ?, ?, ?, ?, ?, NULL, ?, ?)`,
+			reminder_after_days, reminded_at, auto_sync)
+		 VALUES (?, ?, ?, ?, ?, ?, NULL, ?)`,
 		user.id,
 		user.email,
 		user.created_at,
 		user.last_seen_at,
 		user.reminder_enabled,
 		user.reminder_after_days,
-		user.auto_sync,
-		user.unsubscribe_token_hash
+		user.auto_sync
 	);
 
-	return { user, created: true, unsubscribeToken };
-}
-
-export async function touchUser(db: Db, id: string): Promise<void> {
-	await run(db, 'UPDATE users SET last_seen_at = ? WHERE id = ?', now(), id);
+	return { user, created: true };
 }
 
 export interface UserSettings {
@@ -142,59 +131,24 @@ export async function updateSettings(db: Db, id: string, patch: UserSettings): P
 }
 
 /**
- * The kinds of mail this app sends, each with its own way out.
- *
- * They keep separate tokens on purpose. One shared token, rotated per message,
- * would mean that unsubscribing from a leaderboard nudge quietly broke the
- * unsubscribe link in every export reminder — and the two have nothing to do
- * with each other.
+ * The kinds of mail this app sends, each with its own way out. The kind is
+ * part of what an unsubscribe token signs, so turning one off cannot touch the
+ * other.
  */
 export type MailKind = 'reminders' | 'leaderboard';
 
-const TOKEN_COLUMN: Record<MailKind, string> = {
-	reminders: 'unsubscribe_token_hash',
-	leaderboard: 'board_unsubscribe_token_hash'
-};
-
 /**
- * A fresh unsubscribe token for the next message, and the hash that will
- * recognise it.
- *
- * Rotated per message rather than stored in readable form. Only the hash is
- * ever written down, which means the link in an old mail stops working once a
- * newer one of the same kind has been sent — no loss, since every message
- * carries a current one, and it keeps the table free of anything that opens a
- * door.
- */
-export async function rotateUnsubscribeToken(
-	db: Db,
-	userId: string,
-	kind: MailKind = 'reminders'
-): Promise<string> {
-	const token = randomToken();
-	await run(
-		db,
-		`UPDATE users SET ${TOKEN_COLUMN[kind]} = ? WHERE id = ?`,
-		await hashToken(token),
-		userId
-	);
-	return token;
-}
-
-/**
- * The user behind an unsubscribe link. Hashed lookup, so the link in a mail
- * client's history is not a key to anything but this one switch.
+ * The user behind an unsubscribe link, or null when the token is not one this
+ * deployment signed for that kind. See mail/unsubscribe.ts.
  */
 export async function findUserByUnsubscribeToken(
 	db: Db,
+	secret: string,
 	token: string,
 	kind: MailKind = 'reminders'
 ): Promise<User | null> {
-	return one<User>(
-		db,
-		`SELECT * FROM users WHERE ${TOKEN_COLUMN[kind]} = ?`,
-		await hashToken(token)
-	);
+	const id = await verifyUnsubscribe(secret, token, kind);
+	return id ? findUser(db, id) : null;
 }
 
 /**
@@ -202,7 +156,12 @@ export async function findUserByUnsubscribeToken(
  * deleted separately — a foreign key cannot reach into R2.
  */
 export async function deleteUser(db: Db, id: string): Promise<void> {
-	for (const table of [
+	const user = await findUser(db, id);
+
+	// One batch, so a failure halfway cannot leave half an account. Every child
+	// table cascades from `users` as well; the explicit deletes are for a
+	// database that was opened without foreign keys enforced.
+	const statements = [
 		'sessions',
 		'api_tokens',
 		'exports',
@@ -213,8 +172,11 @@ export async function deleteUser(db: Db, id: string): Promise<void> {
 		'shares',
 		'board_candidates',
 		'board_entries'
-	]) {
-		await run(db, `DELETE FROM ${table} WHERE user_id = ?`, id);
-	}
-	await run(db, 'DELETE FROM users WHERE id = ?', id);
+	].map((table) => db.prepare(`DELETE FROM ${table} WHERE user_id = ?`).bind(id));
+
+	// Not linked by id: a sign-in link only knows the address it was sent to.
+	if (user) statements.push(db.prepare('DELETE FROM magic_links WHERE email = ?').bind(user.email));
+	statements.push(db.prepare('DELETE FROM users WHERE id = ?').bind(id));
+
+	await db.batch(statements);
 }

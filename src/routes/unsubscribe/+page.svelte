@@ -47,7 +47,7 @@
 	}
 </script>
 
-<Seo title="E-mail" path="/unsubscribe" noindex />
+<Seo title="Stop e-mails" path="/unsubscribe" noindex />
 
 <main class="flex min-h-svh items-center justify-center p-6">
 	<Card.Root class="w-full max-w-md">
@@ -63,10 +63,16 @@
 			</Card.Title>
 			<Card.Description>
 				{#if done}
-					{done} will not be e-mailed again unless you turn them back on.
+					{#if kind === 'leaderboard'}
+						{done} will no longer get messages about places on a board, or the summary of the year, unless
+						you turn them back on in your account.
+					{:else}
+						{done} will no longer get reminders about new exports, unless you turn them back on in your
+						account.
+					{/if}
 				{:else if kind === 'leaderboard'}
-					Your places stay exactly as they are. This only stops the messages telling you when one of
-					your trips would rank.
+					Your places stay exactly as they are. This only stops the messages telling you when
+					something of yours would rank, and the summary of the year.
 				{:else}
 					You will still be able to import exports whenever you like. This only stops the messages.
 				{/if}
@@ -74,10 +80,12 @@
 		</Card.Header>
 		<Card.Content class="space-y-4">
 			{#if done}
-				<p class="text-sm text-muted-foreground">
-					XPeng only keeps a rolling thirty days, so without a reminder it is worth putting a note
-					in your own calendar.
-				</p>
+				{#if kind === 'reminders'}
+					<p class="text-sm text-muted-foreground">
+						XPeng only keeps a rolling thirty days, so without a reminder it is worth putting a note
+						in your own calendar.
+					</p>
+				{/if}
 				<Button variant="outline" class="w-full" onclick={() => goto('/account')}>
 					Back to your account
 				</Button>
@@ -91,7 +99,13 @@
 				</Button>
 			{:else if token}
 				<Button class="w-full" onclick={confirm} disabled={busy}>
-					{busy ? 'Turning them off…' : 'Stop the reminders'}
+					{#if busy}
+						Turning them off…
+					{:else if kind === 'leaderboard'}
+						Stop these messages
+					{:else}
+						Stop the reminders
+					{/if}
 				</Button>
 			{:else}
 				<p class="text-sm text-muted-foreground">This link is missing its token.</p>

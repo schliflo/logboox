@@ -1,10 +1,12 @@
 /**
  * Sending mail.
  *
- * Four lines of interface, so the two mails this app sends do not depend on
- * who carries them. In production that is Cloudflare's Email Service, through
- * a binding rather than an API key; in `vite dev` the message is printed
- * instead, so the sign-in link can be followed from the terminal.
+ * A small interface, so the mails this app sends (sign-in links, export
+ * reminders, board messages and the yearly summary) do not depend on who
+ * carries them. In production that is Cloudflare's Email Service, through
+ * a binding rather than an API key; a missing binding there is an error, not a
+ * reason to print. Only in `vite dev` is the message printed instead, so the
+ * sign-in link can be followed from the terminal.
  */
 
 export interface Message {
@@ -12,6 +14,8 @@ export interface Message {
 	subject: string;
 	text: string;
 	html: string;
+	/** Extra headers, such as `List-Unsubscribe`. The send binding takes them as they are. */
+	headers?: Record<string, string>;
 }
 
 export interface Mailer {
@@ -26,6 +30,7 @@ interface EmailBinding {
 		subject: string;
 		text?: string;
 		html?: string;
+		headers?: Record<string, string>;
 	}): Promise<unknown>;
 }
 

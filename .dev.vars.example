@@ -5,3 +5,9 @@
 
 # Shared with the cron Worker, which uses it to ask this one to send reminders.
 CRON_SECRET=local-development-cron-secret
+
+# Signs the unsubscribe links in reminder and leaderboard mail. Production needs
+# a long random value (`openssl rand -base64 32`) and must keep it: changing it
+# kills the link in every mail already sent. Development falls back to a fixed
+# one, so this is only needed to test with a different value.
+MAIL_SECRET=local-development-mail-secret

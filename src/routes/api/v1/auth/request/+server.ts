@@ -12,6 +12,7 @@ import { InvalidEmail, RateLimited, requestMagicLink } from '$lib/server/auth/ma
 import { findUserByEmail } from '$lib/server/auth/users';
 import { clientIp, mailer, maybeDb, siteUrl } from '$lib/server/context';
 import { magicLinkMail } from '$lib/server/mail/templates';
+import { redactAddresses } from '$lib/server/mail/batch';
 import { fail, json, readJson } from '$lib/server/response';
 
 export const POST: RequestHandler = async (event) => {
@@ -24,18 +25,22 @@ export const POST: RequestHandler = async (event) => {
 	}
 
 	try {
+		// Asked for first: with no way to send, a link would only use up the
+		// address's hourly allowance.
+		const send = mailer(event);
 		const existing = await findUserByEmail(db, email);
 		const link = await requestMagicLink(db, email, clientIp(event));
 		const url = `${siteUrl(event)}/auth/verify?token=${encodeURIComponent(link.token)}`;
-		await mailer(event).send(magicLinkMail(link.email, url, existing === null));
+		await send.send(magicLinkMail(link.email, url, existing === null));
 	} catch (error) {
 		// A malformed address is worth saying out loud: nothing was sent, and
 		// the person is looking at the field they mistyped.
 		if (error instanceof InvalidEmail) return fail(400, error.message);
-		// Everything else — rate limits, a refused send — is swallowed on
-		// purpose. See the note above.
+		// Everything else — rate limits, a refused send, a missing mail
+		// binding — is swallowed on purpose; see the note above. Only the
+		// rate limit is routine, so everything but that is logged.
 		if (!(error instanceof RateLimited)) {
-			console.error('sign-in link failed', error);
+			console.error(`sign-in link failed: ${redactAddresses(error)}`);
 		}
 	}
 

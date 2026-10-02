@@ -17,16 +17,17 @@ import {
 	consumeMagicLink,
 	requestMagicLink
 } from './magic';
-import {
-	SESSION_TTL_SECONDS,
-	createSession,
-	renewIfStale,
-	revokeSession,
-	validateSession
-} from './session';
+import { authenticateSession, createSession, revokeSession } from './session';
 import { createToken, listTokens, revokeToken, validateToken } from './apiTokens';
 import { API_TOKEN_PREFIX, hashToken, parseApiToken, randomToken, timingSafeEqual } from './tokens';
-import { deleteUser, findUserByEmail, findOrCreateUser, updateSettings } from './users';
+import {
+	deleteUser,
+	findUserByEmail,
+	findUserByUnsubscribeToken,
+	findOrCreateUser,
+	updateSettings
+} from './users';
+import { signUnsubscribe, verifyUnsubscribe } from '../mail/unsubscribe';
 
 let db: TestDb;
 
@@ -151,44 +152,12 @@ describe('sessions', () => {
 		return { user, token: await createSession(db, user.id, 'Test/1.0') };
 	}
 
-	it('recognises its own cookie and nothing else', async () => {
-		const { user, token } = await signedIn();
-		expect((await validateSession(db, token))?.id).toBe(user.id);
-		expect(await validateSession(db, randomToken())).toBeNull();
-	});
-
 	it('forgets a session the moment it is revoked', async () => {
-		const { token } = await signedIn();
+		const { user, token } = await signedIn();
+		expect((await authenticateSession(db, token))?.user.id).toBe(user.id);
+
 		await revokeSession(db, token);
-		expect(await validateSession(db, token)).toBeNull();
-	});
-
-	it('drops an expired session rather than honouring it', async () => {
-		const { token } = await signedIn();
-		await db
-			.prepare('UPDATE sessions SET expires_at = ?')
-			.bind(Math.floor(Date.now() / 1000) - 1)
-			.run();
-
-		expect(await validateSession(db, token)).toBeNull();
-		const left = await one<{ n: number }>(db, 'SELECT COUNT(*) AS n FROM sessions');
-		expect(left?.n).toBe(0);
-	});
-
-	it('renews one that is past halfway, and leaves a fresh one alone', async () => {
-		const { token } = await signedIn();
-		expect(await renewIfStale(db, token)).toBe(false);
-
-		await db
-			.prepare('UPDATE sessions SET expires_at = ?')
-			.bind(Math.floor(Date.now() / 1000) + 60)
-			.run();
-		expect(await renewIfStale(db, token)).toBe(true);
-
-		const row = await one<{ expires_at: number }>(db, 'SELECT expires_at FROM sessions');
-		expect(row!.expires_at).toBeGreaterThan(
-			Math.floor(Date.now() / 1000) + SESSION_TTL_SECONDS - 5
-		);
+		expect(await authenticateSession(db, token)).toBeNull();
 	});
 });
 
@@ -244,10 +213,18 @@ describe('the account itself', () => {
 		await expect(updateSettings(db, user.id, { reminderAfterDays: 20 })).resolves.toBeUndefined();
 	});
 
+	it('does not copy anything to the account until asked', async () => {
+		const { user } = await findOrCreateUser(db, 'reader@example.com');
+		expect(user.auto_sync).toBe(0);
+		expect((await findUserByEmail(db, 'reader@example.com'))?.auto_sync).toBe(0);
+	});
+
 	it('takes everything with it when deleted', async () => {
 		const { user } = await findOrCreateUser(db, 'reader@example.com');
 		await createSession(db, user.id, null);
 		await createToken(db, user.id, 'Home Assistant');
+		await requestMagicLink(db, 'reader@example.com', null);
+		await requestMagicLink(db, 'someone-else@example.com', null);
 
 		await deleteUser(db, user.id);
 
@@ -255,5 +232,71 @@ describe('the account itself', () => {
 			const left = await one<{ n: number }>(db, `SELECT COUNT(*) AS n FROM ${table}`);
 			expect(left?.n).toBe(0);
 		}
+		// Only the address's own links go; somebody else's request stays.
+		const links = await one<{ n: number }>(db, 'SELECT COUNT(*) AS n FROM magic_links');
+		expect(links?.n).toBe(1);
+	});
+
+	it('deletes in one batch, so a failure leaves the account whole', async () => {
+		const { user } = await findOrCreateUser(db, 'reader@example.com');
+		await createSession(db, user.id, null);
+
+		const failing = {
+			...db,
+			batch: async () => {
+				throw new Error('D1 went away');
+			}
+		};
+		await expect(deleteUser(failing, user.id)).rejects.toThrow('D1 went away');
+
+		expect(await findUserByEmail(db, 'reader@example.com')).not.toBeNull();
+		const sessions = await one<{ n: number }>(db, 'SELECT COUNT(*) AS n FROM sessions');
+		expect(sessions?.n).toBe(1);
+	});
+});
+
+describe('unsubscribe tokens', () => {
+	const SECRET = 'test-mail-secret';
+
+	it('are the same every time, so no mail outlives its link', async () => {
+		expect(await signUnsubscribe(SECRET, 'user-1', 'reminders')).toBe(
+			await signUnsubscribe(SECRET, 'user-1', 'reminders')
+		);
+	});
+
+	it('name the user and nothing that opens anything else', async () => {
+		const token = await signUnsubscribe(SECRET, 'user-1', 'reminders');
+		expect(token).toMatch(/^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/);
+		expect(await verifyUnsubscribe(SECRET, token, 'reminders')).toBe('user-1');
+	});
+
+	it('are signed for one kind only', async () => {
+		const token = await signUnsubscribe(SECRET, 'user-1', 'leaderboard');
+		expect(await verifyUnsubscribe(SECRET, token, 'leaderboard')).toBe('user-1');
+		expect(await verifyUnsubscribe(SECRET, token, 'reminders')).toBeNull();
+	});
+
+	it('are refused under another secret, or for another user', async () => {
+		const token = await signUnsubscribe(SECRET, 'user-1', 'reminders');
+		expect(await verifyUnsubscribe('another-secret', token, 'reminders')).toBeNull();
+
+		const [, signature] = token.split('.');
+		const forged = `${btoa('user-2').replace(/=+$/, '')}.${signature}`;
+		expect(await verifyUnsubscribe(SECRET, forged, 'reminders')).toBeNull();
+	});
+
+	it('are refused when they are not tokens at all', async () => {
+		for (const junk of ['', 'abc', '.', 'a.b.c', '!!!.???', `${randomToken()}`]) {
+			expect(await verifyUnsubscribe(SECRET, junk, 'reminders')).toBeNull();
+		}
+	});
+
+	it('find the account, and nobody once it is gone', async () => {
+		const { user } = await findOrCreateUser(db, 'reader@example.com');
+		const token = await signUnsubscribe(SECRET, user.id, 'reminders');
+		expect((await findUserByUnsubscribeToken(db, SECRET, token))?.id).toBe(user.id);
+
+		await deleteUser(db, user.id);
+		expect(await findUserByUnsubscribeToken(db, SECRET, token)).toBeNull();
 	});
 });

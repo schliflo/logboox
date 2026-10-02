@@ -1,7 +1,10 @@
 /**
  * The reminder Worker.
  *
- * All it does is ask the app, once a day, to send whatever reminders are due.
+ * All it does is ask the app, once a day, to do the daily run: send whatever
+ * reminders, board messages and year summaries are due, and clear out what has
+ * expired.
+ *
  * It exists as a Worker of its own because the one SvelteKit generates exports
  * a fetch handler and nothing else, and the Cloudflare adapter writes that
  * generated file over whatever `main` points at — so a hand-written entry that
@@ -16,7 +19,7 @@ interface Env {
 	/** Where the app answers. */
 	LOGBOOX_ORIGIN: string;
 	/** Shared with the app, which refuses the request without it. */
-	CRON_SECRET: string;
+	CRON_SECRET?: string;
 }
 
 export default {
@@ -36,6 +39,14 @@ export default {
 } satisfies ExportedHandler<Env>;
 
 async function trigger(env: Env): Promise<string> {
+	// Without it the request would carry `Bearer undefined` and be answered
+	// with a 401 that reads like a wrong secret rather than a missing one.
+	if (!env.CRON_SECRET) {
+		const message = 'CRON_SECRET is not set on this Worker, so the app was not called.';
+		console.error(message);
+		return JSON.stringify({ error: message });
+	}
+
 	const response = await fetch(`${env.LOGBOOX_ORIGIN}/internal/cron/reminders`, {
 		method: 'POST',
 		headers: { authorization: `Bearer ${env.CRON_SECRET}` }

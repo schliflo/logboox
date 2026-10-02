@@ -39,6 +39,10 @@ jobs:
           node-version: 26
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      # Fails while the database id or the legal text still hold placeholders.
+      # Here rather than in CI, where it would fail every pull request until
+      # the owner has filled them in.
+      - run: pnpm check:deploy
       # Applied before the Worker that depends on them ships. Migrations here
       # only ever add; a deploy is never rolled back into an older schema.
       - uses: cloudflare/wrangler-action@v3
@@ -72,8 +76,10 @@ jobs:
           command: deploy
           secrets: |
             CRON_SECRET
+            MAIL_SECRET
         env:
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          MAIL_SECRET: ${{ secrets.MAIL_SECRET }}
 
   cron:
     name: Reminder Worker
@@ -88,11 +94,15 @@ jobs:
           node-version: 26
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      # Run from `cron`, not pointed at it with `--config`: the action uploads
+      # secrets in a separate `wrangler secret bulk` that only gets the working
+      # directory, so with the root as cwd the secret landed on `logboox`.
       - uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: deploy --config cron/wrangler.jsonc
+          workingDirectory: cron
+          command: deploy
           secrets: |
             CRON_SECRET
         env:

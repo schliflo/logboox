@@ -6,6 +6,7 @@ interface __BaseEnv_Env {
 	PUBLIC_SITE_URL: 'https://logboox.app';
 	PUBLIC_MOVED_TO?: 'https://logboox.app';
 	CRON_SECRET: string;
+	MAIL_SECRET: string;
 	STORAGE?: R2Bucket;
 	DB?: D1Database;
 	EMAIL?: SendEmail;
@@ -18,6 +19,7 @@ declare namespace Cloudflare {
 		PUBLIC_SITE_URL: 'https://logboox.app';
 		PUBLIC_MOVED_TO: 'https://logboox.app';
 		CRON_SECRET: string;
+		MAIL_SECRET: string;
 	}
 	interface Env extends __BaseEnv_Env {}
 }
@@ -29,7 +31,12 @@ declare namespace NodeJS {
 	interface ProcessEnv extends StringifyValues<
 		Pick<
 			Cloudflare.Env,
-			'PUBLIC_SITE_URL' | 'PUBLIC_MOVED_TO' | 'CRON_SECRET' | 'PUBLIC_ACCOUNTS' | 'MAIL_FROM'
+			| 'PUBLIC_SITE_URL'
+			| 'PUBLIC_MOVED_TO'
+			| 'CRON_SECRET'
+			| 'MAIL_SECRET'
+			| 'PUBLIC_ACCOUNTS'
+			| 'MAIL_FROM'
 		>
 	> {}
 }

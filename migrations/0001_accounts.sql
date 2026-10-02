@@ -16,8 +16,8 @@ CREATE TABLE users (
 	reminder_after_days INTEGER NOT NULL DEFAULT 25,
 	reminded_at INTEGER,
 	-- Whether a freshly imported export is copied to the account by itself.
-	auto_sync INTEGER NOT NULL DEFAULT 1,
-	unsubscribe_token_hash TEXT NOT NULL
+	-- Off until the reader turns it on: nothing leaves the browser unasked.
+	auto_sync INTEGER NOT NULL DEFAULT 0
 );
 
 -- Sign-in links. Single use, short lived, and only ever stored hashed, so a
@@ -75,12 +75,15 @@ CREATE TABLE exports (
 	days INTEGER NOT NULL,
 	distance_km REAL NOT NULL,
 	trips INTEGER NOT NULL,
+	-- Charged buffer by buffer before each is stored, and set to the bucket's
+	-- exact sum when the upload completes.
 	stored_bytes INTEGER NOT NULL,
 	is_demo INTEGER NOT NULL DEFAULT 0,
 	record_json TEXT NOT NULL,
 	uploaded_at INTEGER NOT NULL,
-	-- Set once every buffer named by the record is in the bucket. An upload
-	-- interrupted halfway leaves this at 0 and is swept up later.
+	-- Set once every buffer named by the record is in the bucket, after which
+	-- the export is never written again. An upload interrupted halfway leaves
+	-- this at 0 and is swept up later.
 	complete INTEGER NOT NULL DEFAULT 0,
 	PRIMARY KEY (user_id, id)
 );
@@ -163,6 +166,12 @@ CREATE TABLE shares (
 	meta_json TEXT NOT NULL,
 	created_at INTEGER NOT NULL,
 	revoked_at INTEGER,
-	views INTEGER NOT NULL DEFAULT 0
+	views INTEGER NOT NULL DEFAULT 0,
+	-- What a trip or session share has stored so far, counted up before each
+	-- object is written so parallel uploads cannot all fit under the caps.
+	blob_bytes INTEGER NOT NULL DEFAULT 0,
+	blob_count INTEGER NOT NULL DEFAULT 0,
+	-- When the manifest was claimed; a share takes exactly one.
+	manifest_at INTEGER
 );
 CREATE INDEX shares_user ON shares (user_id, created_at);

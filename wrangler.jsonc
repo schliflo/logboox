@@ -14,7 +14,9 @@
 	// Off, now that logboox.app answers: a second origin would keep its own copy
 	// of every export and its own service worker, and the two would never meet.
 	"workers_dev": false,
-	"preview_urls": true,
+	// Off too: every uploaded version would get a URL of its own, on a second
+	// origin, with the production database, bucket and mail binding attached.
+	"preview_urls": false,
 	// Read by the client on start; the prerender reads the same value from
 	// `.env.production`. Keep the two in step.
 	"vars": {

@@ -12,9 +12,10 @@
  */
 
 import { all, now as currentTime, run, type Db } from '../db';
+import { failureStreak, logSendFailure, type FailureStreak } from '../mail/batch';
 import type { Mailer } from '../mail/mailer';
 import { boardNudgeMail, yearRoundupMail } from '../mail/templates';
-import { rotateUnsubscribeToken } from '../auth/users';
+import { unsubscribeLinks } from '../mail/unsubscribe';
 import { boardById, formatValue } from '$lib/leaderboard/boards';
 import { isYearFinal, monthLabel, monthsOfYear } from '$lib/leaderboard/periods';
 
@@ -83,14 +84,20 @@ export interface NudgeReport {
  * Tells people what is waiting for them, one message per person.
  *
  * Marked as mailed before the message goes, as the reminder run does and for
- * the same reason: a run that dies halfway through must not mail anyone twice,
- * and the cost of that order is the occasional offer lost to a failed send.
+ * the same reason: a run that dies halfway through must not mail anyone twice.
+ * A failed send keeps its marks, so an address that is refused for good does
+ * not head the queue every day, and three in a row end the batch; see
+ * mail/batch.ts. The offers it was about are never mailed again — only offers
+ * not yet mailed are picked up — though the app still shows them. The
+ * `streak` is shared with the rest of the daily run when there is one.
  */
 export async function sendBoardNudges(
 	db: Db,
 	mailer: Mailer,
 	origin: string,
-	now = currentTime()
+	mailSecret: string,
+	now = currentTime(),
+	streak: FailureStreak = failureStreak()
 ): Promise<NudgeReport> {
 	const rows = await findUnseen(db, now);
 
@@ -103,14 +110,15 @@ export async function sendBoardNudges(
 	let failed = 0;
 
 	for (const [userId, offers] of byUser) {
+		if (streak.stopped) break;
 		await run(db, 'UPDATE users SET board_mailed_at = ? WHERE id = ?', now, userId);
 		for (const offer of offers) {
 			await run(db, 'UPDATE board_candidates SET mailed_at = ? WHERE id = ?', now, offer.id);
 		}
 
-		// Its own token, minted per message: turning these off must never touch
-		// the way out of the export reminders.
-		const token = await rotateUnsubscribeToken(db, userId, 'leaderboard');
+		// Its own kind: turning these off must never touch the way out of the
+		// export reminders.
+		const links = await unsubscribeLinks(origin, mailSecret, userId, 'leaderboard');
 
 		try {
 			await mailer.send(
@@ -127,12 +135,15 @@ export async function sendBoardNudges(
 						};
 					}),
 					claimUrl: `${origin}/account#leaderboard`,
-					unsubscribeUrl: `${origin}/unsubscribe?kind=leaderboard&token=${encodeURIComponent(token)}`
+					...links
 				})
 			);
 			sent++;
-		} catch {
+			streak.succeeded();
+		} catch (error) {
+			logSendFailure('board nudge', userId, error);
 			failed++;
+			streak.failed();
 		}
 	}
 
@@ -153,15 +164,21 @@ interface RoundupRow {
  * Sent once the last month has closed, so the numbers in it are final, and
  * only to people who actually put their name to something — a year in review
  * for somebody who never entered is just post.
+ *
+ * A failed send keeps its mark like the other two, which here means the
+ * message is not retried at all. Putting it back would let three refused
+ * addresses stop the batch every day, and a year in review is not worth that.
  */
 export async function sendYearRoundups(
 	db: Db,
 	mailer: Mailer,
 	origin: string,
-	now = currentTime()
+	mailSecret: string,
+	now = currentTime(),
+	streak: FailureStreak = failureStreak()
 ): Promise<NudgeReport> {
 	const year = new Date(now * 1000).getUTCFullYear() - 1;
-	if (!isYearFinal(year, now)) return { considered: 0, sent: 0, failed: 0 };
+	if (streak.stopped || !isYearFinal(year, now)) return { considered: 0, sent: 0, failed: 0 };
 
 	const months = monthsOfYear(year);
 	const rows = await all<RoundupRow>(
@@ -188,8 +205,9 @@ export async function sendYearRoundups(
 	let failed = 0;
 
 	for (const row of rows) {
+		if (streak.stopped) break;
 		await run(db, 'UPDATE users SET roundup_mailed_year = ? WHERE id = ?', year, row.user_id);
-		const token = await rotateUnsubscribeToken(db, row.user_id, 'leaderboard');
+		const links = await unsubscribeLinks(origin, mailSecret, row.user_id, 'leaderboard');
 
 		try {
 			await mailer.send(
@@ -198,12 +216,15 @@ export async function sendYearRoundups(
 					places: row.places,
 					wins: row.wins,
 					url: `${origin}/leaderboard/${year}`,
-					unsubscribeUrl: `${origin}/unsubscribe?kind=leaderboard&token=${encodeURIComponent(token)}`
+					...links
 				})
 			);
 			sent++;
-		} catch {
+			streak.succeeded();
+		} catch (error) {
+			logSendFailure('year roundup', row.user_id, error);
 			failed++;
+			streak.failed();
 		}
 	}
 
