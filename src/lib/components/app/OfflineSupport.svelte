@@ -8,7 +8,7 @@
 -->
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { dev } from '$app/environment';
+	import { dev } from '$app/env';
 	import { toast } from 'svelte-sonner';
 
 	onMount(() => {

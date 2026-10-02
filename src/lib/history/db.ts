@@ -14,11 +14,15 @@
  */
 
 import type { ExportRecord, StoredBlob } from './codec';
+import type { Annotation } from '../logbook/types';
 
+// Never renamed. It is a storage identifier, not branding: changing it would
+// orphan every export anyone has kept.
 const DB_NAME = 'xpeng-export-browser';
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 const EXPORTS = 'exports';
 const BLOBS = 'blobs';
+const ANNOTATIONS = 'annotations';
 
 /**
  * Resolved on each call rather than at module load: every page here is
@@ -69,6 +73,13 @@ function open(): Promise<IDBDatabase> {
 			if (!db.objectStoreNames.contains(BLOBS)) {
 				const store = db.createObjectStore(BLOBS, { keyPath: ['id', 'name'] });
 				store.createIndex('id', 'id');
+			}
+			// Added in version 2. Each check is its own, so a browser at any
+			// earlier version arrives at the same schema without a migration
+			// path per step.
+			if (!db.objectStoreNames.contains(ANNOTATIONS)) {
+				const store = db.createObjectStore(ANNOTATIONS, { keyPath: ['vin', 'startTime'] });
+				store.createIndex('vin', 'vin');
 			}
 		};
 
@@ -183,6 +194,46 @@ export async function clearExports(): Promise<void> {
 		const tx = db.transaction([EXPORTS, BLOBS], 'readwrite');
 		tx.objectStore(EXPORTS).clear();
 		tx.objectStore(BLOBS).clear();
+		return settle(tx, () => undefined);
+	});
+}
+
+/**
+ * What the reader has written about their own trips: comments, and the origin
+ * and destination a logbook needs.
+ *
+ * Kept against the vehicle rather than the export. A trip belongs to a car,
+ * not to the file it happened to be found in, and the same trip appears in
+ * every overlapping export — so a note written once has to survive the export
+ * it was written against being removed.
+ */
+export async function putAnnotations(entries: Annotation[]): Promise<void> {
+	if (entries.length === 0) return;
+	return withDb((db) => {
+		const tx = db.transaction(ANNOTATIONS, 'readwrite');
+		const store = tx.objectStore(ANNOTATIONS);
+		for (const entry of entries) store.put(entry);
+		return settle(tx, () => undefined);
+	});
+}
+
+/** Every note for one car, tombstones included — the sync needs to see them. */
+export async function listAnnotations(vin: string): Promise<Annotation[]> {
+	return withDb((db) => {
+		const tx = db.transaction(ANNOTATIONS, 'readonly');
+		const request = tx.objectStore(ANNOTATIONS).index('vin').getAll(IDBKeyRange.only(vin));
+		return settle(tx, () => request.result as Annotation[]);
+	});
+}
+
+export async function clearAnnotations(vin: string): Promise<void> {
+	return withDb((db) => {
+		const tx = db.transaction(ANNOTATIONS, 'readwrite');
+		const store = tx.objectStore(ANNOTATIONS);
+		const keys = store.index('vin').getAllKeys(IDBKeyRange.only(vin));
+		keys.onsuccess = () => {
+			for (const key of keys.result) store.delete(key);
+		};
 		return settle(tx, () => undefined);
 	});
 }

@@ -12,6 +12,7 @@
 // and the parser is the one thing the app cannot do without offline.
 import DataWorker from './worker/data.worker?worker&inline';
 import {
+	packDataset,
 	unpackDataset,
 	type KeptOutcome,
 	type PackedDataset,
@@ -21,6 +22,7 @@ import {
 } from './worker/protocol';
 import type { DerivedData } from './analytics';
 import type { Dataset } from './store/columnar';
+import type { BoardCandidate } from './worker/transfer';
 
 export interface LoadProgress {
 	phase: ParsePhase;
@@ -49,7 +51,16 @@ export interface BackupResult {
 	name: string;
 }
 
-export type WorkerResult = DatasetResult | RestoreResult | BackupResult;
+export interface TransferResult {
+	kind: 'transferred';
+	/** Exports that made it. */
+	ids: string[];
+	failed: Array<{ id: string; reason: string }>;
+	/** Places on a public board this upload turned out to be good enough for. */
+	candidates: BoardCandidate[];
+}
+
+export type WorkerResult = DatasetResult | RestoreResult | BackupResult | TransferResult;
 
 export class DataLoadError extends Error {
 	constructor(
@@ -63,7 +74,8 @@ export class DataLoadError extends Error {
 
 function run(
 	request: WorkerRequest,
-	onProgress?: (progress: LoadProgress) => void
+	onProgress?: (progress: LoadProgress) => void,
+	transfer: Transferable[] = []
 ): Promise<WorkerResult> {
 	return new Promise((resolve, reject) => {
 		const worker = new DataWorker();
@@ -105,6 +117,15 @@ function run(
 					});
 					cleanup();
 					break;
+				case 'transferred':
+					resolve({
+						kind: 'transferred',
+						ids: message.ids,
+						failed: message.failed,
+						candidates: message.candidates ?? []
+					});
+					cleanup();
+					break;
 				case 'error':
 					reject(new DataLoadError(message.message, message.hint));
 					cleanup();
@@ -117,7 +138,7 @@ function run(
 			cleanup();
 		};
 
-		worker.postMessage(request);
+		worker.postMessage(request, transfer);
 	});
 }
 
@@ -135,7 +156,9 @@ export async function loadFiles(
 	// Proxy, and postMessage cannot clone one — it fails with "could not be
 	// cloned" and the upload silently does nothing.
 	const result = await run({ type: 'parse', files: Array.from(files), timeZone }, onProgress);
-	if (result.kind === 'backup') throw new DataLoadError('The data worker answered unexpectedly.');
+	if (result.kind !== 'dataset' && result.kind !== 'restored') {
+		throw new DataLoadError('The data worker answered unexpectedly.');
+	}
 	return result;
 }
 
@@ -167,4 +190,56 @@ export async function backupKept(
 ): Promise<BackupResult> {
 	const result = await run({ type: 'backup', ids: Array.from(ids) }, onProgress);
 	return expect<BackupResult>(result, 'backup');
+}
+
+/**
+ * Copies kept exports into the signed-in account. The buffers go up exactly as
+ * they are stored, so this costs no re-compression — only the analysis needed
+ * to give the account something it can answer questions from.
+ */
+export async function syncToAccount(
+	ids: string[],
+	timeZone: string,
+	onProgress?: (progress: LoadProgress) => void
+): Promise<TransferResult> {
+	return expect<TransferResult>(
+		await run({ type: 'sync', ids, timeZone }, onProgress),
+		'transferred'
+	);
+}
+
+/** Brings exports back down from the account into this browser's own store. */
+export async function fetchFromAccount(
+	ids: string[],
+	onProgress?: (progress: LoadProgress) => void
+): Promise<TransferResult> {
+	return expect<TransferResult>(await run({ type: 'fetch', ids }, onProgress), 'transferred');
+}
+
+/**
+ * Analyses a stretch of what is already open. The slice's buffers move to the
+ * worker rather than being copied, so it is unusable afterwards; what comes
+ * back is the same samples with their analysis.
+ */
+export async function analyzeView(dataset: Dataset, timeZone: string): Promise<DatasetResult> {
+	const { packed, transfer } = packDataset(dataset);
+	return expect<DatasetResult>(
+		await run({ type: 'analyze', dataset: packed, timeZone }, undefined, transfer),
+		'dataset'
+	);
+}
+
+/**
+ * Opens an export someone published. It is read into memory and nowhere else:
+ * a month that arrived through a link is not this browser's to keep.
+ */
+export async function openShared(
+	shareId: string,
+	timeZone: string,
+	onProgress?: (progress: LoadProgress) => void
+): Promise<DatasetResult> {
+	return expect<DatasetResult>(
+		await run({ type: 'openShare', shareId, timeZone }, onProgress),
+		'dataset'
+	);
 }

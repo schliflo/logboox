@@ -27,10 +27,21 @@ function diskFile(path: string, name: string): FileLike {
 	};
 }
 
-describe.skipIf(!hasSamples)('real export', () => {
-	const files = readdirSync(SAMPLES)
+/**
+ * Listed inside a guard rather than at the top of the suite: `skipIf` decides
+ * whether the tests *run*, but the body is still evaluated to collect them, so
+ * reading a directory that is not there fails the file everywhere the samples
+ * are absent — which is everywhere but one machine.
+ */
+function sampleFiles(): FileLike[] {
+	if (!hasSamples) return [];
+	return readdirSync(SAMPLES)
 		.filter((name) => name.endsWith('.csv'))
 		.map((name) => diskFile(join(SAMPLES, name), name));
+}
+
+describe.skipIf(!hasSamples)('real export', () => {
+	const files = sampleFiles();
 
 	const plan = recognizeFiles(files);
 

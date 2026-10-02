@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { parseStream } from './ingest';
+import { EARLIEST_PLAUSIBLE, orderRows } from './order';
 import { recognizeFiles, type FileLike } from '../schema/streams';
 import { valueAt } from '../store/columnar';
 import { combineStreams, verifyAlignment } from './align';
@@ -19,6 +20,22 @@ function fixture(name: string, exportName: string): FileLike {
 					const mid = Math.floor(bytes.byteLength / 2);
 					controller.enqueue(new Uint8Array(bytes.subarray(0, mid)));
 					controller.enqueue(new Uint8Array(bytes.subarray(mid)));
+					controller.close();
+				}
+			})
+	};
+}
+
+/** A FileLike over CSV text, for rows the on-disk fixtures do not contain. */
+function inlineFile(name: string, text: string): FileLike {
+	const bytes = new TextEncoder().encode(text);
+	return {
+		name,
+		size: bytes.byteLength,
+		stream: () =>
+			new ReadableStream<Uint8Array>({
+				start(controller) {
+					controller.enqueue(bytes);
 					controller.close();
 				}
 			})
@@ -241,5 +258,103 @@ describe('alignment', () => {
 		const dataset = combineStreams([full, partial], 'DA-test');
 		expect(dataset.aligned).toBe(false);
 		expect(dataset.time.length).toBe(6);
+	});
+});
+
+describe('rows without a usable time', () => {
+	const HEADER = 'vin,vmodel,timer,ds,esp_vehspd';
+	const row = (timer: number | string, speed: number) =>
+		`L1NTEST00000000001,F30b,${timer},20260902,${speed}`;
+	const T = 1789142390;
+
+	it('leaves out clock-reset and empty timers without shifting the values', async () => {
+		const csv = [
+			HEADER,
+			row(T, 10),
+			row(T + 1, 11),
+			row(1262304040, 99),
+			row('', 98),
+			row(1262304041, 97),
+			row(T + 2, 12),
+			row(T + 2, 12),
+			row(T + 3, 13)
+		].join('\n');
+		const plan = recognizeFiles([inlineFile(BASE, csv)]);
+		const result = await parseStream(plan.streams.operation!, 'operation');
+
+		expect(result.undatedRows).toBe(3);
+		expect(result.duplicateRows).toBe(1);
+		expect([...result.time]).toEqual([T, T + 1, T + 2, T + 3]);
+		const speed = result.columns.get('esp_vehspd')!;
+		expect([0, 1, 2, 3].map((i) => valueAt(speed, i))).toEqual([10, 11, 12, 13]);
+		for (const column of result.columns.values()) {
+			expect(column.data.length).toBe(result.time.length);
+		}
+	});
+
+	it('does the same when the bad rows sit in a later part', async () => {
+		const first = [HEADER, row(T, 10), row(T + 1, 11)].join('\n');
+		const second = [
+			HEADER,
+			row(1262304040, 99),
+			row(1262304041, 97),
+			row('', 98),
+			row(T + 2, 12)
+		].join('\n');
+		const plan = recognizeFiles([inlineFile(PART1, second), inlineFile(BASE, first)]);
+		const result = await parseStream(plan.streams.operation!, 'operation');
+
+		expect(result.undatedRows).toBe(3);
+		expect(result.duplicateRows).toBe(0);
+		expect([...result.time]).toEqual([T, T + 1, T + 2]);
+		const speed = result.columns.get('esp_vehspd')!;
+		expect([0, 1, 2].map((i) => valueAt(speed, i))).toEqual([10, 11, 12]);
+		for (const column of result.columns.values()) {
+			expect(column.data.length).toBe(result.time.length);
+		}
+	});
+});
+
+describe('orderRows', () => {
+	const T = 1789142390;
+
+	it('counts undated and repeated rows apart in sorted input', () => {
+		const time = Uint32Array.of(0, T, T, T + 1);
+		const order = orderRows(time, time.length);
+		expect([...order.keep]).toEqual([1, 3]);
+		expect(order.duplicates).toBe(1);
+		expect(order.undated).toBe(1);
+		expect(order.wasUnsorted).toBe(false);
+	});
+
+	it('counts undated and repeated rows apart in unsorted input', () => {
+		const time = Uint32Array.of(T + 1, 1262304040, T, T, 0, T + 2);
+		const order = orderRows(time, time.length);
+		expect([...order.keep]).toEqual([2, 0, 5]);
+		expect(order.duplicates).toBe(1);
+		expect(order.undated).toBe(2);
+		expect(order.wasUnsorted).toBe(true);
+	});
+
+	it('does not call a file unsorted because of an undated row amid sorted ones', () => {
+		const time = Uint32Array.of(T, T + 1, 1262304040, T + 2, 0, T + 3);
+		const order = orderRows(time, time.length);
+		expect(order.wasUnsorted).toBe(false);
+		expect([...order.keep]).toEqual([0, 1, 3, 5]);
+		expect(order.undated).toBe(2);
+	});
+
+	it('still calls a file unsorted when its dated rows are out of order around undated ones', () => {
+		const time = Uint32Array.of(T + 2, 1262304040, T, T + 1);
+		const order = orderRows(time, time.length);
+		expect(order.wasUnsorted).toBe(true);
+		expect([...order.keep]).toEqual([2, 3, 0]);
+	});
+
+	it('treats the earliest plausible second itself as dated', () => {
+		const time = Uint32Array.of(EARLIEST_PLAUSIBLE - 1, EARLIEST_PLAUSIBLE);
+		const order = orderRows(time, time.length);
+		expect([...order.keep]).toEqual([1]);
+		expect(order.undated).toBe(1);
 	});
 });

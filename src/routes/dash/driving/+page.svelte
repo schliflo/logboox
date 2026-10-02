@@ -1,19 +1,20 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import * as Card from '$lib/components/ui/card';
-	import * as Table from '$lib/components/ui/table';
-	import BigStat from '$lib/components/charts/BigStat.svelte';
-	import Histogram from '$lib/components/charts/Histogram.svelte';
-	import GgDiagram from '$lib/components/charts/GgDiagram.svelte';
-	import { data } from '$lib/state/dataset.svelte';
-	import { dateTime, duration, num } from '$lib/utils/format';
+	import * as Card from '#lib/components/ui/card/index.js';
+	import * as Table from '#lib/components/ui/table/index.js';
+	import BigStat from '#lib/components/charts/BigStat.svelte';
+	import Histogram from '#lib/components/charts/Histogram.svelte';
+	import GgDiagram from '#lib/components/charts/GgDiagram.svelte';
+	import { data } from '#lib/state/dataset.svelte.js';
+	import { tripLink } from '#lib/data/range.js';
+	import { dateTime, duration, num } from '#lib/utils/format.js';
 
 	const stats = $derived(data.derived!);
 
-	/** The trip a given moment belongs to, so an event can link to its context. */
+	/** When the trip a given moment belongs to started, so an event can link to its context. */
 	function tripAt(time: number): number | null {
 		const trip = stats.trips.find((t) => time >= t.startTime && time <= t.endTime);
-		return trip ? trip.index : null;
+		return trip ? trip.startTime : null;
 	}
 
 	const events = $derived([
@@ -168,7 +169,7 @@
 								{@const trip = tripAt(event.time)}
 								<Table.Row
 									class={trip !== null ? 'cursor-pointer hover:bg-muted/50' : ''}
-									onclick={() => trip !== null && goto(`/dash/trips?trip=${trip}`)}
+									onclick={() => trip !== null && goto(tripLink(trip))}
 								>
 									<Table.Cell class="py-2">
 										<span class="font-medium tabular-nums" style="color: var({group.accent})">

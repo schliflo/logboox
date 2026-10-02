@@ -47,6 +47,12 @@ export interface ChargeSession {
 	isDc: boolean;
 	rangeStart: number;
 	rangeEnd: number;
+	/**
+	 * Odometer while plugged in, in km. The car does not move during a session,
+	 * so this is one reading — and the one thing that still identifies the
+	 * session after the timeline it was found in has been merged with another.
+	 */
+	odometer: number;
 }
 
 export interface ChargingHabits {
@@ -128,6 +134,7 @@ export function detectCharging(dataset: Dataset): ChargeSession[] {
 
 		sessions.push({
 			index: sessions.length,
+			odometer: odometer ? firstFinite(odometer, run.start, run.end) : NaN,
 			start: run.start,
 			end: run.end,
 			startTime: time[run.start],

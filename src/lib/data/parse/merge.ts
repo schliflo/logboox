@@ -40,6 +40,7 @@ export interface MergeSource {
 	column(key: string): Column | undefined;
 	available: Record<StreamId, boolean>;
 	duplicateRows: number;
+	undatedRows: number;
 	unsortedStreams: string[];
 	rowsParsed: number;
 	bytesParsed: number;
@@ -150,6 +151,7 @@ export function sourceFromDataset(dataset: Dataset): MergeSource {
 		column: (key) => dataset.columns.get(key),
 		available: dataset.available,
 		duplicateRows: dataset.duplicateRows,
+		undatedRows: dataset.undatedRows,
 		unsortedStreams: dataset.unsortedStreams,
 		rowsParsed: dataset.rowsParsed,
 		bytesParsed: dataset.bytesParsed,
@@ -207,6 +209,7 @@ export function mergeSources(sources: MergeSource[]): Dataset {
 		exportId: ordered.map((s) => s.exportId).join('+'),
 		available,
 		duplicateRows: ordered.reduce((sum, s) => sum + s.duplicateRows, 0),
+		undatedRows: ordered.reduce((sum, s) => sum + s.undatedRows, 0),
 		unsortedStreams: [...new Set(ordered.flatMap((s) => s.unsortedStreams))],
 		emptyColumns,
 		rowsParsed: ordered.reduce((sum, s) => sum + s.rowsParsed, 0),

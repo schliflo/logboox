@@ -4,7 +4,7 @@
  * absolute URL, so it appears only once a public origin has been configured.
  */
 
-import { SITE_URL } from '$lib/seo';
+import { SITE_URL } from '#lib/seo.js';
 
 export const prerender = true;
 

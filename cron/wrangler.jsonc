@@ -1,0 +1,18 @@
+{
+	"$schema": "../node_modules/wrangler/config-schema.json",
+	"name": "logboox-cron",
+	"main": "index.ts",
+	"compatibility_date": "2026-09-01",
+	// Nothing to serve: this Worker only ever wakes up on a schedule.
+	"workers_dev": false,
+	"triggers": {
+		// 06:15 UTC. Early enough to be read with the morning's mail, and off
+		// the hour, where every other scheduled job on the platform piles up.
+		"crons": ["15 6 * * *"]
+	},
+	"vars": {
+		"LOGBOOX_ORIGIN": "https://logboox.app"
+	}
+	// CRON_SECRET is a secret, set with `wrangler secret put` or by the deploy
+	// workflow. It must match the one the app has.
+}

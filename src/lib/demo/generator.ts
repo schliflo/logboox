@@ -732,6 +732,7 @@ function buildDataset(samples: Sample[], awd: boolean, seed: number): Dataset {
 		exportId: `DEMO${seed}`,
 		available: { status: true, operation: true, power: true },
 		duplicateRows: 0,
+		undatedRows: 0,
 		unsortedStreams: [],
 		emptyColumns,
 		rowsParsed: time.length,

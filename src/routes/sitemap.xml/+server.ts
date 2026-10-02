@@ -4,13 +4,19 @@
  * no absolute URL to publish, so the sitemap is served empty but valid.
  */
 
-import { SITE_URL } from '$lib/seo';
+import { SITE_URL } from '#lib/seo.js';
 
 export const prerender = true;
 
 export function GET(): Response {
 	const entries = SITE_URL
-		? [`\t<url>\n\t\t<loc>${SITE_URL}/</loc>\n\t\t<priority>1.0</priority>\n\t</url>`]
+		? [
+				`\t<url>\n\t\t<loc>${SITE_URL}/</loc>\n\t\t<priority>1.0</priority>\n\t</url>`,
+				`\t<url>\n\t\t<loc>${SITE_URL}/leaderboard</loc>\n\t\t<priority>0.7</priority>\n\t</url>`,
+				`\t<url>\n\t\t<loc>${SITE_URL}/legal/privacy</loc>\n\t\t<priority>0.2</priority>\n\t</url>`,
+				`\t<url>\n\t\t<loc>${SITE_URL}/legal/imprint</loc>\n\t\t<priority>0.2</priority>\n\t</url>`,
+				`\t<url>\n\t\t<loc>${SITE_URL}/legal/terms</loc>\n\t\t<priority>0.2</priority>\n\t</url>`
+			]
 		: [];
 	const body = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">

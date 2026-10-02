@@ -1,11 +1,11 @@
 <script lang="ts">
-	import * as Card from '$lib/components/ui/card';
-	import BigStat from '$lib/components/charts/BigStat.svelte';
-	import Punchcard from '$lib/components/charts/Punchcard.svelte';
-	import UPlotChart from '$lib/components/charts/UPlotChart.svelte';
-	import { data } from '$lib/state/dataset.svelte';
-	import { COLUMNS } from '$lib/data/schema/columns';
-	import { duration, hourLabel, num } from '$lib/utils/format';
+	import * as Card from '#lib/components/ui/card/index.js';
+	import BigStat from '#lib/components/charts/BigStat.svelte';
+	import Punchcard from '#lib/components/charts/Punchcard.svelte';
+	import UPlotChart from '#lib/components/charts/UPlotChart.svelte';
+	import { data } from '#lib/state/dataset.svelte.js';
+	import { COLUMNS } from '#lib/data/schema/columns.js';
+	import { duration, hourLabel, num } from '#lib/utils/format.js';
 
 	const stats = $derived(data.derived!);
 	const doors = $derived(stats.doors);

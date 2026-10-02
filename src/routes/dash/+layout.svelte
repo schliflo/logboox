@@ -1,22 +1,26 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
+	import { onMount, untrack } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
-	import * as Sidebar from '$lib/components/ui/sidebar';
-	import * as Popover from '$lib/components/ui/popover';
-	import { Button, buttonVariants } from '$lib/components/ui/button';
-	import { Badge } from '$lib/components/ui/badge';
-	import { Label } from '$lib/components/ui/label';
-	import { Input } from '$lib/components/ui/input';
-	import { Switch } from '$lib/components/ui/switch';
-	import MadeBy from '$lib/components/app/MadeBy.svelte';
-	import Seo from '$lib/components/app/Seo.svelte';
-	import { SITE_NAME } from '$lib/seo';
-	import { data } from '$lib/state/dataset.svelte';
-	import { settings } from '$lib/state/settings.svelte';
-	import { maskVin, dateOnly } from '$lib/utils/format';
+	import * as Sidebar from '#lib/components/ui/sidebar/index.js';
+	import * as Popover from '#lib/components/ui/popover/index.js';
+	import { Button, buttonVariants } from '#lib/components/ui/button/index.js';
+	import { Badge } from '#lib/components/ui/badge/index.js';
+	import { Label } from '#lib/components/ui/label/index.js';
+	import { Input } from '#lib/components/ui/input/index.js';
+	import { Switch } from '#lib/components/ui/switch/index.js';
+	import MadeBy from '#lib/components/app/MadeBy.svelte';
+	import AccountMenu from '#lib/components/app/AccountMenu.svelte';
+	import RangeFilter from '#lib/components/app/RangeFilter.svelte';
+	import Seo from '#lib/components/app/Seo.svelte';
+	import { SITE_NAME } from '#lib/seo.js';
+	import { data } from '#lib/state/dataset.svelte.js';
+	import { logbook } from '#lib/state/logbook.svelte.js';
+	import { settings } from '#lib/state/settings.svelte.js';
+	import { maskVin, dateOnly } from '#lib/utils/format.js';
 	import LayoutIcon from '@lucide/svelte/icons/layout-dashboard';
 	import RouteIcon from '@lucide/svelte/icons/route';
+	import BookIcon from '@lucide/svelte/icons/book-marked';
 	import ZapIcon from '@lucide/svelte/icons/zap';
 	import BatteryIcon from '@lucide/svelte/icons/battery-charging';
 	import GaugeIcon from '@lucide/svelte/icons/gauge';
@@ -30,6 +34,7 @@
 	const sections = [
 		{ href: '/dash/overview', label: 'Overview', icon: LayoutIcon },
 		{ href: '/dash/trips', label: 'Trips', icon: RouteIcon },
+		{ href: '/dash/logbook', label: 'Logbook', icon: BookIcon },
 		{ href: '/dash/charging', label: 'Charging', icon: ZapIcon },
 		{ href: '/dash/battery', label: 'Battery', icon: BatteryIcon },
 		{ href: '/dash/driving', label: 'Driving style', icon: GaugeIcon },
@@ -39,20 +44,42 @@
 	];
 
 	const stats = $derived(data.derived);
+	/** The export as loaded; the range control says how much of it is on screen. */
+	const loaded = $derived(data.full?.derived ?? stats);
 	const section = $derived(sections.find((s) => s.href === page.url.pathname));
 
 	/** What is on screen: a fresh drop, a kept export, or several joined up. */
 	const sourceLabel = $derived.by(() => {
+		if (data.source.kind === 'shared') return 'Shared export';
 		if (data.source.kind === 'merged') return `${data.source.ids.length} exports merged`;
 		if (data.isDemo) return 'Demonstration month';
 		return data.source.kind === 'reopened' ? 'Kept export' : 'Your export';
 	});
+
+	/** Someone else's export carries no identifier worth revealing. */
+	const shared = $derived(data.source.kind === 'shared');
 
 	onMount(() => {
 		// The dataset is not reloaded on navigation, so a deep link opened cold
 		// has nothing to show and belongs back at the start — where the exports
 		// kept in this browser are listed, ready to open again.
 		if (!data.isReady) goto('/');
+	});
+
+	// Notes belong to the car rather than to the export they were written
+	// against, so they are read once a dataset is open and its VIN is known.
+	// Loaded here rather than by the dataset store, which would make the two
+	// import each other.
+	// The VIN is read on its own so that narrowing the range, which swaps the
+	// dataset but not the car, does not reopen the logbook.
+	const vin = $derived(data.dataset?.vin);
+	$effect(() => {
+		// Not for a shared export: those notes belong to whoever owns the car,
+		// and this reader's own logbook has nothing to say about it.
+		// `open` reads the store's own state before its first await; untracked,
+		// so that a failure it records there cannot re-run this and call it again.
+		if (vin && data.source.kind !== 'shared') untrack(() => void logbook.open(vin));
+		else untrack(() => logbook.reset());
 	});
 </script>
 
@@ -63,7 +90,7 @@
 	noindex
 />
 
-{#if data.isReady && stats}
+{#if data.isReady && stats && loaded}
 	<Sidebar.Provider>
 		<Sidebar.Root collapsible="icon">
 			<Sidebar.Header>
@@ -78,11 +105,11 @@
 					<div class="flex min-w-0 flex-col group-data-[collapsible=icon]:hidden">
 						<span class="truncate text-sm font-medium">{sourceLabel}</span>
 						<span class="truncate text-xs text-muted-foreground">
-							{dateOnly(stats.startTime)} – {dateOnly(stats.endTime)}
+							{dateOnly(loaded.startTime)} – {dateOnly(loaded.endTime)}
 						</span>
-						{#if stats.sources > 1}
+						{#if loaded.sources > 1}
 							<span class="truncate text-xs text-muted-foreground">
-								{stats.recordedDays} days recorded
+								{loaded.recordedDays} days recorded
 							</span>
 						{/if}
 					</div>
@@ -115,14 +142,16 @@
 
 			<Sidebar.Footer>
 				<div class="space-y-2 px-2 pb-2 group-data-[collapsible=icon]:hidden">
-					<button
-						type="button"
-						class="w-full text-left font-mono text-[11px] text-muted-foreground transition-colors hover:text-foreground"
-						onclick={() => (settings.revealVin = !settings.revealVin)}
-						title={settings.revealVin ? 'Hide the VIN' : 'Reveal the VIN'}
-					>
-						{settings.revealVin ? data.dataset?.vin : maskVin(data.dataset?.vin ?? '')}
-					</button>
+					{#if !shared}
+						<button
+							type="button"
+							class="w-full text-left font-mono text-[11px] text-muted-foreground transition-colors hover:text-foreground"
+							onclick={() => (settings.revealVin = !settings.revealVin)}
+							title={settings.revealVin ? 'Hide the VIN' : 'Reveal the VIN'}
+						>
+							{settings.revealVin ? data.dataset?.vin : maskVin(data.dataset?.vin ?? '')}
+						</button>
+					{/if}
 					<a href="/wrapped" class="block text-xs text-muted-foreground hover:text-foreground">
 						Replay the highlights
 					</a>
@@ -137,19 +166,27 @@
 				class="sticky top-0 z-10 flex h-14 shrink-0 items-center gap-2 border-b bg-background/80 px-4 backdrop-blur"
 			>
 				<Sidebar.Trigger />
-				<h1 class="text-sm font-medium">
+				<h1 class="min-w-0 truncate text-sm font-medium">
 					{section?.label ?? 'Overview'}
 				</h1>
 
 				<div class="ml-auto flex items-center gap-2">
+					<RangeFilter />
+					<!-- On a phone the sidebar already names the source; the row is for controls. -->
 					{#if data.isDemo}
-						<Badge variant="secondary">Demo data</Badge>
+						<Badge variant="secondary" class="hidden sm:inline-flex">Demo data</Badge>
 					{/if}
 					{#if data.source.kind === 'merged'}
-						<Badge variant="secondary">Merged · {data.source.ids.length}</Badge>
+						<Badge variant="secondary" class="hidden sm:inline-flex">
+							Merged · {data.source.ids.length}
+						</Badge>
 					{:else if data.source.kind === 'reopened'}
-						<Badge variant="secondary">Reopened</Badge>
+						<Badge variant="secondary" class="hidden sm:inline-flex">Reopened</Badge>
+					{:else if shared}
+						<Badge variant="secondary" class="hidden sm:inline-flex">Shared with you</Badge>
 					{/if}
+
+					<AccountMenu variant="ghost" />
 
 					<Popover.Root>
 						<Popover.Trigger class={buttonVariants({ variant: 'ghost', size: 'icon' })}>

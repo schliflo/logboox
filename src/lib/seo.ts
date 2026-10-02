@@ -15,7 +15,7 @@
  * values.
  */
 
-import { env } from '$env/dynamic/public';
+import { PUBLIC_MOVED_TO, PUBLIC_SITE_URL } from '$app/env/public';
 
 export const SITE_NAME = 'LogbooX';
 
@@ -31,14 +31,14 @@ export const AUTHOR = 'schliflo';
 export const AUTHOR_URL = 'https://github.com/schliflo';
 
 /** Configured public origin, without a trailing slash, or an empty string. */
-export const SITE_URL = (env.PUBLIC_SITE_URL ?? '').replace(/\/+$/, '');
+export const SITE_URL = PUBLIC_SITE_URL.replace(/\/+$/, '');
 
 /**
  * Where the app now lives, when this deployment is a superseded one. Set only
  * on the legacy Worker, where it turns on the notice that points readers — and
  * the exports they keep here — at the new address. Empty everywhere else.
  */
-export const MOVED_TO = (env.PUBLIC_MOVED_TO ?? '').replace(/\/+$/, '');
+export const MOVED_TO = PUBLIC_MOVED_TO.replace(/\/+$/, '');
 
 /** Absolute URL for a path, or null when the origin was never configured. */
 export function absolute(path: string): string | null {

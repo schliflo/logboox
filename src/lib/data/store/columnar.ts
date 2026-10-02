@@ -45,6 +45,8 @@ export interface Dataset {
 	available: Record<StreamId, boolean>;
 	/** Source rows dropped as exact repeats — surfaced as a data-quality fact. */
 	duplicateRows: number;
+	/** Source rows with no usable time (clock not yet set), left out. */
+	undatedRows: number;
 	/** Streams whose rows arrived out of chronological order and were sorted. */
 	unsortedStreams: string[];
 	/** Registry columns the export contained but never populated. */
@@ -263,4 +265,80 @@ export function searchTime(time: Uint32Array, t: number): number {
 		}
 	}
 	return best;
+}
+
+/** Index of the first sample at or after `t`, or `time.length`. Time must be ascending. */
+export function firstAtOrAfter(time: Uint32Array, t: number): number {
+	// Samples are whole seconds: the last one before `t`, plus one, is it.
+	return searchTime(time, Math.ceil(t) - 1) + 1;
+}
+
+/** A column around raw values, with the counts and range recomputed from them. */
+export function summarise(spec: ColumnSpec, data: TypedArray): Column {
+	let nonNull = 0;
+	let min = Infinity;
+	let max = -Infinity;
+
+	for (let i = 0; i < data.length; i++) {
+		const raw = data[i];
+		if (isNullRaw(raw, spec.dtype)) continue;
+		nonNull++;
+		if (raw < min) min = raw;
+		if (raw > max) max = raw;
+	}
+
+	return {
+		spec,
+		data,
+		nonNull,
+		min: nonNull > 0 ? min * spec.scale + spec.offset : NaN,
+		max: nonNull > 0 ? max * spec.scale + spec.offset : NaN
+	};
+}
+
+/**
+ * The samples from `from` (inclusive) to `to` (exclusive), as a dataset of
+ * their own.
+ *
+ * Every array is copied rather than viewed: the slice goes to the worker for
+ * analysis and its buffers are transferred there, which must never detach the
+ * full dataset it was cut from. What describes the import itself — rows read,
+ * repeats dropped — is carried over unchanged, since the slice did not change
+ * how the files were read.
+ */
+export function restrictDataset(dataset: Dataset, from: number, to: number): Dataset {
+	const start = firstAtOrAfter(dataset.time, from);
+	const end = Math.max(start, firstAtOrAfter(dataset.time, to));
+
+	const columns = new Map<string, Column>();
+	for (const [key, column] of dataset.columns) {
+		columns.set(key, summarise(column.spec, column.data.slice(start, end) as TypedArray));
+	}
+
+	const coverage = dataset.coverage
+		?.filter((window) => window.endTime > from && window.startTime < to)
+		.map((window) => ({
+			startTime: Math.max(window.startTime, from),
+			endTime: Math.min(window.endTime, to),
+			exportId: window.exportId
+		}));
+
+	return {
+		time: dataset.time.slice(start, end),
+		columns,
+		vin: dataset.vin,
+		vmodel: dataset.vmodel,
+		exportId: dataset.exportId,
+		available: { ...dataset.available },
+		duplicateRows: dataset.duplicateRows,
+		undatedRows: dataset.undatedRows,
+		unsortedStreams: [...dataset.unsortedStreams],
+		emptyColumns: [...columns.values()]
+			.filter((column) => column.nonNull === 0)
+			.map((column) => column.spec.key),
+		rowsParsed: dataset.rowsParsed,
+		bytesParsed: dataset.bytesParsed,
+		aligned: dataset.aligned,
+		coverage: coverage?.length ? coverage : undefined
+	};
 }

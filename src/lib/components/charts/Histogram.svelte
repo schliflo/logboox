@@ -9,7 +9,7 @@
   out.
 -->
 <script lang="ts">
-	import { duration, num } from '$lib/utils/format';
+	import { duration, num } from '#lib/utils/format.js';
 	import ChartTooltip from './ChartTooltip.svelte';
 
 	interface Props {

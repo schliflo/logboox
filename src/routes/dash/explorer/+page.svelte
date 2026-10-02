@@ -1,17 +1,17 @@
 <script lang="ts">
-	import * as Card from '$lib/components/ui/card';
-	import { Button } from '$lib/components/ui/button';
-	import { Switch } from '$lib/components/ui/switch';
-	import { Label } from '$lib/components/ui/label';
-	import UPlotChart, { type ChartSeries } from '$lib/components/charts/UPlotChart.svelte';
-	import { data } from '$lib/state/dataset.svelte';
-	import { settings } from '$lib/state/settings.svelte';
-	import { breakAtGaps, selectSeries } from '$lib/data/store/decimate';
-	import { AWAKE_GAP_SECONDS } from '$lib/data/analytics/sessions';
-	import { CATEGORY_LABELS, type ColumnCategory } from '$lib/data/schema/columns';
-	import { valueAt } from '$lib/data/store/columnar';
-	import { dateTime, num } from '$lib/utils/format';
-	import { downloadBlob } from '$lib/utils/download';
+	import * as Card from '#lib/components/ui/card/index.js';
+	import { Button } from '#lib/components/ui/button/index.js';
+	import { Switch } from '#lib/components/ui/switch/index.js';
+	import { Label } from '#lib/components/ui/label/index.js';
+	import UPlotChart, { type ChartSeries } from '#lib/components/charts/UPlotChart.svelte';
+	import { data } from '#lib/state/dataset.svelte.js';
+	import { settings } from '#lib/state/settings.svelte.js';
+	import { breakAtGaps, selectSeries } from '#lib/data/store/decimate.js';
+	import { AWAKE_GAP_SECONDS } from '#lib/data/analytics/sessions.js';
+	import { CATEGORY_LABELS, type ColumnCategory } from '#lib/data/schema/columns.js';
+	import { valueAt } from '#lib/data/store/columnar.js';
+	import { dateTime, num } from '#lib/utils/format.js';
+	import { downloadBlob } from '#lib/utils/download.js';
 	import DownloadIcon from '@lucide/svelte/icons/download';
 
 	const dataset = $derived(data.dataset!);
@@ -24,6 +24,14 @@
 	const window = $derived({
 		from: from ?? stats.startTime,
 		to: to ?? stats.endTime
+	});
+
+	// A zoom is a pair of instants in the data it was drawn on; once the range
+	// filter swaps that data, it may point at nothing.
+	$effect(() => {
+		void dataset;
+		from = null;
+		to = null;
 	});
 
 	/** Signals grouped by what they describe, empty ones optional. */

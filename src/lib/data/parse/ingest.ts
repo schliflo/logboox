@@ -23,6 +23,8 @@ export interface StreamParseResult {
 	vin: string;
 	vmodel: string;
 	duplicateRows: number;
+	/** Rows left out because their time was missing or implausibly early. */
+	undatedRows: number;
 	/** True when the source file had to be reordered before use. */
 	wasUnsorted: boolean;
 	rows: number;
@@ -58,6 +60,7 @@ export async function parseStream(
 	let vin = '';
 	let vmodel = '';
 	let duplicateRows = 0;
+	let undatedRows = 0;
 	let rows = 0;
 	let bytesBefore = 0;
 
@@ -136,6 +139,7 @@ export async function parseStream(
 	const rawTime = timeBuilder.finish();
 	const order = orderRows(rawTime, rawTime.length);
 	duplicateRows = order.duplicates;
+	undatedRows = order.undated;
 
 	const time = new Uint32Array(order.keep.length);
 	for (let i = 0; i < order.keep.length; i++) time[i] = rawTime[order.keep[i]];
@@ -152,6 +156,7 @@ export async function parseStream(
 		vin,
 		vmodel,
 		duplicateRows,
+		undatedRows,
 		wasUnsorted: order.wasUnsorted,
 		rows,
 		bytes: totalBytes

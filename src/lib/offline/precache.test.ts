@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { fetchCacheMode, optionalFiles, pageKey, precacheList } from './precache';
+import {
+	deferrals,
+	fetchCacheMode,
+	isNetworkOnly,
+	onDemandUrl,
+	optionalFiles,
+	pageKey,
+	precacheList
+} from './precache';
 
 describe('precacheList', () => {
 	it('joins build output, static files and prerendered pages in that order', () => {
@@ -26,6 +34,16 @@ describe('precacheList', () => {
 			['/', '/robots.txt', '/sitemap.xml']
 		);
 		expect(list).toEqual(['/icon-192.png', '/']);
+	});
+
+	it('keeps every chunk, whatever it turns out to hold', () => {
+		// What can wait is not a question about names — see `deferrals`.
+		const list = precacheList(
+			['/_app/immutable/chunks/B3vwC3Rm.js', '/_app/immutable/assets/Inter-Regular.def.ttf'],
+			[],
+			[]
+		);
+		expect(list).toHaveLength(2);
 	});
 
 	it('lists a path once even when several sources name it', () => {
@@ -80,5 +98,67 @@ describe('pageKey', () => {
 
 	it('matches the root of a deployment under a base path', () => {
 		expect(pageKey(new URL('https://example.test/app/'))).toBe('/app');
+	});
+});
+
+describe('isNetworkOnly', () => {
+	it('keeps the API, the share pages and the reminder trigger off the cache', () => {
+		expect(isNetworkOnly('/api/v1/me')).toBe(true);
+		expect(isNetworkOnly('/internal/cron/reminders')).toBe(true);
+		expect(isNetworkOnly('/s/abc123')).toBe(true);
+	});
+
+	it('leaves the app itself to the store', () => {
+		expect(isNetworkOnly('/')).toBe(false);
+		expect(isNetworkOnly('/dash/overview')).toBe(false);
+		expect(isNetworkOnly('/account')).toBe(false);
+		expect(isNetworkOnly('/auth/verify')).toBe(false);
+	});
+
+	it('does not catch a page whose name merely starts the same way', () => {
+		expect(isNetworkOnly('/apixel')).toBe(false);
+		expect(isNetworkOnly('/settings')).toBe(false);
+	});
+
+	it('measures the path from the deployment root', () => {
+		expect(isNetworkOnly('/app/api/v1/me', '/app')).toBe(true);
+		expect(isNetworkOnly('/app/dash/trips', '/app')).toBe(false);
+	});
+});
+
+describe('deferrals', () => {
+	const base = '/app';
+
+	it('reads what the build published and puts it where the paths already are', () => {
+		expect(deferrals(base, ['/_app/immutable/chunks/abc.js'])).toEqual(
+			new Set(['/app/_app/immutable/chunks/abc.js'])
+		);
+	});
+
+	it('defers nothing when the file is missing or unreadable', () => {
+		// A larger first download is a cost; a broken install is a fault.
+		expect(deferrals(base, null)).toEqual(new Set());
+		expect(deferrals(base, undefined)).toEqual(new Set());
+		expect(deferrals(base, 'not a list')).toEqual(new Set());
+		expect(deferrals(base, { files: ['/a.js'] })).toEqual(new Set());
+	});
+
+	it('ignores entries that are not paths', () => {
+		expect(deferrals(base, ['/good.js', 42, null, 'no-leading-slash.js'])).toEqual(
+			new Set(['/app/good.js'])
+		);
+	});
+
+	it('works at the root, where the base is empty', () => {
+		expect(deferrals('', ['/a.js'])).toEqual(new Set(['/a.js']));
+	});
+});
+
+describe('onDemandUrl', () => {
+	it('sits beside the app rather than in the hashed output', () => {
+		// It names this build's files, so it cannot be cached forever.
+		expect(onDemandUrl('')).toBe('/_app/on-demand.json');
+		expect(onDemandUrl('/app')).toBe('/app/_app/on-demand.json');
+		expect(onDemandUrl('/app')).not.toContain('immutable');
 	});
 });

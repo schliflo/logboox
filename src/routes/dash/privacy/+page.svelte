@@ -1,11 +1,11 @@
 <script lang="ts">
-	import * as Card from '$lib/components/ui/card';
-	import { Button } from '$lib/components/ui/button';
-	import { Badge } from '$lib/components/ui/badge';
-	import BigStat from '$lib/components/charts/BigStat.svelte';
-	import { data } from '$lib/state/dataset.svelte';
-	import { settings } from '$lib/state/settings.svelte';
-	import { bytes, maskVin, num } from '$lib/utils/format';
+	import * as Card from '#lib/components/ui/card/index.js';
+	import { Button } from '#lib/components/ui/button/index.js';
+	import { Badge } from '#lib/components/ui/badge/index.js';
+	import BigStat from '#lib/components/charts/BigStat.svelte';
+	import { data } from '#lib/state/dataset.svelte.js';
+	import { settings } from '#lib/state/settings.svelte.js';
+	import { bytes, maskVin, num } from '#lib/utils/format.js';
 	import ShieldIcon from '@lucide/svelte/icons/shield-check';
 	import EyeIcon from '@lucide/svelte/icons/eye';
 	import EyeOffIcon from '@lucide/svelte/icons/eye-off';

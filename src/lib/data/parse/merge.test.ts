@@ -30,6 +30,7 @@ function makeDataset(
 		exportId: 'DA-one',
 		available: { status: true, operation: true, power: true },
 		duplicateRows: 0,
+		undatedRows: 0,
 		unsortedStreams: [],
 		emptyColumns: [],
 		rowsParsed: seconds.length,

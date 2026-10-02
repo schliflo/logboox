@@ -5,10 +5,10 @@
   seconds and needs to say what it is doing rather than spin silently.
 -->
 <script lang="ts">
-	import { Progress } from '$lib/components/ui/progress';
-	import { data } from '$lib/state/dataset.svelte';
-	import { PHASE_LABELS } from '$lib/data/worker/protocol';
-	import { bytes } from '$lib/utils/format';
+	import { Progress } from '#lib/components/ui/progress/index.js';
+	import { data } from '#lib/state/dataset.svelte.js';
+	import { PHASE_LABELS } from '#lib/data/worker/protocol.js';
+	import { bytes } from '#lib/utils/format.js';
 
 	const progress = $derived(data.progress);
 	const fraction = $derived(

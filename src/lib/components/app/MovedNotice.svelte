@@ -8,9 +8,9 @@
 -->
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
-	import { Button } from '$lib/components/ui/button';
-	import { history } from '$lib/state/history.svelte';
-	import { MOVED_TO, SITE_NAME } from '$lib/seo';
+	import { Button } from '#lib/components/ui/button/index.js';
+	import { history } from '#lib/state/history.svelte.js';
+	import { MOVED_TO, SITE_NAME } from '#lib/seo.js';
 	import ArrowRightIcon from '@lucide/svelte/icons/arrow-right';
 	import DownloadIcon from '@lucide/svelte/icons/download';
 	import SignpostIcon from '@lucide/svelte/icons/signpost';

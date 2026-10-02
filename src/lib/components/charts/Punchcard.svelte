@@ -7,7 +7,7 @@
   Hovering a cell names the hour it stands for and what happened in it.
 -->
 <script lang="ts">
-	import { num, WEEKDAYS } from '$lib/utils/format';
+	import { num, WEEKDAYS } from '#lib/utils/format.js';
 	import ChartTooltip from './ChartTooltip.svelte';
 
 	interface Props {

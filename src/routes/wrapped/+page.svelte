@@ -8,15 +8,16 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
-	import { Button } from '$lib/components/ui/button';
-	import { Badge } from '$lib/components/ui/badge';
-	import Seo from '$lib/components/app/Seo.svelte';
-	import { data } from '$lib/state/dataset.svelte';
-	import type { Fact } from '$lib/data/analytics/facts';
+	import { Button } from '#lib/components/ui/button/index.js';
+	import { Badge } from '#lib/components/ui/badge/index.js';
+	import Seo from '#lib/components/app/Seo.svelte';
+	import { data } from '#lib/state/dataset.svelte.js';
+	import type { Fact } from '#lib/data/analytics/facts.js';
 	import ArrowRightIcon from '@lucide/svelte/icons/arrow-right';
 	import ArrowDownIcon from '@lucide/svelte/icons/arrow-down';
 
-	const stats = $derived(data.derived);
+	// The highlights are about the whole export, whatever range the dashboard is on.
+	const stats = $derived(data.full?.derived ?? data.derived);
 
 	/** Headlines first, then habits, then the export's own oddities. */
 	const cards = $derived.by<Fact[]>(() => {
