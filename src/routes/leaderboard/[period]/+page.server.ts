@@ -21,6 +21,7 @@ import {
 } from '$lib/leaderboard/periods';
 import { monthBoards, yearBoards } from '$lib/server/leaderboard/repo';
 import { maybeDb } from '$lib/server/context';
+import { now as currentTime } from '$lib/server/db';
 
 export const prerender = false;
 export const ssr = true;
@@ -33,7 +34,7 @@ export const load: PageServerLoad = async (event) => {
 	if (!db) error(503, 'The boards live at logboox.app.');
 
 	const viewer = event.locals.auth?.user.id;
-	const now = Math.floor(Date.now() / 1000);
+	const now = currentTime();
 
 	const boards = BOARDS.map((board) => ({
 		id: board.id,

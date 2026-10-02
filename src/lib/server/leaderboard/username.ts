@@ -51,6 +51,24 @@ const RESERVED = new Set([
 	'xpeng'
 ]);
 
+/**
+ * Words a name may not be built around, once it is lower-cased and stripped of
+ * digits and separators — so `admin1`, `logboox-team` and `xpeng_official` read
+ * as what they are trying to be. The brand names are refused anywhere; the
+ * roles only at either end, which is where they claim something, and which
+ * leaves "badminton" alone.
+ */
+const BRANDS = ['logboox', 'xpeng'];
+const ROLES = ['admin', 'administrator', 'official', 'support', 'moderator'];
+
+function impersonates(name: string): boolean {
+	const plain = name.toLowerCase().replace(/[\d_-]/g, '');
+	return (
+		BRANDS.some((word) => plain.includes(word)) ||
+		ROLES.some((word) => plain.startsWith(word) || plain.endsWith(word))
+	);
+}
+
 export class UsernameInvalid extends Error {
 	constructor(message: string) {
 		super(message);
@@ -85,7 +103,7 @@ export function checkUsername(name: unknown): asserts name is string {
 	if (!USERNAME_RE.test(trimmed)) {
 		throw new UsernameInvalid('Letters, digits, hyphens and underscores only.');
 	}
-	if (RESERVED.has(trimmed.toLowerCase())) {
+	if (RESERVED.has(trimmed.toLowerCase()) || impersonates(trimmed)) {
 		throw new UsernameInvalid('That name is reserved.');
 	}
 }

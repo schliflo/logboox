@@ -7,6 +7,7 @@
 
 import { redirect } from '@sveltejs/kit';
 import { currentMonth } from '$lib/leaderboard/periods';
+import { now } from '$lib/server/db';
 
 export const prerender = false;
 export const ssr = true;
@@ -14,5 +15,5 @@ export const ssr = true;
 export function load() {
 	// The Worker's own zone is UTC, which is as good a choice as any for
 	// deciding whose month "now" is when nobody has said.
-	redirect(307, `/leaderboard/${currentMonth(Math.floor(Date.now() / 1000), 'UTC')}`);
+	redirect(307, `/leaderboard/${currentMonth(now(), 'UTC')}`);
 }

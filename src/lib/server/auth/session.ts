@@ -8,9 +8,9 @@
  * a cookie that never ages.
  */
 
-import { now, one, rowId, run, type Db } from '../db';
+import { now, one, rowId, run, type Db, type Statement } from '../db';
 import { hashToken, randomToken } from './tokens';
-import { touchUser, type User } from './users';
+import type { User } from './users';
 
 export const SESSION_COOKIE = 'lbx_session';
 export const SESSION_TTL_SECONDS = 90 * 24 * 3600;
@@ -47,53 +47,77 @@ export async function createSession(
 	return token;
 }
 
+/** Every `User` column, spelled out; the type makes forgetting one a compile error. */
+const USER_COLUMNS = {
+	id: 1,
+	email: 1,
+	created_at: 1,
+	last_seen_at: 1,
+	reminder_enabled: 1,
+	reminder_after_days: 1,
+	reminded_at: 1,
+	auto_sync: 1,
+	username: 1,
+	username_changed_at: 1,
+	board_notify: 1,
+	board_mailed_at: 1,
+	roundup_mailed_year: 1
+} satisfies Record<keyof User, 1>;
+
+const USER_SELECT = Object.keys(USER_COLUMNS)
+	.map((column) => `u.${column}`)
+	.join(', ');
+
 /**
- * The user behind a cookie, or null. Expired rows are deleted as they are met,
- * which keeps the table tidy without a job to do it.
+ * What every cookie request does, in one read: the user behind the cookie, and
+ * whether the cookie should be reissued with a fresh ninety days. Expired rows
+ * are deleted as they are met, which keeps the table tidy without a job to do
+ * it, and whatever else needs writing goes out as one batch.
  */
-export async function validateSession(db: Db, token: string): Promise<User | null> {
-	const hash = await hashToken(token);
-	const row = await one<{ id: string; user_id: string; expires_at: number; last_used_at: number }>(
+export async function authenticateSession(
+	db: Db,
+	token: string
+): Promise<{ user: User; reissue: boolean } | null> {
+	const row = await one<User & { session_id: string; expires_at: number; last_used_at: number }>(
 		db,
-		'SELECT id, user_id, expires_at, last_used_at FROM sessions WHERE token_hash = ?',
-		hash
+		`SELECT s.id AS session_id, s.expires_at, s.last_used_at, ${USER_SELECT}
+		 FROM sessions s JOIN users u ON u.id = s.user_id
+		 WHERE s.token_hash = ?`,
+		await hashToken(token)
 	);
 	if (!row) return null;
 
-	if (row.expires_at <= now()) {
-		await run(db, 'DELETE FROM sessions WHERE id = ?', row.id);
+	const { session_id, expires_at, last_used_at, ...user } = row;
+	const at = now();
+
+	if (expires_at <= at) {
+		await run(db, 'DELETE FROM sessions WHERE id = ?', session_id);
 		return null;
 	}
 
-	const user = await one<User>(db, 'SELECT * FROM users WHERE id = ?', row.user_id);
-	if (!user) return null;
+	const reissue = expires_at - at <= RENEW_AFTER_SECONDS;
+	const touch = at - last_used_at > 86400;
+	const writes: Statement[] = [];
 
-	// One write a day at most: `last_used_at` is for the user's own list of
-	// sessions, not an audit log worth a row write per request.
-	if (now() - row.last_used_at > 86400) {
-		await run(db, 'UPDATE sessions SET last_used_at = ? WHERE id = ?', now(), row.id);
-		await touchUser(db, user.id);
+	if (touch || reissue) {
+		// One write a day at most for `last_used_at`: it is for the user's own
+		// list of sessions, not an audit log worth a row write per request.
+		writes.push(
+			db
+				.prepare('UPDATE sessions SET last_used_at = ?, expires_at = ? WHERE id = ?')
+				.bind(
+					touch ? at : last_used_at,
+					reissue ? at + SESSION_TTL_SECONDS : expires_at,
+					session_id
+				)
+		);
 	}
+	if (touch) {
+		writes.push(db.prepare('UPDATE users SET last_seen_at = ? WHERE id = ?').bind(at, user.id));
+	}
+	if (writes.length > 0) await db.batch(writes);
 
-	return user;
-}
-
-/** True when the cookie should be reissued with a fresh ninety days. */
-export async function renewIfStale(db: Db, token: string): Promise<boolean> {
-	const row = await one<{ id: string; expires_at: number }>(
-		db,
-		'SELECT id, expires_at FROM sessions WHERE token_hash = ?',
-		await hashToken(token)
-	);
-	if (!row) return false;
-	if (row.expires_at - now() > RENEW_AFTER_SECONDS) return false;
-	await run(
-		db,
-		'UPDATE sessions SET expires_at = ? WHERE id = ?',
-		now() + SESSION_TTL_SECONDS,
-		row.id
-	);
-	return true;
+	return { user, reissue };
 }
 
 export async function revokeSession(db: Db, token: string): Promise<void> {

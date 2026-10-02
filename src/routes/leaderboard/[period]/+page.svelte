@@ -29,6 +29,9 @@
 		data.kind === 'month' ? monthLabel(data.period) : `The year ${data.period}`
 	);
 
+	/** The period as it reads inside a sentence. */
+	const when = $derived(data.kind === 'month' ? monthLabel(data.period) : data.period);
+
 	const listings = $derived(
 		data.kind === 'month'
 			? data.listings
@@ -89,8 +92,8 @@
 </script>
 
 <Seo
-	title="Leaderboards · {heading}"
-	description="What XPeng drivers have put their name to this month: the fastest charge, the longest drive, the most efficient run."
+	title="Leaderboard · {heading}"
+	description="What XPeng drivers have put their name to in {when}: the fastest charge, the longest drive, the most efficient run."
 	path="/leaderboard/{data.period}"
 	image={absolute(`/leaderboard/${data.period}/og.png`) ?? undefined}
 	imageAlt="The names and figures leading the LogbooX boards for {heading}."
@@ -147,8 +150,8 @@
 			<Card.Header>
 				<Card.Title>Nothing here yet</Card.Title>
 				<Card.Description>
-					No one has put a place up for {heading}. If you have an export of your own, yours may well
-					be the first.
+					No one has put a place up for {when}. If you have an export of your own, yours may well be
+					the first.
 				</Card.Description>
 			</Card.Header>
 			<Card.Content>
@@ -166,7 +169,8 @@
 						</Card.Header>
 						<Card.Content>
 							<ol class="divide-y">
-								{#each listing.entries as entry (entry.rank + entry.username)}
+								<!-- A name is unique and a person holds one row per board, so it is the key. -->
+								{#each listing.entries as entry (entry.username)}
 									<li
 										class="flex flex-wrap items-baseline gap-x-3 gap-y-1 py-2 {entry.mine
 											? 'font-medium'
@@ -198,7 +202,7 @@
 												href="/s/{entry.shareId}"
 												class="underline underline-offset-4 hover:text-foreground"
 											>
-												see it
+												See it
 											</a>
 										{/if}
 									</li>
@@ -238,9 +242,9 @@
 		<Card.Header>
 			<Card.Title>How a place gets here</Card.Title>
 			<Card.Description>
-				Sign in, keep an export in your account, and LogbooX will tell you when one of your own
-				trips or charges would rank. Nothing is published until you say so, and you can take it back
-				down at any time — including after a month has closed.
+				Sign in, keep an export in your account, and LogbooX will tell you when something of yours
+				would rank. Nothing is published until you say so, and you can take it back down at any time
+				— including after a month has closed.
 			</Card.Description>
 		</Card.Header>
 		<Card.Content class="flex flex-wrap gap-3">

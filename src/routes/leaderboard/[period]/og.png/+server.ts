@@ -3,11 +3,13 @@
  *
  * Unlike a share, a month is not finished: places are claimed all through it,
  * and a card pasted into a chat on the 3rd should not still be showing the 1st.
- * So nothing is stored — the card is drawn from one query and handed out with
- * ten minutes of cache, which the platform's edge cache honours because the
- * response is `public` and the URL carries no query string. Ten minutes is
- * short enough that the board is recognisably current and long enough that a
- * popular link costs one render rather than thousands.
+ * So nothing is stored in the database — the card is drawn from one query and
+ * kept in the colo's Cache API for five minutes. A Worker's own responses are
+ * not edge-cached unless it asks, so `public` alone would still render on
+ * every request. Five minutes is long enough that a popular link costs one
+ * render rather than thousands, and the same for a settled month: a withdrawn
+ * place or a deleted account's name has to leave the card as quickly as the
+ * app promises it leaves the board.
  *
  * `json()` from `$lib/server/response` is deliberately not used here: it forces
  * `private, no-store`, which is right for everything else on this server and
@@ -20,13 +22,23 @@ import { BOARDS, boardById, formatValue } from '$lib/leaderboard/boards';
 import { isMonthOpen, locksAt, monthLabel, parsePeriod } from '$lib/leaderboard/periods';
 import { monthBoards, yearBoards } from '$lib/server/leaderboard/repo';
 import { maybeDb } from '$lib/server/context';
+import { now as currentTime } from '$lib/server/db';
 import { boardCard, type Tile } from '$lib/server/og/card';
 import { renderPng } from '$lib/server/og/rasterize';
 
 export const prerender = false;
 
-/** Long enough to absorb a link being passed around, short enough to be true. */
-const MAX_AGE = 600;
+/** Long enough to absorb a link being passed around, short enough for a take-down. */
+const MAX_AGE = 300;
+
+/** The edge cache of this colo, or null where there is none (dev, tests). */
+function edgeCache(event: Parameters<RequestHandler>[0]) {
+	try {
+		return event.platform?.caches?.default ?? null;
+	} catch {
+		return null;
+	}
+}
 
 function settled(date: number): string {
 	return new Intl.DateTimeFormat('en-GB', {
@@ -40,10 +52,19 @@ export const GET: RequestHandler = async (event) => {
 	const period = parsePeriod(event.params.period);
 	if (!period) error(404, 'That is not a month or a year.');
 
+	// Keyed on the path alone, so a query string cannot mint a render per guess.
+	const cache = edgeCache(event);
+	const key = `${event.url.origin}${event.url.pathname}`;
+	// The cache speaks the Workers types, the handler the DOM ones; the casts
+	// below bridge the two and nothing else.
+	const cached = (await cache?.match(key)) as unknown as Response | undefined;
+	// A copy, because the hook sets headers on whatever it gets back.
+	if (cached) return new Response(cached.body, cached);
+
 	const db = maybeDb(event);
 	if (!db) error(503, 'The boards live at logboox.app.');
 
-	const now = Math.floor(Date.now() / 1000);
+	const now = currentTime();
 	let title: string;
 	let badge: string;
 	const tiles: Tile[] = [];
@@ -87,11 +108,14 @@ export const GET: RequestHandler = async (event) => {
 
 	const png = await renderPng(boardCard({ title, badge, tiles }));
 
-	return new Response(png, {
+	const response = new Response(png, {
 		headers: {
 			'content-type': 'image/png',
 			'cache-control': `public, max-age=${MAX_AGE}`,
 			'content-length': String(png.byteLength)
 		}
 	});
+
+	if (cache) event.platform?.ctx.waitUntil(cache.put(key, response.clone() as never));
+	return response;
 };

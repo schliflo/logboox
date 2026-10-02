@@ -12,19 +12,27 @@
  * straight past it.
  */
 
-import type { Handle } from '@sveltejs/kit';
+import type { Handle } from '@sveltejs/kit/hooks';
 import { validateToken } from '$lib/server/auth/apiTokens';
 import {
 	SESSION_COOKIE,
 	SESSION_COOKIE_OPTIONS,
-	renewIfStale,
-	validateSession
+	authenticateSession
 } from '$lib/server/auth/session';
 import { bearer, parseApiToken, timingSafeEqual } from '$lib/server/auth/tokens';
 import { cronSecret, maybeDb } from '$lib/server/context';
 
 /** Requests that carry a credential and may therefore not be forged. */
 const GUARDED = /^\/(api|internal)\//;
+
+function isLocalHost(hostname: string): boolean {
+	return (
+		hostname === 'localhost' ||
+		hostname.endsWith('.localhost') ||
+		hostname === '127.0.0.1' ||
+		hostname === '[::1]'
+	);
+}
 
 const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
 
@@ -52,12 +60,12 @@ export const handle: Handle = async ({ event, resolve }) => {
 		} else {
 			const cookie = event.cookies.get(SESSION_COOKIE);
 			if (cookie) {
-				const user = await validateSession(db, cookie);
-				if (user) {
-					event.locals.auth = { user, via: 'session', scopes: ['read', 'write'] };
+				const session = await authenticateSession(db, cookie);
+				if (session) {
+					event.locals.auth = { user: session.user, via: 'session', scopes: ['read', 'write'] };
 					// Kept alive by being used, so a regular reader is not signed
 					// out on a schedule.
-					if (await renewIfStale(db, cookie)) {
+					if (session.reissue) {
 						event.cookies.set(SESSION_COOKIE, cookie, SESSION_COOKIE_OPTIONS);
 					}
 				} else {
@@ -89,6 +97,18 @@ export const handle: Handle = async ({ event, resolve }) => {
 	response.headers.set('x-content-type-options', 'nosniff');
 	response.headers.set('referrer-policy', 'strict-origin-when-cross-origin');
 	response.headers.set('permissions-policy', 'geolocation=(), camera=(), microphone=()');
+
+	// Only framing is ruled out. A fuller policy would have to account for the
+	// inline script and style SvelteKit emits and the wasm renderer.
+	if (!response.headers.has('content-security-policy')) {
+		response.headers.set('content-security-policy', "frame-ancestors 'none'");
+	}
+
+	// Plain http is how `wrangler dev` and the tests reach this, and a pinned
+	// header on localhost would follow the browser to every other local project.
+	if (event.url.protocol === 'https:' && !isLocalHost(event.url.hostname)) {
+		response.headers.set('strict-transport-security', 'max-age=31536000; includeSubDomains');
+	}
 
 	return response;
 };

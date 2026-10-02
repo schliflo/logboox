@@ -17,6 +17,7 @@ import { all, one, run } from '../db';
 import { findOrCreateUser } from '../auth/users';
 import {
 	ClaimRefused,
+	type EntryRow,
 	claim,
 	detectCandidates,
 	dismiss,
@@ -24,6 +25,7 @@ import {
 	listPending,
 	markSeen,
 	monthBoards,
+	rankOf,
 	removeEntry,
 	yearBoards
 } from './repo';
@@ -212,6 +214,61 @@ describe('spotting a place', () => {
 		expect(
 			await all(db, "SELECT * FROM board_candidates WHERE board = 'longest-drive'")
 		).toHaveLength(1);
+	});
+
+	it('returns ids that are in the table, also after an upsert kept the old one', async () => {
+		const first = await detectCandidates(
+			db,
+			userId,
+			summary({ trips: [longDrive(SEPTEMBER, 220)] }),
+			ZONE,
+			SOON
+		);
+		const second = await detectCandidates(
+			db,
+			userId,
+			summary({ trips: [longDrive(SEPTEMBER, 400)] }),
+			ZONE,
+			SOON
+		);
+
+		expect(second.map((c) => c.id).sort()).toEqual(first.map((c) => c.id).sort());
+		for (const candidate of second) {
+			const row = await one<{ value: number }>(
+				db,
+				'SELECT value FROM board_candidates WHERE id = ?',
+				candidate.id
+			);
+			expect(row?.value).toBe(candidate.value);
+		}
+	});
+
+	it('does not announce a place that stays turned down', async () => {
+		await detectCandidates(db, userId, summary({ trips: [longDrive(SEPTEMBER, 240)] }), ZONE, SOON);
+		await dismiss(db, userId, (await pendingOn(userId, 'longest-drive')).id);
+
+		for (let i = 0; i < 3; i++) {
+			const other = await account(`fast${i}@example.com`, `fast${i}`);
+			await run(
+				db,
+				`INSERT INTO board_entries (id, board, month, user_id, kind, vin, start_time, value,
+					score, detail_json, vmodel, claimed_at)
+				 VALUES (?, 'longest-drive', '2026-09', ?, 'trip', 'VIN', ?, 999, 999, '{}', 'F30b', ?)`,
+				`fast-${i}`,
+				other,
+				SEPTEMBER + i,
+				SEPTEMBER
+			);
+		}
+
+		const found = await detectCandidates(
+			db,
+			userId,
+			summary({ trips: [longDrive(SEPTEMBER, 260)] }),
+			ZONE,
+			SOON
+		);
+		expect(found.filter((c) => c.board === 'longest-drive')).toEqual([]);
 	});
 
 	it('forgets it was seen once a better trip replaces it', async () => {
@@ -601,6 +658,37 @@ describe('a board with several people on it', () => {
 		expect(board.entries[1].mine).toBe(true);
 	});
 
+	it('says nothing about when anything happened', async () => {
+		await place('a@example.com', 'ant', 500);
+		const [board] = await monthBoards(db, '2026-09');
+		const year = await yearBoards(db, 2026);
+
+		expect(Object.keys(board.entries[0])).not.toContain('claimedAt');
+		expect(Object.keys(year.boards[0].entries[0])).not.toContain('claimedAt');
+	});
+
+	it('ranks everything an account holds the way a single lookup would', async () => {
+		const me = await place('me@example.com', 'me-again', 300);
+		await place('a@example.com', 'ant', 500);
+		await place('b@example.com', 'bea', 400);
+		await place('c@example.com', 'cat', 100);
+
+		const october = Math.floor(Date.UTC(2026, 9, 3, 9, 0) / 1000);
+		await detectCandidates(db, me, summary({ trips: [longDrive(october, 200)] }), ZONE, SOON);
+		await claim(db, me, (await pendingOn(me, 'longest-drive')).id, null, SOON);
+
+		const own = await listOwn(db, me, SOON);
+		expect(own.map((e) => [e.month, e.rank])).toEqual([
+			['2026-10', 1],
+			['2026-09', 3]
+		]);
+
+		for (const entry of own) {
+			const row = await one<EntryRow>(db, 'SELECT * FROM board_entries WHERE id = ?', entry.id);
+			expect(entry.rank).toBe(await rankOf(db, row!));
+		}
+	});
+
 	it('leaves out anyone who has not chosen a name', async () => {
 		await place('a@example.com', 'ant', 500);
 		// A row written straight into the table by an account with no name.
@@ -649,6 +737,49 @@ describe('the year', () => {
 	});
 });
 
+describe('the board queries', () => {
+	/** The plan of whatever SQL `read` sends, captured as it goes by. */
+	async function plansFor(read: () => Promise<unknown>): Promise<string[]> {
+		const seen: string[] = [];
+		const prepare = db.prepare.bind(db);
+		db.prepare = (sql: string) => {
+			seen.push(sql);
+			return prepare(sql);
+		};
+		await read();
+		db.prepare = prepare;
+
+		const plans: string[] = [];
+		for (const sql of seen) {
+			const marks = sql.split('?').length - 1;
+			const rows = await all<{ detail: string }>(
+				db,
+				`EXPLAIN QUERY PLAN ${sql}`,
+				...Array.from({ length: marks }, (_, i) => (i === 0 ? '2026-09' : '2026-12'))
+			);
+			plans.push(rows.map((row) => row.detail).join('\n'));
+		}
+		return plans;
+	}
+
+	it('finds a month through the index that leads with it', async () => {
+		const [plan] = await plansFor(() => monthBoards(db, '2026-09'));
+		expect(plan).toContain('board_entries_month (month=?)');
+		expect(plan).not.toMatch(/SCAN e\b/);
+	});
+
+	it('finds a year the same way', async () => {
+		const [plan] = await plansFor(() => yearBoards(db, 2026));
+		expect(plan).toContain('board_entries_month (month>? AND month<?)');
+		expect(plan).not.toMatch(/SCAN e\b/);
+	});
+
+	it('ranks a whole account in one statement', async () => {
+		const plans = await plansFor(() => listOwn(db, userId));
+		expect(plans).toHaveLength(1);
+	});
+});
+
 describe('choosing a name', () => {
 	it('takes an ordinary one and shows it as typed', async () => {
 		expect(await setUsername(db, userId, 'Flo_S', SEPTEMBER)).toBe('Flo_S');
@@ -673,6 +804,24 @@ describe('choosing a name', () => {
 				UsernameInvalid
 			);
 		}
+	});
+
+	it('refuses names that contain a word nobody else may wear', async () => {
+		const refused = [
+			'admin1',
+			'logboox-team',
+			'xpeng_official',
+			'Super_Admin',
+			'x-p-e-n-g',
+			'help4support'
+		];
+		for (const name of refused) {
+			await expect(setUsername(db, userId, name, SEPTEMBER)).rejects.toBeInstanceOf(
+				UsernameInvalid
+			);
+		}
+		// A role in the middle of a word claims nothing.
+		expect(await setUsername(db, userId, 'badminton', SEPTEMBER)).toBe('badminton');
 	});
 
 	it('allows a change only once a day', async () => {

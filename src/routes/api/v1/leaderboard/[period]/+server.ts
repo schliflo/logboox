@@ -12,6 +12,7 @@ import { BOARDS, TOP_N } from '$lib/leaderboard/boards';
 import { isMonthOpen, isYearFinal, locksAt, parsePeriod } from '$lib/leaderboard/periods';
 import { monthBoards, yearBoards } from '$lib/server/leaderboard/repo';
 import { maybeDb } from '$lib/server/context';
+import { now as currentTime } from '$lib/server/db';
 import { fail } from '$lib/server/response';
 
 /**
@@ -20,11 +21,15 @@ import { fail } from '$lib/server/response';
  */
 const CACHE_SECONDS = 300;
 
-function publish(body: unknown): Response {
+/**
+ * `public` only when the body is the same for everyone. With a viewer it marks
+ * their own rows, so a shared cache must not hand it to the next reader.
+ */
+function publish(body: unknown, personal: boolean): Response {
 	return new Response(JSON.stringify(body), {
 		headers: {
 			'content-type': 'application/json',
-			'cache-control': `public, max-age=${CACHE_SECONDS}`
+			'cache-control': `${personal ? 'private' : 'public'}, max-age=${CACHE_SECONDS}`
 		}
 	});
 }
@@ -39,7 +44,7 @@ export const GET: RequestHandler = async (event) => {
 	// Signed in, the reader's own rows are marked so the page can point them
 	// out. Signing in changes nothing else about what is returned.
 	const viewer = event.locals.auth?.user.id;
-	const now = Math.floor(Date.now() / 1000);
+	const now = currentTime();
 
 	const meta = {
 		boards: BOARDS.map((board) => ({
@@ -54,22 +59,28 @@ export const GET: RequestHandler = async (event) => {
 	};
 
 	if (period.kind === 'month') {
-		return publish({
-			kind: 'month',
-			period: period.month,
-			open: isMonthOpen(period.month, now),
-			locksAt: locksAt(period.month),
-			...meta,
-			listings: await monthBoards(db, period.month, viewer)
-		});
+		return publish(
+			{
+				kind: 'month',
+				period: period.month,
+				open: isMonthOpen(period.month, now),
+				locksAt: locksAt(period.month),
+				...meta,
+				listings: await monthBoards(db, period.month, viewer)
+			},
+			Boolean(viewer)
+		);
 	}
 
-	return publish({
-		kind: 'year',
-		period: String(period.year),
-		open: !isYearFinal(period.year, now),
-		locksAt: locksAt(`${period.year}-12`),
-		...meta,
-		year: await yearBoards(db, period.year, viewer)
-	});
+	return publish(
+		{
+			kind: 'year',
+			period: String(period.year),
+			open: !isYearFinal(period.year, now),
+			locksAt: locksAt(`${period.year}-12`),
+			...meta,
+			year: await yearBoards(db, period.year, viewer)
+		},
+		Boolean(viewer)
+	);
 };

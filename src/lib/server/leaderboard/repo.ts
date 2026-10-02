@@ -2,7 +2,7 @@
  * Spotting, claiming and publishing places on a board.
  *
  * Two tables and a hard line between them. A candidate is the app noticing
- * that one of your trips would rank; it is private to your account and it
+ * that something of yours would rank; it is private to your account and it
  * publishes nothing. An entry is you having said yes, and that is the table
  * strangers read. Nothing crosses from one to the other without a request from
  * the person it belongs to.
@@ -83,7 +83,7 @@ export interface Candidate {
 	seen: boolean;
 }
 
-/** One row of a public board. Nothing here names a car or an owner. */
+/** One row of a public board. Nothing here names a car, an owner or a moment. */
 export interface PublicEntry {
 	rank: number;
 	username: string;
@@ -91,7 +91,6 @@ export interface PublicEntry {
 	value: number;
 	detail: BoardEntryDetail;
 	shareId: string | null;
-	claimedAt: number;
 	/** Set only for the signed-in reader's own rows. */
 	mine?: true;
 }
@@ -369,10 +368,22 @@ export async function detectCandidates(
 	}>;
 
 	// Only the rows the upsert actually took: an export re-uploaded unchanged
-	// must not announce the same trip a second time.
-	return wanted
-		.filter((_, index) => (results[index]?.meta?.changes ?? 0) > 0)
-		.map((entry) => toCandidate(entry.row));
+	// must not announce the same trip a second time. Read back rather than
+	// built from what was bound, because a conflict keeps the old row's id, and
+	// a place they turned down stays hidden.
+	const found: Candidate[] = [];
+	for (const [index, entry] of wanted.entries()) {
+		if ((results[index]?.meta?.changes ?? 0) === 0) continue;
+		const stored = await one<CandidateRow>(
+			db,
+			'SELECT * FROM board_candidates WHERE user_id = ? AND board = ? AND month = ?',
+			userId,
+			entry.row.board,
+			entry.row.month
+		);
+		if (stored && stored.dismissed_at === null) found.push(toCandidate(stored));
+	}
+	return found;
 }
 
 /** Candidates still waiting on an answer, newest first. */
@@ -498,7 +509,7 @@ export async function claim(
 		candidate.month,
 		userId
 	);
-	if (!entry) throw new ClaimRefused('That place could not be taken.', 'gone');
+	if (!entry) throw new ClaimRefused('That place could not be claimed.', 'gone');
 	if (changed === 0 && entry.score > candidate.score) {
 		throw new ClaimRefused('You already hold a better place on that board.', 'outranked');
 	}
@@ -571,28 +582,32 @@ export interface OwnEntry {
 
 /** Every place this account holds, newest first. */
 export async function listOwn(db: Db, userId: string, now = currentTime()): Promise<OwnEntry[]> {
-	const rows = await all<EntryRow>(
+	// Ranked in the same query, by the same count `rankOf` makes.
+	const rows = await all<EntryRow & { rank: number }>(
 		db,
-		'SELECT * FROM board_entries WHERE user_id = ? AND removed_at IS NULL ORDER BY month DESC, board',
+		`SELECT e.*, 1 + (
+				SELECT COUNT(*) FROM board_entries o
+				WHERE o.board = e.board AND o.month = e.month AND o.removed_at IS NULL
+					AND o.score > e.score
+			) AS rank
+		 FROM board_entries e
+		 WHERE e.user_id = ? AND e.removed_at IS NULL
+		 ORDER BY e.month DESC, e.board`,
 		userId
 	);
 
-	const out: OwnEntry[] = [];
-	for (const row of rows) {
-		out.push({
-			id: row.id,
-			board: row.board as BoardId,
-			month: row.month,
-			value: row.value,
-			rank: await rankOf(db, row),
-			shareId: row.share_id,
-			claimedAt: row.claimed_at,
-			startTime: row.start_time,
-			vin: row.vin,
-			locked: !isMonthOpen(row.month, now)
-		});
-	}
-	return out;
+	return rows.map((row) => ({
+		id: row.id,
+		board: row.board as BoardId,
+		month: row.month,
+		value: row.value,
+		rank: row.rank,
+		shareId: row.share_id,
+		claimedAt: row.claimed_at,
+		startTime: row.start_time,
+		vin: row.vin,
+		locked: !isMonthOpen(row.month, now)
+	}));
 }
 
 interface RankedRow {
@@ -604,6 +619,7 @@ interface RankedRow {
 	score: number;
 	detail_json: string;
 	share_id: string | null;
+	/** Only breaks ties, in the order claimed; never leaves the server. */
 	claimed_at: number;
 	user_id: string;
 	rank: number;
@@ -615,7 +631,8 @@ interface RankedRow {
  * One query for the whole page: the window function ranks within each board,
  * and the outer filter throws away everything past the places on offer. The
  * columns are listed out rather than taken wholesale, so the vehicle and the
- * moment it happened cannot leave by accident.
+ * moment it happened cannot leave by accident. `claimed_at` is read for the order
+ * of ties and dropped before anything is returned.
  */
 export async function monthBoards(
 	db: Db,
@@ -654,7 +671,6 @@ function listingsFrom(rows: RankedRow[], viewerId?: string): BoardListing[] {
 			value: row.value,
 			detail: detailOf(row),
 			shareId: row.share_id,
-			claimedAt: row.claimed_at,
 			...(viewerId && row.user_id === viewerId ? { mine: true as const } : {})
 		});
 		byBoard.set(row.board, entries);
@@ -748,7 +764,6 @@ export async function yearBoards(db: Db, year: number, viewerId?: string): Promi
 				value: row.value,
 				detail: detailOf(row),
 				shareId: row.share_id,
-				claimedAt: row.claimed_at,
 				...(viewerId && row.user_id === viewerId ? { mine: true as const } : {})
 			})),
 			winners: mine

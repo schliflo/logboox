@@ -16,11 +16,10 @@ ALTER TABLE users ADD COLUMN username TEXT;
 ALTER TABLE users ADD COLUMN username_changed_at INTEGER;
 
 -- Being told when a trip would rank. Separate from the export reminder in
--- every respect: its own switch, its own timestamp, its own unsubscribe token,
--- so turning one off never silently turns off the other.
+-- every respect: its own switch and its own timestamp, so turning one off
+-- never silently turns off the other.
 ALTER TABLE users ADD COLUMN board_notify INTEGER NOT NULL DEFAULT 1;
 ALTER TABLE users ADD COLUMN board_mailed_at INTEGER;
-ALTER TABLE users ADD COLUMN board_unsubscribe_token_hash TEXT;
 ALTER TABLE users ADD COLUMN roundup_mailed_year INTEGER;
 
 -- The zone the car was driven in, sent with the upload. Without it there is no
@@ -87,5 +86,8 @@ CREATE TABLE board_entries (
 	UNIQUE (board, month, user_id)
 );
 
-CREATE INDEX board_entries_rank ON board_entries (board, month, removed_at, score);
+-- Leads with the month because that is what the public pages ask for: a whole
+-- month, or a run of twelve, ranked board by board. A rank for one entry is
+-- the same index read as month, board, score. Only live rows are in it.
+CREATE INDEX board_entries_month ON board_entries (month, board, score) WHERE removed_at IS NULL;
 CREATE INDEX board_entries_user ON board_entries (user_id, claimed_at);

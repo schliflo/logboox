@@ -43,10 +43,7 @@ export const POST: RequestHandler = async (event) => {
 		});
 	} catch (error) {
 		if (error instanceof ClaimRefused) {
-			return json(
-				{ error: error.message, reason: error.reason },
-				{ status: STATUS[error.reason] ?? 409 }
-			);
+			return fail(STATUS[error.reason] ?? 409, error.message);
 		}
 		throw error;
 	}
