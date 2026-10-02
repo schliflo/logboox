@@ -13,7 +13,7 @@
 <Seo title="Terms" description="The terms LogbooX is offered under." path="/legal/terms" />
 
 <h1 class="text-2xl font-semibold tracking-tight">Terms of use</h1>
-<p class="text-muted-foreground">Last updated 14 September 2026</p>
+<p class="text-muted-foreground">Last updated 2 October 2026</p>
 
 <h2>What this is</h2>
 <p>
@@ -33,9 +33,9 @@
 </p>
 <p>
 	So: do not use this as the sole basis for anything that matters legally or financially. That
-	includes the Fahrtenbuch. A logbook kept for tax purposes has requirements this app does not
-	attempt to guarantee, and the app tells you when kilometres are unaccounted for precisely because
-	it cannot vouch for the rest.
+	includes the logbook (Fahrtenbuch). A logbook kept for tax purposes has requirements this app does
+	not attempt to guarantee, and the app tells you when kilometres are unaccounted for precisely
+	because it cannot vouch for the rest.
 </p>
 
 <h2>Accounts</h2>
@@ -66,7 +66,7 @@
 <p>
 	A shared link makes what it shows readable by anyone who has it. You decide what to publish and
 	you are responsible for it. A link never carries the vehicle identification number, and revoking
-	one takes effect immediately.
+	one takes effect within a few minutes.
 </p>
 
 <h2>API tokens</h2>

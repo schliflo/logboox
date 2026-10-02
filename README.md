@@ -8,12 +8,16 @@ called XPeng Data Export Browser.
 
 Everything runs in the browser. The export is parsed by a worker inside the
 page, kept on your own device so it can be reopened later, and several exports
-can be read as one continuous record.
+can be read as one continuous record. The dashboard can be narrowed to the last
+week, a month, a year or any dates you pick, and the trip and charging lists
+download as a CSV, a spreadsheet or a PDF.
 
 Signing in is optional and changes none of that. An account holds a copy of an
 export so it outlives the browser, reminds you before the thirty-day window
-closes, serves your own data over an API, and can publish a single trip at a
-link. Everything the app does without one, it still does without one.
+closes, serves your own data over an API, can publish a single trip at a link,
+and can put a place on a monthly leaderboard. Nothing is copied to it unless you
+ask, or switch automatic copying on. Everything the app does without one, it
+still does without one.
 
 ## What it looks like
 
@@ -101,18 +105,25 @@ changes when you have one. What it adds:
   [docs/api.md](docs/api.md), which includes a Home Assistant example.
 - **A link to one trip or charging session**, or a whole export. Shares carry
   the model of the car and never its identification number, and revoking one
-  takes effect immediately.
+  takes effect within a few minutes: browsers may cache a link for five.
+- **Leaderboards.** The app tells you privately when something of yours would
+  rank for a month: a fast charge, a long drive, the most distance. Nothing is
+  published unless you say so, and a place shows a name you choose, the car's
+  model and the figures, never the exact time. Board and yearly-summary mail can be
+  switched off separately from the export reminders.
 
 Signing in is by e-mail alone: a link, good once, for fifteen minutes. There is
-no password to lose. Deleting the account removes every byte it holds and
+no password to lose. Deleting the account removes every byte it holds, meaning the
+database rows, the stored exports and the files behind every link you shared. It
 leaves what is in this browser alone.
 
 ## Comments and a Fahrtenbuch
 
 The export contains no location data whatsoever, so where a journey went is the
 one thing only the driver knows. Each trip takes an origin, a destination, a
-purpose and a comment, and the whole month downloads as a CSV a tax office
-would recognise.
+purpose and a comment, and the book downloads as a CSV, a spreadsheet or a PDF, for the time range on
+screen. It is derived from raw signals and is not a certified logbook, so treat
+it as a draft and check it before it goes to anyone who relies on it.
 
 This works signed out; an account only carries the notes to the next device.
 
@@ -175,16 +186,17 @@ offline — and reload.
 
 Merging to `main` deploys, through
 [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml): checks, then
-database migrations, then logboox.app, the reminder Worker, and the old
-address, in that order. **[docs/deploying.md](docs/deploying.md)** covers the
+database migrations, then logboox.app, then the reminder Worker and the old
+address side by side. It stops before any of that while a placeholder is left
+in `wrangler.jsonc` or the legal pages (`pnpm check:deploy`). **[docs/deploying.md](docs/deploying.md)** covers the
 one-time setup — the database, the bucket, the sender domain, the API token —
 and the manual commands for when the workflow cannot run.
 
 Almost every route is still prerendered, and the app still reads an export
 without a server. What the Worker adds is the account API under `/api`, the
-reminder trigger under `/internal`, and the shared pages under `/s` — the only
-route rendered per request, because a link preview is built by a scraper that
-runs no JavaScript.
+daily run under `/internal`, and two sets of pages rendered per request: the
+shared pages under `/s` and the boards under `/leaderboard`, because a link
+preview is built by a scraper that runs no JavaScript.
 
 The app answers on logboox.app alone. `workers_dev` is off, because a second
 address would be a second origin, keeping its own copy of every export and its
@@ -271,14 +283,15 @@ src/lib/share/               slicing one trip out of a month, and back
 src/lib/server/              accounts: auth, exports, shares, reminders, mail
 src/hooks.server.ts          who is asking, and whether they may ask this way
 migrations/                  the account database, in order
-cron/                        the Worker that asks for reminders once a day
+cron/                        the Worker that starts the daily run (mail, tidying)
 src/lib/demo/  synthetic month generator
 src/lib/offline/             what the service worker keeps, and how it finds it
 src/service-worker.ts        the service worker itself
 src/lib/components/charts/   uPlot wrapper, calendar, punchcard, g-g diagram
 src/routes/    landing, the opening sequence, the dashboard, the account
 src/routes/api/v1/           the account API; docs/api.md describes it
-src/routes/s/                public share pages, the one route rendered per request
+src/routes/s/                public share pages, rendered per request
+src/routes/leaderboard/      the public boards, also rendered per request
 src/lib/seo.ts               site metadata, shared by every page
 static/                      icons, the social card, the manifest
 design/og-card.html          source for the social card; render it at 1200x630

@@ -173,15 +173,14 @@
 
 					<p class="text-xs leading-relaxed text-muted-foreground">
 						An account changes nothing about how your export is read: it is still parsed in this
-						tab. Nothing is copied to it unless you ask for that. Signing in means accepting the
-						<a href="/legal/terms" class="underline underline-offset-4 hover:text-foreground">
-							terms
-						</a>
-						; the
-						<a href="/legal/privacy" class="underline underline-offset-4 hover:text-foreground">
-							privacy notice
-						</a>
-						says what an account stores.
+						tab. Nothing is copied to it unless you ask for that, or switch automatic copying on.
+						Signing in means accepting the <a
+							href="/legal/terms"
+							class="underline underline-offset-4 hover:text-foreground">terms</a
+						>; the
+						<a href="/legal/privacy" class="underline underline-offset-4 hover:text-foreground"
+							>privacy notice</a
+						> says what an account stores.
 					</p>
 				{/if}
 			</Dialog.Content>

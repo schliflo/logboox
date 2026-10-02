@@ -31,10 +31,7 @@
 
 <h2>Dispute resolution</h2>
 <p>
-	The European Commission provides a platform for online dispute resolution at
-	<a href="https://ec.europa.eu/consumers/odr/" rel="noreferrer noopener" target="_blank"
-		>ec.europa.eu/consumers/odr</a
-	>. We are neither obliged nor willing to take part in dispute resolution proceedings before a
+	We are neither obliged nor willing to take part in dispute resolution proceedings before a
 	consumer arbitration board.
 </p>
 

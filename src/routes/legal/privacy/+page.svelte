@@ -20,7 +20,7 @@
 />
 
 <h1 class="text-2xl font-semibold tracking-tight">Privacy</h1>
-<p class="text-muted-foreground">Last updated 14 September 2026</p>
+<p class="text-muted-foreground">Last updated 2 October 2026</p>
 
 <p>
 	LogbooX reads the vehicle data XPeng gives you under the EU Data Act. The reading happens in your
@@ -59,17 +59,19 @@
 	</li>
 	<li>
 		<strong>Sign-in links</strong>, stored only as a hash, valid once and for fifteen minutes. The
-		IP address that asked for one is kept beside it for up to 24 hours, purely to stop the form
+		IP address that asked for one is kept beside it for up to two days, purely to stop the form
 		being used to send mail to other people.
 	</li>
 	<li>
-		<strong>Sessions</strong>, as a cookie holding a random value and a hash of it here. Ninety
-		days, renewed while you keep using it.
+		<strong>Sessions</strong>, as a cookie holding a random value and a hash of it here, together
+		with your browser's user-agent string and when the session was last used. Ninety days, renewed
+		while you keep using it.
 	</li>
 	<li>
 		<strong>Exports you choose to keep in the account</strong>: the compressed signal data, the
 		vehicle identification number and model it carries, and the trips and charging sessions worked
-		out from it. Only exports you explicitly copy up, or every new one if you switch that on.
+		out from it, and the time zone your browser was set to when it was copied up. Nothing is copied
+		unless you ask for it, or switch automatic copying on.
 	</li>
 	<li>
 		<strong>Logbook entries</strong> you write against trips — where you went, why, and any comment —
@@ -77,15 +79,16 @@
 	</li>
 	<li><strong>API tokens</strong> you create, stored as hashes.</li>
 	<li>
-		<strong>Shared links and leaderboard places</strong> you create, described below.
+		<strong>Shared links and leaderboard places</strong> you create, described below. A shared link also
+		keeps its time zone and a count of how often it has been opened, and nothing about who opened it.
 	</li>
 </ul>
 
 <h3>Where it is stored</h3>
 <p>
-	On Cloudflare's infrastructure, in the European Union: the database and the object storage are
-	both created in the EU jurisdiction. Cloudflare Inc. acts as our processor under a data processing
-	agreement incorporating the EU standard contractual clauses.
+	On Cloudflare's infrastructure: the database and the object storage are both Cloudflare services.
+	Cloudflare Inc. acts as our processor under a data processing agreement incorporating the EU
+	standard contractual clauses.
 </p>
 
 <h3>Legal basis</h3>
@@ -99,37 +102,43 @@
 
 <h3>How long</h3>
 <p>
-	Until you delete it. "Delete this account" on the account page removes the rows and the stored
-	files. Sign-in links are pruned a day after they expire, sessions once they lapse, and an upload
-	that was never finished is swept up after a day.
+	Until you delete it. "Delete this account" on the account page removes the rows, everything stored
+	under your account, and the files behind every link you shared. Until then, a revoked link, a
+	revoked token, a declined offer and a place you took down stay as inactive rows. Sign-in links are
+	pruned a day after they expire, sessions once they lapse, and an upload that was never finished is
+	swept up once it is a day old. That clearing-out is one run a day, so each takes up to a day
+	longer.
 </p>
 
 <h2>What is published, and only when you say so</h2>
 <p>
 	<strong>Shared links</strong> make one trip, one charging session or a whole export readable by anyone
 	holding the link. They carry the model of the car and never the vehicle identification number. You can
-	revoke one at any time, and it stops working immediately.
+	revoke one at any time. It stops working within a few minutes, since a copy may be cached for up to
+	five minutes.
 </p>
 <p>
-	<strong>Leaderboards</strong> show a name you choose, the model of the car, the figure itself and the
-	numbers beside it. They never show your e-mail address, your vehicle identification number, your odometer
-	or the exact time anything happened. Nothing appears there automatically: the app tells you privately
-	when something of yours would rank, and only you can put it up. You can take it down again at any time,
-	including after a month has closed.
+	<strong>Leaderboard places</strong> show a name you choose, the model of the car, the figure itself
+	and the numbers beside it, under the month it counts for. They never show your e-mail address, your
+	vehicle identification number, your odometer or the exact time anything happened. Nothing appears there
+	automatically: the app tells you privately when something of yours would rank, and only you can put
+	it up. You can take it down again at any time, including after a month has closed.
 </p>
 
 <h2>E-mail</h2>
 <p>
 	We send sign-in links, and — only if you leave them switched on — reminders to request your next
-	export, messages when one of your trips would rank on a board, and a summary at the end of a year.
-	Each kind has its own switch on the account page and its own unsubscribe link, so turning one off
-	never affects the other. There are no tracking pixels and no click tracking; the messages are
-	plain text with a plain HTML twin. Mail is delivered through Cloudflare's e-mail service.
+	export, messages when something of yours would rank on a board, and a summary at the end of a
+	year. Reminders have a switch of their own on the account page. Board messages and the yearly
+	summary share another. Every message other than a sign-in link carries its own unsubscribe link,
+	which does not expire, and a <code>List-Unsubscribe</code> header. There are no tracking pixels and
+	no click tracking; the messages are plain text with a plain HTML twin. Mail is delivered through Cloudflare's
+	e-mail service.
 </p>
 
 <h2>Cookies</h2>
 <p>
-	Two, both strictly necessary, so there is no consent banner to click through (§ 25 (2) TTDSG):
+	Two, both strictly necessary, so there is no consent banner to click through (§ 25 (2) TDDDG):
 </p>
 <ul>
 	<li>
@@ -150,7 +159,9 @@
 		<strong>Access and portability.</strong> The API serves everything in your account as JSON, and "Back
 		up" writes every export you keep as a single archive.
 	</li>
-	<li><strong>Rectification.</strong> Logbook entries and your name are editable at any time.</li>
+	<li>
+		<strong>Rectification.</strong> Logbook entries can be edited at any time, and your name once a day.
+	</li>
 	<li>
 		<strong>Erasure.</strong> "Delete this account" removes everything. Individual exports, links and
 		places can be removed on their own.

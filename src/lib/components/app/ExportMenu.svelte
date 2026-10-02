@@ -3,9 +3,10 @@
 
   One menu over three writers, so the choice between a CSV, a spreadsheet and a
   document is made here and nowhere else. Every format takes the whole list in
-  date order rather than whatever the table is currently filtered or sorted by:
-  a Fahrtenbuch has to be complete, and the "unlabelled only" switch on the
-  trips page is an aid to labelling rather than a selection.
+  date order, and the whole of the time range on screen, rather than whatever
+  the table is currently filtered or sorted by: a logbook has to be complete,
+  and the "unlabelled only" switch on the trips page is an aid to labelling
+  rather than a selection.
 
   All three are written in this tab out of data that never left it. The PDF is
   the one that needs the network — its writer and the typeface it embeds are
@@ -119,7 +120,7 @@
 <DropdownMenu.Root>
 	<DropdownMenu.Trigger class={buttonVariants({ variant, size })} disabled={rows.length === 0}>
 		<DownloadIcon class="size-4" />
-		Export
+		Download
 	</DropdownMenu.Trigger>
 	<DropdownMenu.Content align="end" class="w-60">
 		<DropdownMenu.Label class="font-normal text-muted-foreground">

@@ -152,7 +152,7 @@
 				<Card.Title>Keeping exports</Card.Title>
 				<Card.Description>
 					A copy in the account outlives this browser. Exports are still read here, and still kept
-					here.
+					here. Nothing is copied unless you ask for it or switch this on.
 				</Card.Description>
 			</Card.Header>
 			<Card.Content>
@@ -214,8 +214,8 @@
 			<Card.Header>
 				<Card.Title>Delete this account</Card.Title>
 				<Card.Description>
-					Removes the account, every export kept in it and every share link. What is stored in this
-					browser stays where it is.
+					Removes the account, every export kept in it and every shared link, with the files behind
+					them. What is stored in this browser stays where it is.
 				</Card.Description>
 			</Card.Header>
 			<Card.Content>

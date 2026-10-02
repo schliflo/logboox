@@ -137,8 +137,8 @@
 					<p class="text-sm leading-relaxed text-muted-foreground">
 						Signing in is the one exception, and it is optional. An account can hold a copy of an
 						export so it outlives this browser, and can publish a single trip if you choose to share
-						one. Nothing is copied to it by itself the first time; the switch is yours, and deleting
-						the account takes every byte with it.
+						one. Nothing is copied to it unless you ask for that, or switch automatic copying on.
+						Deleting the account takes every byte with it.
 					</p>
 				</div>
 

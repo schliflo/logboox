@@ -52,7 +52,7 @@
 				description: 'Take it down again whenever you like, from your account.'
 			});
 		} catch (error) {
-			toast('That place could not be taken', {
+			toast('That place could not be claimed', {
 				description: error instanceof Error ? error.message : undefined,
 				closeButton: true
 			});
@@ -136,7 +136,7 @@
 		{:else}
 			<div class="flex flex-wrap items-center gap-2">
 				<Button size="sm" disabled={busy} onclick={take}>Claim it</Button>
-				<Button size="sm" variant="ghost" disabled={busy} onclick={decline}>Not this one</Button>
+				<Button size="sm" variant="ghost" disabled={busy} onclick={decline}>No thanks</Button>
 				<span class="text-xs text-muted-foreground">
 					Nothing is published until you say so · open until {dateOnly(candidate.locksAt)}
 				</span>

@@ -66,7 +66,7 @@
 				description: `${monthLabel(candidate.month)}. You can take it down again whenever you like.`
 			});
 		} catch (error) {
-			toast('That place could not be taken', {
+			toast('That place could not be claimed', {
 				description: error instanceof Error ? error.message : undefined,
 				closeButton: true
 			});
@@ -88,7 +88,9 @@
 		working = entry.id;
 		try {
 			await account.removeEntry(entry.id);
-			toast('Taken down', { description: 'It is gone from the board for everyone.' });
+			toast('Taken down', {
+				description: 'It leaves the board for everyone within a few minutes.'
+			});
 		} finally {
 			working = null;
 		}
@@ -110,7 +112,7 @@
 			Leaderboard
 		</Card.Title>
 		<Card.Description>
-			Nothing of yours appears on a board unless you put it there. When one of your trips would
+			Nothing of yours appears on a board unless you put it there. When something of yours would
 			rank, it is listed here first.
 		</Card.Description>
 	</Card.Header>
@@ -139,8 +141,8 @@
 				<p class="text-xs text-destructive">{nameError}</p>
 			{:else}
 				<p class="text-xs text-muted-foreground">
-					Letters, digits, hyphens and underscores. It is the only thing about you a board shows —
-					not your e-mail, not your car.
+					Letters, digits, hyphens and underscores. A board shows this name, your car's model and
+					the figures, never your e-mail address. You can change it once a day.
 				</p>
 			{/if}
 		</div>
@@ -149,9 +151,12 @@
 
 		<div class="flex items-center justify-between gap-4">
 			<div class="space-y-1">
-				<Label for="board-notify" class="font-normal">Tell me when a trip would rank</Label>
+				<Label for="board-notify" class="font-normal"
+					>Tell me when something of mine would rank</Label
+				>
 				<p class="text-xs text-muted-foreground">
-					In the app, and by e-mail if you have not been back in a couple of days.
+					In the app, and by e-mail if you have not been back in a couple of days. Also covers the
+					summary of the year.
 				</p>
 			</div>
 			<Switch
