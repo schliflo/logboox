@@ -2,15 +2,14 @@
  * Finishes an upload.
  *
  * The bucket is listed and compared with what the record said it would hold.
- * An export is only listed once that agrees, so a browser that lost its
- * connection partway through leaves something invisible and replaceable rather
- * than a library entry that cannot be opened.
+ * An export is only listed once that agrees, and the account is then charged
+ * the bucket's exact sum. See exports/upload.ts.
  */
 
 import type { RequestHandler } from './$types';
 import type { ExportSummary } from '$lib/data/analytics/summary';
-import { exportPrefix, listBlobNames } from '$lib/server/exports/r2';
-import { expectedBlobNames, getExportRow, getRecord, markComplete } from '$lib/server/exports/repo';
+import { completeUpload } from '$lib/server/exports/upload';
+import { getExportRow } from '$lib/server/exports/repo';
 import { detectCandidates } from '$lib/server/leaderboard/repo';
 import { all, type Db } from '$lib/server/db';
 import { requireDb, requireStorage } from '$lib/server/context';
@@ -21,34 +20,21 @@ export const POST: RequestHandler = async (event) => {
 	if (!auth) return fail(401, 'Not signed in.');
 	if (auth.via !== 'session') return fail(403, 'Uploads come from the app, not from a token.');
 
-	const id = event.params.id;
-	const record = await getRecord(requireDb(event), auth.user.id, id);
-	if (!record) return fail(404, 'There is no upload in progress for that export.');
-
-	const expected = expectedBlobNames(record);
-	const present = await listBlobNames(requireStorage(event), exportPrefix(auth.user.id, id));
-	const missing = [...expected].filter((name) => !present.has(name));
-
-	if (missing.length > 0) {
-		return json(
-			{
-				ok: false,
-				missing,
-				error: `${missing.length} of ${expected.size} buffers did not arrive.`
-			},
-			{ status: 409 }
-		);
-	}
-
 	const db = requireDb(event);
-	await markComplete(db, auth.user.id, id);
+	const done = await completeUpload(db, requireStorage(event), auth.user.id, event.params.id);
+	if (!done.ok) {
+		if (done.missing) {
+			return json({ ok: false, missing: done.missing, error: done.error }, { status: 409 });
+		}
+		return fail(done.status, done.error);
+	}
 
 	// Only now, with the whole export in place: a candidate found against an
 	// upload that never finished would point at trips that are about to be
 	// swept away with it.
-	const candidates = await lookForPlaces(db, auth.user.id, id);
+	const candidates = await lookForPlaces(db, auth.user.id, event.params.id);
 
-	return json({ ok: true, blobs: expected.size, candidates });
+	return json({ ok: true, blobs: done.blobs, candidates });
 };
 
 /**

@@ -37,19 +37,25 @@ export function shareBlobKey(shareId: string, name: string): string {
 	return `${sharePrefix(shareId)}${name}.gz`;
 }
 
-/** The blob names actually present under a prefix, without their suffix. */
-export async function listBlobNames(storage: R2Bucket, prefix: string): Promise<Set<string>> {
-	const names = new Set<string>();
+/**
+ * The blobs actually present under a prefix, without their suffix, and how
+ * large each one is. The sizes are what an account is charged for.
+ */
+export async function listBlobSizes(
+	storage: R2Bucket,
+	prefix: string
+): Promise<Map<string, number>> {
+	const sizes = new Map<string, number>();
 	let cursor: string | undefined;
 	do {
 		const page = await storage.list({ prefix, cursor, limit: 1000 });
 		for (const object of page.objects) {
 			const name = object.key.slice(prefix.length);
-			if (name.endsWith('.gz')) names.add(name.slice(0, -3));
+			if (name.endsWith('.gz')) sizes.set(name.slice(0, -3), object.size);
 		}
 		cursor = page.truncated ? page.cursor : undefined;
 	} while (cursor);
-	return names;
+	return sizes;
 }
 
 /**

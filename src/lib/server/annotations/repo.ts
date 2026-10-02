@@ -8,7 +8,7 @@
  * device still had the note.
  */
 
-import { all, run, type Db } from '../db';
+import { all, run, runBatched, type Db, type Statement } from '../db';
 
 export interface AnnotationRow {
 	vin: string;
@@ -54,6 +54,13 @@ export function listAnnotations(db: Db, userId: string, vin: string): Promise<An
 	);
 }
 
+/** A time from a device, never later than now: a clock running ahead would win every merge. */
+function clamped(value: unknown, now: number): number | null {
+	return typeof value === 'number' && Number.isFinite(value)
+		? Math.min(Math.floor(value), now)
+		: null;
+}
+
 /**
  * Writes what is newer and leaves what is not. The comparison is in the WHERE
  * clause rather than in this code, so two devices syncing at once cannot read
@@ -65,40 +72,47 @@ export async function mergeAnnotations(
 	vin: string,
 	entries: AnnotationInput[]
 ): Promise<number> {
-	let written = 0;
+	// Epoch milliseconds, as the browser keeps them, unlike the seconds the
+	// rest of the schema uses.
+	const now = Date.now();
+	const upsert = db.prepare(
+		`INSERT INTO annotations (user_id, vin, start_time, odo_start, origin, destination, purpose, comment, updated_at, deleted_at)
+		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+		 ON CONFLICT (user_id, vin, start_time) DO UPDATE SET
+			odo_start = excluded.odo_start,
+			origin = excluded.origin,
+			destination = excluded.destination,
+			purpose = excluded.purpose,
+			comment = excluded.comment,
+			updated_at = excluded.updated_at,
+			deleted_at = excluded.deleted_at
+		 WHERE excluded.updated_at > annotations.updated_at`
+	);
+	const statements: Statement[] = [];
 
 	for (const entry of entries.slice(0, MAX_BATCH)) {
+		if (!entry || typeof entry !== 'object') continue;
 		if (!Number.isInteger(entry.startTime) || entry.startTime <= 0) continue;
 		const purpose = clean(entry.purpose, 20);
 		if (!PURPOSES.has(purpose)) continue;
 
-		written += await run(
-			db,
-			`INSERT INTO annotations (user_id, vin, start_time, odo_start, origin, destination, purpose, comment, updated_at, deleted_at)
-			 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-			 ON CONFLICT (user_id, vin, start_time) DO UPDATE SET
-				odo_start = excluded.odo_start,
-				origin = excluded.origin,
-				destination = excluded.destination,
-				purpose = excluded.purpose,
-				comment = excluded.comment,
-				updated_at = excluded.updated_at,
-				deleted_at = excluded.deleted_at
-			 WHERE excluded.updated_at > annotations.updated_at`,
-			userId,
-			vin,
-			entry.startTime,
-			Number.isFinite(entry.odoStart as number) ? entry.odoStart : null,
-			clean(entry.origin, MAX_PLACE),
-			clean(entry.destination, MAX_PLACE),
-			purpose,
-			clean(entry.comment, MAX_COMMENT),
-			Number.isFinite(entry.updatedAt) ? Math.floor(entry.updatedAt) : Date.now(),
-			Number.isFinite(entry.deletedAt as number) ? entry.deletedAt : null
+		statements.push(
+			upsert.bind(
+				userId,
+				vin,
+				entry.startTime,
+				Number.isFinite(entry.odoStart as number) ? entry.odoStart : null,
+				clean(entry.origin, MAX_PLACE),
+				clean(entry.destination, MAX_PLACE),
+				purpose,
+				clean(entry.comment, MAX_COMMENT),
+				clamped(entry.updatedAt, now) ?? now,
+				clamped(entry.deletedAt, now)
+			)
 		);
 	}
 
-	return written;
+	return runBatched(db, statements);
 }
 
 /** Tombstones old enough that every device will have seen them. */

@@ -18,12 +18,14 @@ export const GET: RequestHandler = async (event) => {
 	if (!auth) return fail(401, 'Not signed in.');
 
 	const db = requireDb(event);
-	const rows = await listVehicles(db, auth.user.id);
+	const [rows, totals] = await Promise.all([
+		listVehicles(db, auth.user.id),
+		vehicleTotals(db, auth.user.id)
+	]);
 
-	const vehicles = [];
-	for (const row of rows) {
-		const totals = await vehicleTotals(db, auth.user.id, row.vin);
-		vehicles.push({
+	const vehicles = rows.map((row) => {
+		const counts = totals.get(row.vin) ?? { exports: 0, trips: 0, charging: 0, from: 0, to: 0 };
+		return {
 			vin: row.vin,
 			model: row.vmodel,
 			state: {
@@ -32,10 +34,10 @@ export const GET: RequestHandler = async (event) => {
 				soc: row.soc,
 				rangeKm: row.range_km
 			},
-			coverage: { from: totals.from, to: totals.to, exports: totals.exports },
-			counts: { trips: totals.trips, chargingSessions: totals.charging }
-		});
-	}
+			coverage: { from: counts.from, to: counts.to, exports: counts.exports },
+			counts: { trips: counts.trips, chargingSessions: counts.charging }
+		};
+	});
 
 	return json({ vehicles });
 };

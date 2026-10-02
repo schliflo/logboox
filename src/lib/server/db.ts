@@ -17,7 +17,7 @@ export interface Statement {
 
 export interface Db {
 	prepare(sql: string): Statement;
-	batch(statements: Statement[]): Promise<unknown[]>;
+	batch(statements: Statement[]): Promise<Array<{ meta?: { changes?: number } }>>;
 }
 
 /** Now, in the epoch seconds everything in this schema is measured in. */
@@ -47,6 +47,22 @@ export async function run(db: Db, sql: string, ...values: unknown[]): Promise<nu
 		.bind(...values)
 		.run();
 	return result.meta?.changes ?? 0;
+}
+
+/**
+ * Statements per `db.batch`. A month is a few dozen round trips at this size,
+ * and each batch — one D1 transaction — stays far below its size and time limits.
+ */
+export const BATCH_SIZE = 250;
+
+/** Runs statements in atomic chunks and says how many rows they changed. */
+export async function runBatched(db: Db, statements: Statement[]): Promise<number> {
+	let changes = 0;
+	for (let i = 0; i < statements.length; i += BATCH_SIZE) {
+		const results = await db.batch(statements.slice(i, i + BATCH_SIZE));
+		for (const result of results) changes += result?.meta?.changes ?? 0;
+	}
+	return changes;
 }
 
 /** A short opaque id for a row. Not a secret; never used for access. */

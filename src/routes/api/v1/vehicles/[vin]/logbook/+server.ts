@@ -13,6 +13,7 @@ import {
 	mergeAnnotations,
 	type AnnotationInput
 } from '$lib/server/annotations/repo';
+import { isVin } from '$lib/server/exports/repo';
 import { requireDb } from '$lib/server/context';
 import { fail, json, readJson } from '$lib/server/response';
 
@@ -41,6 +42,7 @@ function present(row: {
 export const GET: RequestHandler = async (event) => {
 	const auth = event.locals.auth;
 	if (!auth) return fail(401, 'Not signed in.');
+	if (!isVin(event.params.vin)) return fail(400, 'That is not a vehicle identifier.');
 
 	const rows = await listAnnotations(requireDb(event), auth.user.id, event.params.vin);
 	return json({ vin: event.params.vin, entries: rows.map(present) });
@@ -52,6 +54,7 @@ export const PUT: RequestHandler = async (event) => {
 	if (auth.via !== 'session' && !auth.scopes.includes('write')) {
 		return fail(403, 'This token may only read.');
 	}
+	if (!isVin(event.params.vin)) return fail(400, 'That is not a vehicle identifier.');
 
 	const body = await readJson<{ entries?: AnnotationInput[] }>(event.request);
 	if (!Array.isArray(body?.entries)) return fail(400, 'Expected a list of entries.');

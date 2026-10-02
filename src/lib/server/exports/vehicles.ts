@@ -54,38 +54,47 @@ export function getVehicle(db: Db, userId: string, vin: string): Promise<Vehicle
 	);
 }
 
-/** What the account knows about one car, in numbers rather than rows. */
-export async function vehicleTotals(
-	db: Db,
-	userId: string,
-	vin: string
-): Promise<{ exports: number; trips: number; charging: number; from: number; to: number }> {
-	const exports = await one<{ n: number; from: number | null; to: number | null }>(
-		db,
-		'SELECT COUNT(*) AS n, MIN(start_time) AS "from", MAX(end_time) AS "to" FROM exports WHERE user_id = ? AND vin = ? AND complete = 1',
-		userId,
-		vin
-	);
-	const trips = await one<{ n: number }>(
-		db,
-		'SELECT COUNT(*) AS n FROM trips WHERE user_id = ? AND vin = ?',
-		userId,
-		vin
-	);
-	const charging = await one<{ n: number }>(
-		db,
-		'SELECT COUNT(*) AS n FROM charging_sessions WHERE user_id = ? AND vin = ?',
-		userId,
-		vin
-	);
+export interface VehicleTotals {
+	exports: number;
+	trips: number;
+	charging: number;
+	from: number;
+	to: number;
+}
 
-	return {
-		exports: exports?.n ?? 0,
-		trips: trips?.n ?? 0,
-		charging: charging?.n ?? 0,
-		from: exports?.from ?? 0,
-		to: exports?.to ?? 0
+/** What the account knows about each of its cars, in numbers rather than rows. */
+export async function vehicleTotals(db: Db, userId: string): Promise<Map<string, VehicleTotals>> {
+	const [exports, trips, charging] = await Promise.all([
+		all<{ vin: string; n: number; from: number | null; to: number | null }>(
+			db,
+			`SELECT vin, COUNT(*) AS n, MIN(start_time) AS "from", MAX(end_time) AS "to"
+			 FROM exports WHERE user_id = ? AND complete = 1 GROUP BY vin`,
+			userId
+		),
+		all<{ vin: string; n: number }>(
+			db,
+			'SELECT vin, COUNT(*) AS n FROM trips WHERE user_id = ? GROUP BY vin',
+			userId
+		),
+		all<{ vin: string; n: number }>(
+			db,
+			'SELECT vin, COUNT(*) AS n FROM charging_sessions WHERE user_id = ? GROUP BY vin',
+			userId
+		)
+	]);
+
+	const totals = new Map<string, VehicleTotals>();
+	const entry = (vin: string) => {
+		let found = totals.get(vin);
+		if (!found) totals.set(vin, (found = { exports: 0, trips: 0, charging: 0, from: 0, to: 0 }));
+		return found;
 	};
+	for (const row of exports) {
+		Object.assign(entry(row.vin), { exports: row.n, from: row.from ?? 0, to: row.to ?? 0 });
+	}
+	for (const row of trips) entry(row.vin).trips = row.n;
+	for (const row of charging) entry(row.vin).charging = row.n;
+	return totals;
 }
 
 interface Window {

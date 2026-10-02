@@ -76,9 +76,17 @@ export function migratedDb(): TestDb {
 
 	return {
 		prepare: (sql: string) => new SqliteStatement(sqlite, sql),
+		// A D1 batch is one transaction: all of it lands or none of it does.
 		batch: async (statements: Statement[]) => {
-			const out: unknown[] = [];
-			for (const statement of statements) out.push(await statement.run());
+			const out: Array<{ meta: { changes: number } }> = [];
+			sqlite.exec('BEGIN');
+			try {
+				for (const statement of statements) out.push(await statement.run());
+				sqlite.exec('COMMIT');
+			} catch (error) {
+				sqlite.exec('ROLLBACK');
+				throw error;
+			}
 			return out;
 		},
 		close: () => sqlite.close()
