@@ -35,13 +35,32 @@ export function labelled(entry: Annotation | undefined): boolean {
 	return Boolean(entry && entry.deletedAt === null && (entry.origin || entry.destination));
 }
 
+const formatters = new Map<string, Intl.DateTimeFormat>();
+
+/**
+ * One formatter per kind and time zone. Building one is the expensive part,
+ * and the suggestions ask about every trip in the dataset, on every note saved.
+ */
+export function zoneFormatter(
+	kind: string,
+	timeZone: string,
+	options: Intl.DateTimeFormatOptions
+): Intl.DateTimeFormat {
+	const id = `${kind}|${timeZone}`;
+	let formatter = formatters.get(id);
+	if (!formatter) {
+		formatter = new Intl.DateTimeFormat('en-GB', { ...options, timeZone });
+		formatters.set(id, formatter);
+	}
+	return formatter;
+}
+
 /** Minutes since local midnight, which is what a habit is measured in. */
 export function hourOf(startTime: number, timeZone: string): number {
-	const parts = new Intl.DateTimeFormat('en-GB', {
+	const parts = zoneFormatter('clock', timeZone, {
 		hour: 'numeric',
 		minute: 'numeric',
-		hour12: false,
-		timeZone
+		hour12: false
 	}).formatToParts(new Date(startTime * 1000));
 	const hour = Number(parts.find((part) => part.type === 'hour')?.value ?? '0');
 	const minute = Number(parts.find((part) => part.type === 'minute')?.value ?? '0');
@@ -49,7 +68,7 @@ export function hourOf(startTime: number, timeZone: string): number {
 }
 
 export function isWeekend(startTime: number, timeZone: string): boolean {
-	const day = new Intl.DateTimeFormat('en-GB', { weekday: 'short', timeZone }).format(
+	const day = zoneFormatter('weekday', timeZone, { weekday: 'short' }).format(
 		new Date(startTime * 1000)
 	);
 	return day === 'Sat' || day === 'Sun';

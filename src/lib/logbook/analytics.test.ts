@@ -130,6 +130,34 @@ describe('what is written down and what is missing', () => {
 	});
 });
 
+describe('the kilometres add up', () => {
+	it('counts a gap of exactly one kilometre', () => {
+		const trips = [trip(0, MONDAY, 41000, { km: 20 }), trip(1, MONDAY + 3600, 41021, { km: 20 })];
+		const { coverage } = analyseLogbook(trips, new Map(), ZONE);
+		expect(coverage.gaps).toHaveLength(1);
+		expect(coverage.unrecordedKm).toBe(1);
+	});
+
+	it('leaves trips plus unaccounted kilometres equal to the odometer delta', () => {
+		// Gaps of 0, 1, 2 and 7 km between five trips.
+		let odo = 41000;
+		const trips: Trip[] = [];
+		for (const [i, jump] of [0, 0, 1, 2, 7].entries()) {
+			odo += jump;
+			trips.push(trip(i, MONDAY + i * 3600, odo, { km: 10 + i }));
+			odo += 10 + i;
+		}
+		const { coverage } = analyseLogbook(trips, new Map(), ZONE);
+		expect(coverage.km + coverage.unrecordedKm).toBe(odo - 41000);
+		expect(coverage.gaps.map((gap) => gap.km)).toEqual([1, 2, 7]);
+	});
+
+	it('says nothing when the readings meet exactly', () => {
+		const trips = [trip(0, MONDAY, 41000, { km: 20 }), trip(1, MONDAY + 3600, 41020, { km: 20 })];
+		expect(analyseLogbook(trips, new Map(), ZONE).coverage.unrecordedKm).toBe(0);
+	});
+});
+
 describe('by purpose', () => {
 	it('adds up distance, time and what the electricity cost', () => {
 		const { trips, notes } = commuteWeek();

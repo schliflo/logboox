@@ -7,9 +7,14 @@
  * can use. CRLF for the same reason.
  *
  * The rules were settled by the logbook download, which shipped first; this is
- * the same writer generalised over a column description, and the byte-for-byte
- * output has not changed. Its tests are the proof of that and should stay
- * exactly as they were written.
+ * the same writer generalised over a column description. The output is the
+ * same except for one deliberate change: a text cell that starts with `=`, `+`,
+ * `-` or `@` (or a tab or return) gets a leading apostrophe, so a destination
+ * of "+49 89 1234" downloads as `'+49 89 1234`. A spreadsheet must never
+ * execute a note someone typed, and the apostrophe is what spreadsheet
+ * programs themselves use to mark text; the cost is that it shows in a reader
+ * that is not one. A cell that is only "-" or "+" cannot be a formula and is
+ * left alone. Numbers are never touched.
  */
 
 import type { Column } from './columns';
@@ -26,6 +31,20 @@ function formatter(timeZone: string, options: Intl.DateTimeFormatOptions) {
  */
 function cell(text: string): string {
 	return /[";\n\r]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
+}
+
+/**
+ * Free text that a spreadsheet would read as a formula.
+ *
+ * A comment of `=HYPERLINK(...)` runs when the file is opened, and a place
+ * called `-Büro` shows as an error. A leading apostrophe makes the cell text
+ * (OWASP's recommendation). Only text columns pass through here: a negative
+ * number starts with `-` too, and must stay one.
+ */
+function literal(text: string): string {
+	// A lone "-" or "+" is a dash in a column of places, not a formula.
+	if (text === '-' || text === '+') return text;
+	return /^[=+\-@\t\r]/.test(text) ? `'${text}` : text;
 }
 
 export function toCsv<T>(columns: Array<Column<T>>, rows: T[], timeZone: string): string {
@@ -46,7 +65,7 @@ export function toCsv<T>(columns: Array<Column<T>>, rows: T[], timeZone: string)
 					.toFixed(column.digits ?? 0)
 					.replace('.', ',');
 			default:
-				return String(value);
+				return typeof value === 'string' ? literal(value) : String(value);
 		}
 	};
 

@@ -15,9 +15,16 @@
 
 import type { Trip } from '../data/analytics/trips';
 import type { Annotation, Purpose } from './types';
-import { hourOf, isWeekend, labelled } from './suggest';
+import { hourOf, isWeekend, labelled, zoneFormatter } from './suggest';
 
-/** Odometer readings further apart than this mean the car moved unrecorded. */
+/**
+ * Odometer readings at least this far apart mean the car moved unrecorded.
+ *
+ * Readings are whole kilometres, so one apart could be two roundings of a
+ * car that barely moved. It is still counted: trip distances are differences
+ * between readings, so a jump left out is a kilometre the trips, the gaps and
+ * the odometer no longer add up to.
+ */
 const GAP_KM = 1;
 
 /** Below this a route is a one-off rather than a habit worth summarising. */
@@ -111,11 +118,10 @@ function grid(): number[][] {
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
 function weekdayHour(startTime: number, timeZone: string): { day: number; hour: number } {
-	const parts = new Intl.DateTimeFormat('en-GB', {
+	const parts = zoneFormatter('weekday-hour', timeZone, {
 		weekday: 'short',
 		hour: 'numeric',
-		hour12: false,
-		timeZone
+		hour12: false
 	}).formatToParts(new Date(startTime * 1000));
 	const name = parts.find((part) => part.type === 'weekday')?.value ?? 'Sun';
 	return {
@@ -167,7 +173,7 @@ export function analyseLogbook(
 			const previous = ordered[i - 1];
 			if (Number.isFinite(previous.odoEnd) && Number.isFinite(trip.odoStart)) {
 				const jump = trip.odoStart - previous.odoEnd;
-				if (jump > GAP_KM) {
+				if (jump >= GAP_KM) {
 					gaps.push({
 						fromOdo: previous.odoEnd,
 						toOdo: trip.odoStart,

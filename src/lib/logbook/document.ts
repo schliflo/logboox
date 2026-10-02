@@ -17,7 +17,7 @@
 
 import type { Trip } from '../data/analytics/trips';
 import type { Annotation } from './types';
-import { analyseLogbook } from './analytics';
+import { analyseLogbook, type LogbookAnalysis } from './analytics';
 import { LOGBOOK_COLUMNS, type LogbookRow } from '../export/columns';
 import type { Column } from '../export/columns';
 import { measure, num } from '../og/format';
@@ -58,7 +58,9 @@ export function logbookDocument(
 	timeZone: string,
 	/** The model, and the vehicle number as the reader chose to see it. */
 	vehicle: string,
-	pricePerKwh = 0
+	pricePerKwh = 0,
+	/** Already worked out by the caller, which saves doing it twice per change. */
+	analysis: LogbookAnalysis = analyseLogbook(trips, notes, timeZone, pricePerKwh)
 ): LogbookDocument {
 	// Chronological, and complete: a book with the rows in the order the table
 	// happened to be sorted in, or with a filter still applied, is not a book.
@@ -68,7 +70,6 @@ export function logbookDocument(
 
 	const from = rows.length ? rows[0].trip.startTime : 0;
 	const to = rows.length ? rows[rows.length - 1].trip.endTime : 0;
-	const analysis = analyseLogbook(trips, notes, timeZone, pricePerKwh);
 
 	const totals = [
 		{ label: 'Trips', value: `${num(analysis.coverage.trips)}` },

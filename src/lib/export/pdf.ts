@@ -84,6 +84,18 @@ function fit(
 	return `${cut}…`;
 }
 
+/**
+ * A cell is one line. `drawText` honours a line break, and a comment typed
+ * into a textarea has them, so the second line would print over the next row.
+ */
+function oneLine(text: string): string {
+	return text
+		.split(/[\r\n\v\f\u0085\u2028\u2029]+/)
+		.map((line) => line.replace(/\t/g, ' ').trim())
+		.filter(Boolean)
+		.join(' / ');
+}
+
 export async function toPdf<T>(document: Document<T>): Promise<Uint8Array<ArrayBuffer>> {
 	const [{ PDFDocument, rgb }, { default: fontkit }] = await Promise.all([
 		import('pdf-lib'),
@@ -123,7 +135,7 @@ export async function toPdf<T>(document: Document<T>): Promise<Uint8Array<ArrayB
 			case 'number':
 				return Number.isFinite(Number(value)) ? Number(value).toFixed(column.digits ?? 0) : '';
 			default:
-				return String(value);
+				return oneLine(String(value));
 		}
 	};
 

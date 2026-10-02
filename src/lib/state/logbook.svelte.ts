@@ -11,7 +11,9 @@
  * keeping exports is joining them up.
  */
 
-import { browser } from '$app/environment';
+import { browser } from '$app/env';
+import { untrack } from 'svelte';
+import { toast } from 'svelte-sonner';
 import { api } from '../api/client';
 import { listAnnotations, putAnnotations } from '../history/db';
 import { storageAvailable } from '../history/db';
@@ -31,26 +33,43 @@ class LogbookStore {
 	syncing = $state(false);
 
 	private timer: ReturnType<typeof setTimeout> | null = null;
-	private pending = new Map<number, Annotation>();
+	/**
+	 * Waiting to go up, by car and then by trip. Per car so that notes for one
+	 * can never be sent to another's logbook: only the open car's are ever sent.
+	 */
+	private pending = new Map<string, Map<number, Annotation>>();
+	private pulling: { vin: string; run: Promise<void> } | null = null;
 
-	/** Notes attached to the trips of the open dataset. */
-	get bound() {
-		const trips = data.derived?.trips ?? [];
-		return bindAnnotations(trips, this.entries);
+	constructor() {
+		if (!browser) return;
+		// The account resolves on its own schedule, usually after the dataset has
+		// opened and found nobody signed in. Nothing else would ever ask again.
+		$effect.root(() => {
+			$effect(() => {
+				if (!account.signedIn) return;
+				untrack(() => {
+					if (this.loaded) void this.pull();
+				});
+			});
+		});
 	}
 
-	get places(): string[] {
-		return knownPlaces(this.entries);
-	}
+	/**
+	 * Notes attached to the trips of the open dataset. Derived, so the binding
+	 * is worked out once per change rather than once per component asking.
+	 */
+	bound = $derived.by(() => bindAnnotations(data.derived?.trips ?? [], this.entries));
+
+	places = $derived.by(() => knownPlaces(this.entries));
 
 	/** How many trips in this dataset have somewhere written against them. */
-	get labelled(): number {
+	labelled = $derived.by(() => {
 		let count = 0;
 		for (const entry of this.bound.byTrip.values()) {
 			if (entry.origin || entry.destination) count++;
 		}
 		return count;
-	}
+	});
 
 	for(trip: Trip): Annotation {
 		return (
@@ -63,6 +82,19 @@ class LogbookStore {
 		);
 	}
 
+	private bucket(vin: string): Map<number, Annotation> {
+		let bucket = this.pending.get(vin);
+		if (!bucket) this.pending.set(vin, (bucket = new Map()));
+		return bucket;
+	}
+
+	/** Queues a note, unless one newer is already waiting. */
+	private enqueue(entry: Annotation): void {
+		const bucket = this.bucket(entry.vin);
+		const waiting = bucket.get(entry.startTime);
+		if (!waiting || waiting.updatedAt <= entry.updatedAt) bucket.set(entry.startTime, entry);
+	}
+
 	/**
 	 * Reads this car's notes. Called when a dataset opens; a different car
 	 * replaces what is held rather than adding to it.
@@ -71,24 +103,49 @@ class LogbookStore {
 		if (!browser || !storageAvailable()) return;
 		if (this.vin === vin && this.loaded) return;
 
+		if (this.vin !== vin) {
+			// A push scheduled for the last car must not find this one.
+			if (this.timer) clearTimeout(this.timer);
+			this.timer = null;
+			this.entries = [];
+		}
 		this.vin = vin;
 		this.loaded = false;
-		this.entries = await listAnnotations(vin);
+
+		try {
+			const entries = await listAnnotations(vin);
+			if (this.vin !== vin) return;
+			this.entries = entries;
+		} catch {
+			if (this.vin !== vin) return;
+			// Not loaded, so `save` refuses: writing a note over ones that could
+			// not be read is worse than offering no place to write. The VIN
+			// stays, since whoever called this may be reacting to it, and
+			// changing it would call again.
+			toast.error('The logbook could not be read from this browser.');
+			return;
+		}
 		this.loaded = true;
 
 		// Corrections first: a merge may have moved a trip under a note, and
 		// rewriting it once is better than re-tolerating the drift forever.
-		await this.settleRebinds();
+		try {
+			await this.settleRebinds(vin);
+		} catch {
+			// Found again, and tried again, the next time this car opens.
+		}
+		if (this.vin !== vin) return;
 		await this.pull();
 	}
 
-	private async settleRebinds(): Promise<void> {
+	private async settleRebinds(vin: string): Promise<void> {
 		const { rebound } = this.bound;
 		if (rebound.length === 0) return;
 
+		const now = Date.now();
 		const writes: Annotation[] = [];
 		for (const { from, entry } of rebound) {
-			writes.push({ ...entry, updatedAt: Date.now() });
+			writes.push({ ...entry, updatedAt: now });
 			// The old key becomes a tombstone, so the correction travels rather
 			// than the note reappearing at both times on another device.
 			writes.push({
@@ -98,18 +155,30 @@ class LogbookStore {
 				destination: '',
 				purpose: '',
 				comment: '',
-				updatedAt: Date.now(),
-				deletedAt: Date.now()
+				updatedAt: now,
+				deletedAt: now
 			});
 		}
 
 		await putAnnotations(writes);
-		this.entries = await listAnnotations(this.vin!);
+		// Both halves go up: a live note at the new time alone would leave the
+		// old one live on the account as well.
+		for (const write of writes) this.enqueue(write);
+		const entries = await listAnnotations(vin);
+		if (this.vin === vin) this.entries = entries;
 	}
 
-	/** Writes a note here, and queues telling the account about it. */
+	/**
+	 * Writes a note here, and queues telling the account about it. Rejects when
+	 * the browser would not take it, with the note still held in memory.
+	 */
 	async save(entry: Annotation): Promise<void> {
-		const next: Annotation = { ...entry, vin: this.vin ?? entry.vin, updatedAt: Date.now() };
+		const vin = this.vin;
+		// A note with no car to belong to would be sent to whichever car is
+		// opened next.
+		if (!vin || !this.loaded) throw new Error('There is no logbook open to keep this note in.');
+
+		const next: Annotation = { ...entry, vin, updatedAt: Date.now() };
 		// A note emptied of everything is a deletion, not a blank note: that is
 		// what has to reach the other devices.
 		if (isBlank(next) && !next.deletedAt) next.deletedAt = Date.now();
@@ -117,48 +186,66 @@ class LogbookStore {
 
 		this.entries = [...this.entries.filter((held) => held.startTime !== next.startTime), next];
 
-		await putAnnotations([next]);
+		// Queued before the write: a browser that refuses the write should not
+		// also keep the note from the account.
 		this.queue(next);
+		await putAnnotations([next]);
 	}
 
 	private queue(entry: Annotation): void {
-		this.pending.set(entry.startTime, entry);
-		if (!account.signedIn) return;
+		this.enqueue(entry);
+		if (!account.signedIn || entry.vin !== this.vin) return;
 		if (this.timer) clearTimeout(this.timer);
 		this.timer = setTimeout(() => void this.push(), SAVE_DELAY_MS);
 	}
 
 	/** Sends what has changed, and takes back whatever the account knows. */
 	async push(): Promise<void> {
-		if (!account.signedIn || !this.vin || this.pending.size === 0) return;
+		const vin = this.vin;
+		if (!account.signedIn || !vin) return;
+		const bucket = this.pending.get(vin);
+		if (!bucket || bucket.size === 0) return;
 
-		const entries = [...this.pending.values()];
-		this.pending.clear();
+		const entries = [...bucket.values()];
+		bucket.clear();
 		this.syncing = true;
 		try {
 			const body = await api<{ entries: Annotation[] }>(
-				`/api/v1/vehicles/${encodeURIComponent(this.vin)}/logbook`,
+				`/api/v1/vehicles/${encodeURIComponent(vin)}/logbook`,
 				{ method: 'PUT', body: { entries } }
 			);
-			await this.absorb(body.entries);
+			await this.absorb(vin, body.entries, entries);
 		} catch {
 			// Put them back: an offline edit should go up on the next attempt
-			// rather than being quietly dropped.
-			for (const entry of entries) this.pending.set(entry.startTime, entry);
+			// rather than being quietly dropped. Whatever was edited meanwhile is
+			// newer, and stays.
+			for (const entry of entries) this.enqueue(entry);
 		} finally {
 			this.syncing = false;
 		}
 	}
 
 	/** Reads the account's copy and merges it into this browser's. */
-	async pull(): Promise<void> {
-		if (!account.signedIn || !this.vin) return;
+	pull(): Promise<void> {
+		const vin = this.vin;
+		if (!account.signedIn || !vin) return Promise.resolve();
+		// The dataset opening and the account resolving can both ask at once.
+		if (this.pulling?.vin === vin) return this.pulling.run;
+
+		const run = this.fetchAndAbsorb(vin).finally(() => {
+			if (this.pulling?.run === run) this.pulling = null;
+		});
+		this.pulling = { vin, run };
+		return run;
+	}
+
+	private async fetchAndAbsorb(vin: string): Promise<void> {
 		this.syncing = true;
 		try {
 			const body = await api<{ entries: Annotation[] }>(
-				`/api/v1/vehicles/${encodeURIComponent(this.vin)}/logbook`
+				`/api/v1/vehicles/${encodeURIComponent(vin)}/logbook`
 			);
-			await this.absorb(body.entries);
+			await this.absorb(vin, body.entries);
 		} catch {
 			// The notes in this browser are the ones that matter; the account is
 			// a copy, and it will be read again next time.
@@ -167,30 +254,59 @@ class LogbookStore {
 		}
 	}
 
-	/** Last writer wins, in both directions, by the clock on the note. */
-	private async absorb(incoming: Annotation[]): Promise<void> {
-		if (!this.vin) return;
+	/**
+	 * Last writer wins, in both directions, by the clock on the note.
+	 *
+	 * `sent` is what the response answers. The server clamps a note's time to
+	 * its own clock, so a note from a fast clock comes back older than it went;
+	 * queueing it again on that evidence would loop forever.
+	 */
+	private async absorb(
+		vin: string,
+		incoming: Annotation[],
+		sent: Annotation[] = []
+	): Promise<void> {
+		if (this.vin !== vin) return;
+		const answered = new Map(sent.map((entry) => [entry.startTime, entry.updatedAt]));
 		const held = new Map(this.entries.map((entry) => [entry.startTime, entry]));
+		const returned = new Set<number>();
 		const writes: Annotation[] = [];
 
 		for (const entry of incoming) {
+			returned.add(entry.startTime);
 			const mine = held.get(entry.startTime);
-			if (mine && mine.updatedAt >= entry.updatedAt) continue;
-			const merged: Annotation = { ...entry, vin: this.vin };
-			held.set(entry.startTime, merged);
-			writes.push(merged);
+			if (!mine || mine.updatedAt < entry.updatedAt) {
+				writes.push({ ...entry, vin });
+			} else if (
+				mine.updatedAt > entry.updatedAt &&
+				answered.get(mine.startTime) !== mine.updatedAt
+			) {
+				// Newer here than there: edited while offline or signed out. The
+				// account holds the old text until this goes up.
+				this.enqueue(mine);
+			}
+		}
+
+		// Anything this browser has that the account did not send back is new to
+		// it, and goes up too.
+		for (const mine of held.values()) {
+			if (returned.has(mine.startTime)) continue;
+			if (answered.get(mine.startTime) !== mine.updatedAt) this.enqueue(mine);
 		}
 
 		if (writes.length > 0) await putAnnotations(writes);
-		this.entries = [...held.values()];
+		if (this.vin !== vin) return;
 
-		// Anything this browser has that the account did not send back is new to
-		// it, and goes up on the next push.
-		const known = new Set(incoming.map((entry) => entry.startTime));
-		for (const entry of this.entries) {
-			if (!known.has(entry.startTime)) this.pending.set(entry.startTime, entry);
+		// Merged into what is held now, not what was held before the write: a
+		// note saved while it was in flight is newer than either.
+		const current = new Map(this.entries.map((entry) => [entry.startTime, entry]));
+		for (const write of writes) {
+			const mine = current.get(write.startTime);
+			if (!mine || mine.updatedAt < write.updatedAt) current.set(write.startTime, write);
 		}
-		if (this.pending.size > 0) await this.push();
+		this.entries = [...current.values()];
+
+		if (this.pending.get(vin)?.size) await this.push();
 	}
 
 	reset(): void {

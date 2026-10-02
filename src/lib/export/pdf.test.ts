@@ -87,6 +87,25 @@ describe('toPdf', () => {
 		).resolves.toBeInstanceOf(Uint8Array);
 	});
 
+	it('draws a two-line comment on one line, so it cannot print over the next row', async () => {
+		// Each line of text is its own show-text operator in the page's content
+		// stream, so a second line shows up as an extra one.
+		const { PDFArray, PDFName, decodePDFRawStream } = await import('pdf-lib');
+		const shown = async (comment: string) => {
+			const pdf = await reopen(await toPdf(document([trip(0, { comment })])));
+			const contents = pdf.context.lookup(pdf.getPage(0).node.get(PDFName.of('Contents')));
+			const streams = contents instanceof PDFArray ? contents.asArray() : [contents];
+			const text = streams
+				.map((ref) => pdf.context.lookup(ref) as Parameters<typeof decodePDFRawStream>[0])
+				.map((stream) => Buffer.from(decodePDFRawStream(stream).decode()).toString('latin1'))
+				.join('\n');
+			return text.match(/\bTj\b/g)?.length ?? 0;
+		};
+
+		expect(await shown('First line\nSecond line')).toBe(await shown('First line / Second line'));
+		expect(await shown('A\r\n\r\nB\tC')).toBe(await shown('A / B C'));
+	});
+
 	it('writes a document with no rows at all', async () => {
 		await expect(pageCount(await toPdf(document([])))).resolves.toBe(1);
 	});
