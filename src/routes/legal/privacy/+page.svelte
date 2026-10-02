@@ -169,7 +169,7 @@
 	<li><strong>Objection and restriction</strong>, under Art. 21 and Art. 18 GDPR.</li>
 	<li>
 		<strong>Complaint.</strong> You may complain to a supervisory authority, in particular the one where
-		you live. For this service that is [YOUR STATE DATA PROTECTION AUTHORITY].
+		you live. For this service that is Bayerisches Landesamt für Datenschutzaufsicht.
 	</li>
 </ul>
 <p>Write to the address in the imprint to exercise any of these.</p>

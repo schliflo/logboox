@@ -16,14 +16,14 @@
 <h2>Operator</h2>
 <p>
 	Florian Schlittenbauer<br />
-	[STREET AND NUMBER]<br />
-	[POSTCODE AND TOWN]<br />
+	Buchenweg 22<br />
+	93345 Hausen<br />
 	Germany
 </p>
 
 <h2>Contact</h2>
 <p>
-	E-mail: <a href="mailto:[EMAIL]">[EMAIL]</a>
+	E-mail: <a href="mailto:info@logboox.app">info@logboox.app</a>
 </p>
 
 <h2>Responsible for content</h2>

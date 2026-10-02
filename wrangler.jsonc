@@ -2,7 +2,9 @@
 	"$schema": "./node_modules/wrangler/config-schema.json",
 	"name": "logboox",
 	"compatibility_date": "2026-09-01",
-	"compatibility_flags": ["nodejs_als"],
+	"compatibility_flags": [
+		"nodejs_als"
+	],
 	"main": ".svelte-kit/cloudflare/_worker.js",
 	"assets": {
 		"binding": "ASSETS",
@@ -10,7 +12,12 @@
 	},
 	// The public address. Wrangler creates the DNS record and certificate for a
 	// custom domain itself, as long as the zone is in this account.
-	"routes": [{ "pattern": "logboox.app", "custom_domain": true }],
+	"routes": [
+		{
+			"pattern": "logboox.app",
+			"custom_domain": true
+		}
+	],
 	// Off, now that logboox.app answers: a second origin would keep its own copy
 	// of every export and its own service worker, and the two would never meet.
 	"workers_dev": false,
@@ -33,7 +40,7 @@
 			"binding": "DB",
 			"database_name": "logboox",
 			// From `wrangler d1 create logboox`. See docs/deploying.md.
-			"database_id": "REPLACE_WITH_D1_DATABASE_ID",
+			"database_id": "3dec4df1-34c4-48cd-ba36-8c46a8660525",
 			"migrations_dir": "migrations"
 		}
 	],
@@ -47,7 +54,11 @@
 	],
 	// Sign-in links and import reminders. The sender domain has to be verified
 	// in Email Service first; unverified senders fail with E_SENDER_NOT_VERIFIED.
-	"send_email": [{ "name": "EMAIL" }],
+	"send_email": [
+		{
+			"name": "EMAIL"
+		}
+	],
 	"env": {
 		// The Worker the app first shipped on. It keeps serving the full app, with
 		// a notice pointing at the new address, so that the exports readers kept
