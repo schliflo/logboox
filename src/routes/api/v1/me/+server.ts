@@ -5,8 +5,10 @@
 
 import type { RequestHandler } from './$types';
 import { one } from '$lib/server/db';
-import { deletePrefix } from '$lib/server/exports/r2';
+import { deletePrefix, sharePrefix } from '$lib/server/exports/r2';
 import { deleteUser, updateSettings } from '$lib/server/auth/users';
+import { SESSION_COOKIE } from '$lib/server/auth/session';
+import { listShareIds } from '$lib/server/shares/repo';
 import { listOwn, listPending } from '$lib/server/leaderboard/repo';
 import { maybeStorage, requireDb } from '$lib/server/context';
 import { fail, json, readJson } from '$lib/server/response';
@@ -75,9 +77,10 @@ export const PATCH: RequestHandler = async (event) => {
 };
 
 /**
- * Deletes the account. The rows go first and the objects after: an object with
- * no row is unreachable and swept up later, whereas a row pointing at bytes
- * that are already gone would break the library for anyone still looking at it.
+ * Deletes the account. The objects go first and the rows after: a trip
+ * share's slice lives under its own prefix, and once the rows are gone nothing
+ * would ever find it again. If the bucket fails, the request fails before any
+ * row is touched, and deleting again finishes the job.
  */
 export const DELETE: RequestHandler = async (event) => {
 	const auth = event.locals.auth;
@@ -85,11 +88,15 @@ export const DELETE: RequestHandler = async (event) => {
 	if (auth.via !== 'session') return fail(403, 'An account can only be deleted from the app.');
 
 	const db = requireDb(event);
+	const storage = maybeStorage(event);
+	if (storage) {
+		for (const id of await listShareIds(db, auth.user.id)) {
+			await deletePrefix(storage, sharePrefix(id));
+		}
+		await deletePrefix(storage, `users/${auth.user.id}/`);
+	}
 	await deleteUser(db, auth.user.id);
 
-	const storage = maybeStorage(event);
-	if (storage) await deletePrefix(storage, `users/${auth.user.id}/`);
-
-	event.cookies.delete('lbx_session', { path: '/' });
+	event.cookies.delete(SESSION_COOKIE, { path: '/' });
 	return json({ ok: true });
 };

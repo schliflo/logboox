@@ -4,12 +4,23 @@
  * PUT is the owner uploading a slice right after making the link; GET is
  * anyone at all reading it. A whole-export share stores nothing of its own and
  * reads the owner's objects instead, which is why the key depends on the kind.
+ *
+ * Whatever is stored here is served from this domain to anyone, so a share
+ * takes a slice and nothing else: the manifest first, then only the buffers it
+ * names, each one gzip, all of it small, and only in the minutes after the link
+ * was made.
  */
 
 import type { RequestHandler } from './$types';
-import { getShare } from '$lib/server/shares/repo';
+import {
+	MAX_SHARE_BLOB_BYTES,
+	MAX_SHARE_MANIFEST_BYTES,
+	getShare
+} from '$lib/server/shares/repo';
+import { storeShareBlob } from '$lib/server/shares/blobs';
+import { MANIFEST_BLOB, declaredLength, readAtMost } from '$lib/server/shares/validate';
 import { blobKey, isSafeBlobName, shareBlobKey } from '$lib/server/exports/r2';
-import { MAX_BLOB_BYTES } from '$lib/server/exports/limits';
+import { now } from '$lib/server/db';
 import { requireDb, requireStorage } from '$lib/server/context';
 import { fail, json } from '$lib/server/response';
 
@@ -21,16 +32,22 @@ export const PUT: RequestHandler = async (event) => {
 	const { id, name } = event.params;
 	if (!isSafeBlobName(name)) return fail(400, 'Not a usable name.');
 
-	const share = await getShare(requireDb(event), id);
+	const db = requireDb(event);
+	const share = await getShare(db, id);
 	if (!share || share.user_id !== auth.user.id) return fail(404, 'That link is not one of yours.');
 	if (share.kind === 'export') return fail(400, 'A shared export reads its own buffers.');
 
-	const body = await event.request.arrayBuffer();
-	if (body.byteLength === 0 || body.byteLength > MAX_BLOB_BYTES) {
-		return fail(400, 'That buffer is not a plausible size.');
-	}
+	const limit = name === MANIFEST_BLOB ? MAX_SHARE_MANIFEST_BYTES : MAX_SHARE_BLOB_BYTES;
+	const declared = declaredLength(event.request.headers.get('content-length'));
+	if (declared === null) return fail(411, 'Say how large the buffer is.');
+	if (declared > limit) return fail(413, 'That buffer is larger than a slice should be.');
 
-	await requireStorage(event).put(shareBlobKey(id, name), body);
+	const bytes = await readAtMost(event.request, declared);
+	if (!bytes || bytes.byteLength !== declared)
+		return fail(400, 'That buffer is not the size it said.');
+
+	const stored = await storeShareBlob(db, requireStorage(event), share, name, bytes, now());
+	if (!stored.ok) return fail(stored.status, stored.error);
 	return json({ ok: true });
 };
 

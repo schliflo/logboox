@@ -19,6 +19,7 @@
 	import { account } from '$lib/state/account.svelte';
 	import { data } from '$lib/state/dataset.svelte';
 	import { settings } from '$lib/state/settings.svelte';
+	import { exactBuffer } from '$lib/history/codec';
 	import { encodeSlice, manifestOf, sliceDataset } from '$lib/share/slice';
 	import CopyIcon from '@lucide/svelte/icons/copy';
 	import ShareIcon from '@lucide/svelte/icons/share-2';
@@ -33,6 +34,14 @@
 
 	let { kind, startTime, endTime, meta }: Props = $props();
 
+	const noun = $derived(kind === 'trip' ? 'trip' : 'charging session');
+	/** What the slice carries; keep in step with `SHARED_COLUMNS`. */
+	const signals = $derived(
+		kind === 'trip'
+			? 'speed, battery power and charge, pedals and steering'
+			: 'charging power and charge'
+	);
+
 	let open = $state(false);
 	let title = $state('');
 	let busy = $state(false);
@@ -42,12 +51,26 @@
 	async function publish() {
 		busy = true;
 		error = null;
+		let createdId: string | null = null;
 		try {
+			// Cut and compressed before anything is created, so the failures that
+			// need no server never leave a row behind.
+			// The whole export, not the range on screen: a trip at the edge of a
+			// narrowed view would otherwise lose the seconds either side of it.
+			const dataset = data.full?.dataset ?? data.dataset;
+			if (!dataset) throw new Error('Open an export first.');
+			const slice = sliceDataset(dataset, kind, startTime, endTime);
+			const blobs = await encodeSlice(slice);
+
+			// The manifest travels as a buffer like the rest, so the page needs
+			// one request shape rather than two.
+			const manifest = exactBuffer(new TextEncoder().encode(JSON.stringify(manifestOf(slice))));
+
 			const created = await api<{ id: string; url: string }>('/api/v1/shares', {
 				method: 'POST',
 				body: {
 					kind,
-					vmodel: data.dataset?.vmodel ?? '',
+					vmodel: dataset.vmodel,
 					title: title.trim() || undefined,
 					startTime,
 					endTime,
@@ -55,21 +78,31 @@
 					meta
 				}
 			});
+			createdId = created.id;
 
-			const slice = sliceDataset(data.dataset!, startTime, endTime);
-			const blobs = await encodeSlice(slice);
-
-			// The manifest travels as a buffer like the rest, so the page needs
-			// one request shape rather than two.
-			const manifest = new TextEncoder().encode(JSON.stringify(manifestOf(slice)));
-			await upload(created.id, '_manifest', manifest.buffer as ArrayBuffer);
+			// The server takes the manifest first, and then only what it lists.
+			await upload(created.id, '_manifest', manifest);
 			for (const blob of blobs) await upload(created.id, blob.name, blob.bytes);
 
 			url = created.url;
 		} catch (failure) {
 			error = failure instanceof Error ? failure.message : 'The link could not be made.';
+			// A link that shows nothing is worse than none, and a retry would make
+			// a second one beside it.
+			if (createdId && !(await revoke(createdId))) {
+				error += ' A half-made link may be listed under your shared links; revoke it there.';
+			}
 		} finally {
 			busy = false;
+		}
+	}
+
+	async function revoke(id: string): Promise<boolean> {
+		try {
+			await api(`/api/v1/shares/${encodeURIComponent(id)}`, { method: 'DELETE' });
+			return true;
+		} catch {
+			return false;
 		}
 	}
 
@@ -129,9 +162,9 @@
 			<Dialog.Header>
 				<Dialog.Title>Anyone with this link can see it</Dialog.Title>
 				<Dialog.Description>
-					It shows the {kind === 'trip' ? 'trip' : 'charging session'} and the model of the car. Not the
-					vehicle identification number, and nothing else from your export. Revoke it any time from your
-					account.
+					It shows when the {noun} happened, its totals and the model of the car, with {signals} second
+					by second. Not the vehicle identification number, the odometer, or the rest of your export.
+					Revoke it any time from your account; it stops working within a few minutes.
 				</Dialog.Description>
 			</Dialog.Header>
 			<div class="flex gap-2">
@@ -148,7 +181,7 @@
 			<Dialog.Header>
 				<Dialog.Title>Share this {kind === 'trip' ? 'trip' : 'charging session'}</Dialog.Title>
 				<Dialog.Description>
-					A copy of these seconds is published at a link only someone you give it to can guess.
+					A copy of these seconds is published at a link nobody can guess.
 				</Dialog.Description>
 			</Dialog.Header>
 

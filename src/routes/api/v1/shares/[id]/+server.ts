@@ -8,6 +8,7 @@
 
 import type { RequestHandler } from './$types';
 import { countView, getShare, revokeShare } from '$lib/server/shares/repo';
+import { storedMeta } from '$lib/server/shares/validate';
 import { deletePrefix, sharePrefix } from '$lib/server/exports/r2';
 import { maybeStorage, requireDb } from '$lib/server/context';
 import { fail, json } from '$lib/server/response';
@@ -28,7 +29,7 @@ export const GET: RequestHandler = async (event) => {
 			startTime: share.start_time,
 			endTime: share.end_time,
 			timeZone: share.time_zone,
-			meta: JSON.parse(share.meta_json),
+			meta: storedMeta(share.meta_json),
 			createdAt: share.created_at
 		}),
 		{

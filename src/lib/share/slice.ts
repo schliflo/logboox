@@ -12,13 +12,54 @@
  * difference between a link and an upload.
  */
 
-import { compress, decompress, exactBuffer, TIME_BLOB } from '../history/codec';
-import type { ColumnSpec } from '../data/schema/columns';
-import { isNullRaw, searchTime, type Column, type Dataset } from '../data/store/columnar';
+import { compress, exactBuffer, inflateExactly, TIME_BLOB } from '../history/codec';
+import { DTYPE_CTOR, type ColumnSpec } from '../data/schema/columns';
+import {
+	firstAtOrAfter,
+	searchTime,
+	summarise,
+	type Column,
+	type Dataset
+} from '../data/store/columnar';
 import { viewFor } from '../data/worker/protocol';
 
 /** Seconds of context on either side, so a trace does not start mid-corner. */
 export const PADDING_SECONDS = 30;
+
+export type SliceKind = 'trip' | 'charging';
+
+/**
+ * The columns a share carries, per kind. THIS LIST IS THE PRIVACY BOUNDARY:
+ * whatever is named here is publicly readable under the share's id, and a
+ * dataset holds far more — the absolute odometer, doors, windows, tailgate.
+ * Extend it deliberately, when the public page or the card starts drawing
+ * something new, and never to "everything the trip touched".
+ *
+ * Each entry is where it is read:
+ * - trip: speed (TripDetail, and the card), battery voltage and current
+ *   (TripDetail's power panel, via `instantPowerKw`), displayed charge,
+ *   accelerator and brake pedals, steering angle (all TripDetail).
+ * - charging: power at the plug (SessionDetail, and the card) and displayed
+ *   charge (SessionDetail).
+ *
+ * Distance is not read from a column at all: the page prints `meta.distanceKm`,
+ * which the dashboard works out from the odometer without publishing it.
+ */
+export const SHARED_COLUMNS: Record<SliceKind, readonly string[]> = {
+	trip: [
+		'esp_vehspd',
+		'bms_battvolt',
+		'bms_battcurr',
+		'ldcu_bms_soc_disp',
+		'ldcu_accpedalsig',
+		'ldcu_brkpedalst',
+		'eps_steeringangle'
+	],
+	charging: ['ldcu_chrgpwr', 'ldcu_bms_soc_disp']
+};
+
+/** About eleven days at a sample a second; the card's server-side bound too. */
+export const MAX_SLICE_ROWS = 1_000_000;
 
 export interface ShareBlob {
 	name: string;
@@ -32,53 +73,37 @@ export interface Slice {
 	vmodel: string;
 }
 
-/** Recomputed rather than inherited: a slice's range is its own, not the month's. */
-function summarise(spec: ColumnSpec, data: Column['data']): Column {
-	let nonNull = 0;
-	let min = Infinity;
-	let max = -Infinity;
-
-	for (let i = 0; i < data.length; i++) {
-		const raw = data[i];
-		if (isNullRaw(raw, spec.dtype)) continue;
-		nonNull++;
-		if (raw < min) min = raw;
-		if (raw > max) max = raw;
-	}
-
-	return {
-		spec,
-		data,
-		nonNull,
-		min: nonNull > 0 ? min * spec.scale + spec.offset : NaN,
-		max: nonNull > 0 ? max * spec.scale + spec.offset : NaN
-	};
-}
-
 function bytesOf(view: { buffer: ArrayBufferLike; byteOffset: number; byteLength: number }) {
 	return exactBuffer(new Uint8Array(view.buffer, view.byteOffset, view.byteLength));
 }
 
 /**
  * The samples between two instants, with padding, as a dataset in its own
- * right. Signals the car never reported are left out: an empty column is
+ * right. Only the columns `SHARED_COLUMNS` allows for this kind are cut, and
+ * of those the ones the car never reported are left out: an empty column is
  * nothing to publish and nothing to draw.
  */
 export function sliceDataset(
 	dataset: Dataset,
+	kind: SliceKind,
 	startTime: number,
 	endTime: number,
 	padding = PADDING_SECONDS
 ): Slice {
-	// `searchTime` gives the last sample at or before an instant, and -1 when
-	// the instant is earlier than anything recorded — so the lower bound is
-	// clamped, and the upper one nudged past its hit to stay inclusive.
-	const from = Math.max(0, searchTime(dataset.time, startTime - padding));
-	const to = Math.min(dataset.time.length, searchTime(dataset.time, endTime + padding) + 1);
+	// The lower bound is the first sample inside the padding, not the last one
+	// before it: after the car slept, that one is hours old and would be
+	// published with its timestamp. The upper bound is the last sample at or
+	// before its instant, nudged past its hit to stay inclusive.
+	const from = firstAtOrAfter(dataset.time, startTime - padding);
+	const to = Math.max(
+		from,
+		Math.min(dataset.time.length, searchTime(dataset.time, endTime + padding) + 1)
+	);
 
 	const columns = new Map<string, Column>();
-	for (const [key, column] of dataset.columns) {
-		if (column.nonNull === 0) continue;
+	for (const key of SHARED_COLUMNS[kind]) {
+		const column = dataset.columns.get(key);
+		if (!column || column.nonNull === 0) continue;
 		const data = column.data.slice(from, to) as Column['data'];
 		const summarised = summarise(column.spec, data);
 		if (summarised.nonNull === 0) continue;
@@ -127,6 +152,11 @@ export function decodeSlice(
 	vmodel: string,
 	blobs: Map<string, ArrayBuffer>
 ): Slice {
+	const { rows } = manifest;
+	if (!Number.isSafeInteger(rows) || rows < 0 || rows > MAX_SLICE_ROWS) {
+		throw new Error('This share is larger than a trip could be.');
+	}
+
 	const timeBytes = blobs.get(TIME_BLOB);
 	if (!timeBytes) throw new Error('This share is missing its timeline.');
 
@@ -134,14 +164,22 @@ export function decodeSlice(
 	for (const stored of manifest.columns) {
 		const bytes = blobs.get(stored.key);
 		if (!bytes) continue;
+		if (!Object.hasOwn(DTYPE_CTOR, stored.spec.dtype)) {
+			throw new Error(`This share's ${stored.key} is not readable.`);
+		}
+		const width = new DTYPE_CTOR[stored.spec.dtype](0).BYTES_PER_ELEMENT;
 		columns.set(stored.key, {
 			spec: stored.spec,
-			data: viewFor(stored.spec, decompress(bytes)),
+			data: viewFor(stored.spec, inflateExactly(bytes, rows * width, `This share's ${stored.key}`)),
 			nonNull: stored.nonNull,
 			min: stored.min,
 			max: stored.max
 		});
 	}
 
-	return { time: new Uint32Array(decompress(timeBytes)), columns, vmodel };
+	return {
+		time: new Uint32Array(inflateExactly(timeBytes, rows * 4, "This share's timeline")),
+		columns,
+		vmodel
+	};
 }

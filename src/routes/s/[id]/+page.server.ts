@@ -11,6 +11,7 @@
 import { error } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types';
 import { getShare } from '$lib/server/shares/repo';
+import { storedMeta } from '$lib/server/shares/validate';
 import { maybeDb } from '$lib/server/context';
 
 export const prerender = false;
@@ -33,7 +34,7 @@ export const load: PageServerLoad = async (event) => {
 			startTime: share.start_time,
 			endTime: share.end_time,
 			timeZone: share.time_zone,
-			meta: JSON.parse(share.meta_json) as Record<string, unknown>,
+			meta: storedMeta(share.meta_json),
 			createdAt: share.created_at
 		},
 		canonical: `${event.url.origin}/s/${share.id}`

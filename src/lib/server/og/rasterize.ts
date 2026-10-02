@@ -9,7 +9,8 @@
  * Two things are memoised for the life of the isolate, because both are pure
  * setup and one of them can only happen once: `initWasm` throws if it is called
  * a second time, and reading the fonts is a request to the asset store. A cold
- * isolate therefore pays for them and every later render does not.
+ * isolate therefore pays for them and every later render does not. A failure
+ * is not memoised: the next card tries again.
  *
  * The module itself arrives already compiled — see `tooling/wasm-modules.ts` for
  * why it has to. Handing an existing `WebAssembly.Module` to `instantiate`
@@ -33,14 +34,21 @@ async function compiled(): Promise<void> {
 }
 
 function ready(): Promise<void> {
-	started ??= compiled();
+	started ??= compiled().catch((failure) => {
+		// A rejected memo would fail every card until the isolate is recycled.
+		started = undefined;
+		throw failure;
+	});
 	return started;
 }
 
 function fonts(): Promise<Uint8Array[]> {
 	loaded ??= Promise.all(
 		FONT_URLS.map(async (url) => new Uint8Array(await read(url).arrayBuffer()))
-	);
+	).catch((failure) => {
+		loaded = undefined;
+		throw failure;
+	});
 	return loaded;
 }
 

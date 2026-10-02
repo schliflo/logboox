@@ -22,13 +22,22 @@
 	import MadeBy from '$lib/components/app/MadeBy.svelte';
 	import { apiBytes } from '$lib/api/client';
 	import { data as dataset } from '$lib/state/dataset.svelte';
-	import { decodeSlice, type Slice, type SliceManifest } from '$lib/share/slice';
+	import {
+		SHARED_COLUMNS,
+		decodeSlice,
+		type Slice,
+		type SliceKind,
+		type SliceManifest
+	} from '$lib/share/slice';
 	import { shareHeading, shareImageAlt, shareSummary } from '$lib/share/describe';
 	import { TIME_BLOB } from '$lib/history/codec';
 	import { duration, num, percent } from '$lib/utils/format';
 	import ArrowRightIcon from '@lucide/svelte/icons/arrow-right';
 	import ShieldIcon from '@lucide/svelte/icons/shield-check';
 	import type { PageData } from './$types';
+
+	/** What a column key looks like; anything else in a manifest is not one. */
+	const COLUMN_KEY = /^[A-Za-z0-9._-]{1,120}$/;
 
 	let { data }: { data: PageData } = $props();
 
@@ -73,11 +82,25 @@
 		try {
 			const manifestBytes = await apiBytes(`/api/v1/shares/${share.id}/blobs/_manifest`);
 			const manifest = JSON.parse(new TextDecoder().decode(manifestBytes)) as SliceManifest;
-			const names = [TIME_BLOB, ...manifest.columns.map((column) => column.key)];
+			// Names come from a manifest the owner wrote, and end up in a URL on
+			// this origin: plain column keys only, and encoded all the same. Only what
+			// this kind of share draws is read, whatever the manifest lists.
+			const drawn = new Set(SHARED_COLUMNS[share.kind as SliceKind] ?? []);
+			const names = [
+				TIME_BLOB,
+				...manifest.columns
+					.map((column) => column.key)
+					.filter((key) => COLUMN_KEY.test(key) && key !== TIME_BLOB && drawn.has(key))
+			];
 			const blobs = new Map<string, ArrayBuffer>();
 			await Promise.all(
 				names.map(async (name) => {
-					blobs.set(name, await apiBytes(`/api/v1/shares/${share.id}/blobs/${name}`));
+					blobs.set(
+						name,
+						await apiBytes(
+							`/api/v1/shares/${encodeURIComponent(share.id)}/blobs/${encodeURIComponent(name)}`
+						)
+					);
 				})
 			);
 			slice = decodeSlice(manifest, share.model, blobs);

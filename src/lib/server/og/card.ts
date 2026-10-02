@@ -61,7 +61,7 @@ export interface BoardCard {
 }
 
 /** Characters XML will not carry, in text that came from somebody else. */
-const FORBIDDEN = new RegExp('[\\u0000-\\u0008\\u000b\\u000c\\u000e-\\u001f]', 'g');
+const FORBIDDEN = new RegExp('[\\u0000-\\u0008\\u000b\\u000c\\u000e-\\u001f\\ufffe\\uffff]', 'g');
 
 /** XML has five characters that cannot appear raw, and a card must not break. */
 export function escape(text: string): string {

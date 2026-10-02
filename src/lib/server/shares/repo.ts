@@ -31,6 +31,10 @@ export interface ShareRow {
 	created_at: number;
 	revoked_at: number | null;
 	views: number;
+	/** What a trip or session share has stored, counted before each write. */
+	blob_bytes: number;
+	blob_count: number;
+	manifest_at: number | null;
 }
 
 export interface NewShare {
@@ -47,6 +51,16 @@ export interface NewShare {
 }
 
 export const MAX_SHARES_PER_USER = 200;
+
+// A slice is one trip or session, at most ~40 columns of a few hundred kB each; these sit well above that.
+export const MAX_SHARE_BLOB_BYTES = 2 * 1024 * 1024;
+export const MAX_SHARE_BLOBS = 128;
+export const MAX_SHARE_BYTES = 32 * 1024 * 1024;
+export const MAX_SHARE_MANIFEST_BYTES = 64 * 1024;
+export const MAX_SHARE_META_BYTES = 2 * 1024;
+
+/** A share is written once, straight after it is made, and never again. */
+export const SHARE_UPLOAD_WINDOW_SECONDS = 15 * 60;
 
 /**
  * Short enough to paste, long enough that nobody finds one by trying. 128 bits
@@ -66,6 +80,19 @@ export function listShares(db: Db, userId: string): Promise<ShareRow[]> {
 		'SELECT * FROM shares WHERE user_id = ? AND revoked_at IS NULL ORDER BY created_at DESC',
 		userId
 	);
+}
+
+/**
+ * Every share of the user's that may hold objects of its own, revoked ones
+ * included. A whole-export share never does: it reads the export's objects.
+ */
+export async function listShareIds(db: Db, userId: string): Promise<string[]> {
+	const rows = await all<{ id: string }>(
+		db,
+		"SELECT id FROM shares WHERE user_id = ? AND kind != 'export'",
+		userId
+	);
+	return rows.map((row) => row.id);
 }
 
 export async function countShares(db: Db, userId: string): Promise<number> {
@@ -95,7 +122,10 @@ export async function createShare(db: Db, userId: string, share: NewShare): Prom
 		meta_json: JSON.stringify(share.meta),
 		created_at: now(),
 		revoked_at: null,
-		views: 0
+		views: 0,
+		blob_bytes: 0,
+		blob_count: 0,
+		manifest_at: null
 	};
 
 	await run(
@@ -129,7 +159,11 @@ export async function revokeShare(db: Db, userId: string, id: string): Promise<b
 		id,
 		userId
 	);
-	return changed > 0;
+	if (changed === 0) return false;
+
+	// A leaderboard row may link here, and a public link to a 404 helps nobody.
+	await run(db, 'UPDATE board_entries SET share_id = NULL WHERE share_id = ?', id);
+	return true;
 }
 
 /** Counted for the owner's benefit, and never per visitor. */

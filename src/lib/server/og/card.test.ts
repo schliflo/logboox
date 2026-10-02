@@ -99,6 +99,13 @@ describe('escape', () => {
 		expect(escape(`one${nul}two${unit}two`)).toBe('onetwotwo');
 	});
 
+	it('drops the two noncharacters XML also refuses', () => {
+		// resvg rejects the whole document over either one.
+		const fffe = String.fromCharCode(0xfffe);
+		const ffff = String.fromCharCode(0xffff);
+		expect(escape(`one${fffe}two${ffff}three`)).toBe('onetwothree');
+	});
+
 	it('keeps the whitespace a card actually uses', () => {
 		expect(escape('a\tb\nc')).toBe('a\tb\nc');
 	});

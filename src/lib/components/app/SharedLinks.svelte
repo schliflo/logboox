@@ -46,9 +46,17 @@
 	}
 
 	async function revoke(row: ShareRow) {
-		await api(`/api/v1/shares/${encodeURIComponent(row.id)}`, { method: 'DELETE' });
+		try {
+			await api(`/api/v1/shares/${encodeURIComponent(row.id)}`, { method: 'DELETE' });
+		} catch (error) {
+			toast('The link could not be revoked', {
+				description: error instanceof Error ? error.message : 'It is still live.',
+				closeButton: true
+			});
+			return;
+		}
 		await load();
-		toast('Link revoked', { description: 'It stops working for everyone immediately.' });
+		toast('Link revoked', { description: 'It stops working for everyone within a few minutes.' });
 	}
 
 	async function copy(row: ShareRow) {

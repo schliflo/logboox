@@ -4,8 +4,9 @@
  * A shared trip or charging session never changes — that is the point of it —
  * so the picture of one is worth drawing once. The first request renders it and
  * writes it to R2 under the share's own prefix, which means the existing revoke
- * path removes it along with everything else; later requests read it back. It
- * is served with a day of cache, because nothing behind it can move.
+ * path removes it along with everything else; later requests read it back. A
+ * card that cannot be drawn at all is remembered too, so a share that breaks
+ * the renderer breaks it once an hour rather than on every request.
  *
  * A whole-export share is the exception and gets the static card. A month is
  * three and a half million samples across sixty-odd columns, and decoding the
@@ -19,30 +20,48 @@
 
 import { error, redirect } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { getShare } from '$lib/server/shares/repo';
+import {
+	MAX_SHARE_BLOB_BYTES,
+	MAX_SHARE_MANIFEST_BYTES,
+	SHARE_UPLOAD_WINDOW_SECONDS,
+	getShare
+} from '$lib/server/shares/repo';
+import { parseManifest, storedMeta } from '$lib/server/shares/validate';
 import { sharePrefix } from '$lib/server/exports/r2';
 import { maybeDb, maybeStorage } from '$lib/server/context';
-import { decodeSlice, type SliceManifest } from '$lib/share/slice';
+import { now } from '$lib/server/db';
 import { decodeRange } from '$lib/data/store/columnar';
+import { viewFor } from '$lib/data/worker/protocol';
 import { TIME_BLOB } from '$lib/history/codec';
 import { shareFigures, shareHeading, shareSummary } from '$lib/share/describe';
-import { shareCard } from '$lib/server/og/card';
+import { shareCard, type Series } from '$lib/server/og/card';
+import { inflateAtMost } from '$lib/server/og/inflate';
 import { decimate, toPath } from '$lib/server/og/series';
 import { renderPng } from '$lib/server/og/rasterize';
 import { OG_IMAGE } from '$lib/seo';
 
 export const prerender = false;
 
-/** Nothing behind a share can change, so the picture of one need not either. */
-const MAX_AGE = 86400;
+/** The picture never changes, but revoking a link has to take effect in minutes. */
+const MAX_AGE = 300;
+
+/** About eleven days at one sample a second, and four megabytes per buffer inflated. */
+const MAX_CURVE_SAMPLES = 1_000_000;
+
+/** How long a card that would not draw is left alone before it is tried again. */
+const FAILED_RETRY_MS = 60 * 60 * 1000;
 
 /** The one signal each kind is worth drawing. */
 const SIGNAL = { trip: 'esp_vehspd', charging: 'ldcu_chrgpwr' } as const;
 
+// Beside the share's buffers rather than under keys of their own, so that
+// revoking a link deletes the card with the rest of it.
 function stored(id: string): string {
-	// Beside the share's buffers rather than under a key of its own, so that
-	// revoking a link deletes the card with the rest of it.
 	return `${sharePrefix(id)}og.png`;
+}
+
+function failed(id: string): string {
+	return `${sharePrefix(id)}og.failed`;
 }
 
 function png(body: BodyInit, length?: number): Response {
@@ -60,39 +79,45 @@ function png(body: BodyInit, length?: number): Response {
  *
  * Only the timeline and the single charted column are fetched — a slice holds
  * every signal the trip touched, and reading sixty of them to draw one would
- * be paid for on every cold render.
+ * be paid for on every cold render. The owner wrote these bytes, so every size
+ * is checked before anything is read or inflated.
  */
 async function curve(
 	storage: R2Bucket,
 	id: string,
-	kind: 'trip' | 'charging',
-	model: string
-): Promise<{ line: string; area: string } | undefined> {
+	kind: 'trip' | 'charging'
+): Promise<Series | undefined> {
 	const key = SIGNAL[kind];
 
 	// The manifest travels as a buffer like the rest, but it is plain JSON; the
 	// `.gz` in its key is the naming convention, not a claim about its contents.
 	const manifestObject = await storage.get(`${sharePrefix(id)}_manifest.gz`);
-	if (!manifestObject) return undefined;
-	const manifest = JSON.parse(await manifestObject.text()) as SliceManifest;
-	if (!manifest.columns?.some((column) => column.key === key)) return undefined;
+	if (!manifestObject || manifestObject.size > MAX_SHARE_MANIFEST_BYTES) return undefined;
+	const manifest = parseManifest(await manifestObject.text());
+	const spec = manifest?.columns.find((column) => column.key === key);
+	if (!manifest || !spec || manifest.rows > MAX_CURVE_SAMPLES) return undefined;
 
 	const [time, column] = await Promise.all([
 		storage.get(`${sharePrefix(id)}${TIME_BLOB}.gz`),
 		storage.get(`${sharePrefix(id)}${key}.gz`)
 	]);
 	if (!time || !column) return undefined;
+	if (time.size > MAX_SHARE_BLOB_BYTES || column.size > MAX_SHARE_BLOB_BYTES) return undefined;
 
-	const blobs = new Map<string, ArrayBuffer>([
-		[TIME_BLOB, await time.arrayBuffer()],
-		[key, await column.arrayBuffer()]
-	]);
+	// No dtype is wider than four bytes, so that is all a row may inflate to.
+	const limit = manifest.rows * 4;
+	const timeBytes = inflateAtMost(await time.arrayBuffer(), limit);
+	const columnBytes = inflateAtMost(await column.arrayBuffer(), limit);
+	if (!timeBytes || !columnBytes) return undefined;
 
-	const slice = decodeSlice(manifest, model, blobs);
-	const values = slice.columns.get(key);
-	if (!values) return undefined;
-
-	return toPath(decimate(slice.time, decodeRange(values)));
+	const values = decodeRange({
+		spec: spec.spec,
+		data: viewFor(spec.spec, columnBytes),
+		nonNull: spec.nonNull,
+		min: spec.min,
+		max: spec.max
+	});
+	return toPath(decimate(new Uint32Array(timeBytes), values));
 }
 
 export const GET: RequestHandler = async (event) => {
@@ -112,34 +137,54 @@ export const GET: RequestHandler = async (event) => {
 	const existing = await storage.get(key);
 	if (existing) return png(existing.body, existing.size);
 
+	const marker = await storage.head(failed(share.id));
+	if (marker && Date.now() - marker.uploaded.getTime() < FAILED_RETRY_MS) redirect(302, OG_IMAGE);
+
 	const thing = {
 		kind: share.kind,
 		model: share.vmodel,
 		title: share.title,
-		meta: JSON.parse(share.meta_json) as Record<string, unknown>
+		meta: storedMeta(share.meta_json)
 	};
 
 	// A share whose buffers never finished uploading still gets a card, without
 	// the curve: a missing picture is worse than a plain one.
-	let series: { line: string; area: string } | undefined;
+	let series: Series | undefined;
 	try {
-		series = await curve(storage, share.id, share.kind, share.vmodel);
+		series = await curve(storage, share.id, share.kind);
 	} catch {
 		series = undefined;
 	}
 
-	const body = await renderPng(
-		shareCard({
-			heading: shareHeading(thing),
-			subtitle: shareSummary(thing),
-			stats: shareFigures(thing),
-			series
-		})
-	);
+	const draw = (drawn: Series | undefined) =>
+		renderPng(
+			shareCard({
+				heading: shareHeading(thing),
+				subtitle: shareSummary(thing),
+				stats: shareFigures(thing),
+				series: drawn
+			})
+		);
 
-	// Written behind the response: the reader has their picture either way, and
-	// a scraper should not wait on an object store to get it.
-	event.platform?.ctx?.waitUntil(storage.put(key, body));
+	let body: Uint8Array<ArrayBuffer> | undefined;
+	try {
+		body = await draw(series);
+	} catch {
+		if (series) body = await draw(undefined).catch(() => undefined);
+	}
+
+	// Writes go behind the response: the reader has their picture either way,
+	// and a scraper should not wait on an object store to get it.
+	if (!body) {
+		event.platform?.ctx?.waitUntil(storage.put(failed(share.id), ''));
+		redirect(302, OG_IMAGE);
+	}
+
+	// Until the upload window closes, a card without its curve may only mean the
+	// buffers are still on their way.
+	if (series || now() > share.created_at + SHARE_UPLOAD_WINDOW_SECONDS) {
+		event.platform?.ctx?.waitUntil(storage.put(key, body));
+	}
 
 	return png(body, body.byteLength);
 };
