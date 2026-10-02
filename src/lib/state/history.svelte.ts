@@ -13,7 +13,7 @@
  * no more than listing one.
  */
 
-import { browser } from '$app/environment';
+import { browser } from '$app/env';
 import { goto } from '$app/navigation';
 import { toast } from 'svelte-sonner';
 import { ApiError, api } from '../api/client';
@@ -138,6 +138,14 @@ class HistoryStore {
 	/** Set while an export is on its way to or from the account. */
 	transfer = $state<LoadProgress | null>(null);
 
+	constructor() {
+		// What the account listed is the account's: once nobody is signed in it
+		// must not stay on screen, offering to fetch exports of someone's who left.
+		account.onSignedOut(() => {
+			this.remote = [];
+		});
+	}
+
 	/** Everything openable or fetchable, by vehicle, newest first. */
 	get groups(): VehicleGroup[] {
 		const remoteIds = new Set(this.remote.map((entry) => entry.id));
@@ -215,6 +223,9 @@ class HistoryStore {
 			const body = await api<{ exports: RemoteExport[] }>('/api/v1/exports');
 			this.remote = body.exports;
 		} catch (error) {
+			// Offline says nothing about what the account holds, so the last
+			// listing stays; anything else means it can no longer be trusted.
+			if (error instanceof ApiError && error.status === 0) return;
 			this.remote = [];
 			if (error instanceof ApiError && !error.unauthorized) {
 				this.error = error.message;

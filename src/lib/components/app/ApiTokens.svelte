@@ -68,7 +68,15 @@
 	}
 
 	async function revoke(row: TokenRow) {
-		await api(`/api/v1/tokens/${encodeURIComponent(row.id)}`, { method: 'DELETE' });
+		try {
+			await api(`/api/v1/tokens/${encodeURIComponent(row.id)}`, { method: 'DELETE' });
+		} catch (error) {
+			toast('The token could not be revoked', {
+				description: error instanceof Error ? error.message : 'It still works.',
+				closeButton: true
+			});
+			return;
+		}
 		await load();
 		toast('Token revoked', { description: `${row.name} stopped working immediately.` });
 	}

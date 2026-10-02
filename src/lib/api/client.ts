@@ -74,7 +74,7 @@ export async function api<T>(path: string, options: ApiOptions = {}): Promise<T>
 export async function apiBytes(path: string, signal?: AbortSignal): Promise<ArrayBuffer> {
 	const response = await fetch(path, { credentials: 'same-origin', signal });
 	if (!response.ok) {
-		throw new ApiError(`Could not read ${path}.`, response.status);
+		throw new ApiError('That could not be fetched from your account.', response.status);
 	}
 	return response.arrayBuffer();
 }

@@ -8,7 +8,7 @@
  * majority of readers without anything on screen having waited for it.
  */
 
-import { browser } from '$app/environment';
+import { browser } from '$app/env';
 import { ApiError, api } from '../api/client';
 import { ACCOUNTS_ENABLED } from '../features';
 import { boardById } from '../leaderboard/boards';
@@ -87,6 +87,27 @@ class AccountStore {
 	/** Whether this deployment has a server to talk to at all. */
 	readonly enabled = ACCOUNTS_ENABLED;
 
+	private readonly signedOutListeners = new Set<() => void>();
+
+	/**
+	 * Lets a store that holds this account's data drop it when the account goes.
+	 * Registered from the other side because the library already imports this
+	 * module, and the reverse would be a cycle.
+	 */
+	onSignedOut(listener: () => void): () => void {
+		this.signedOutListeners.add(listener);
+		return () => this.signedOutListeners.delete(listener);
+	}
+
+	/** Back to nobody: what was known about the account, and whoever held a copy of it. */
+	private clear(): void {
+		this.user = null;
+		this.storage = null;
+		this.status = 'anonymous';
+		this.leaderboard = { pending: [], entries: [] };
+		for (const listener of this.signedOutListeners) listener();
+	}
+
 	get signedIn(): boolean {
 		return this.status === 'signed-in' && this.user !== null;
 	}
@@ -102,10 +123,17 @@ class AccountStore {
 			this.storage = me.storage;
 			this.leaderboard = me.leaderboard ?? { pending: [], entries: [] };
 			this.status = 'signed-in';
+			this.error = null;
 		} catch (error) {
-			this.user = null;
-			this.storage = null;
-			this.status = 'anonymous';
+			// No answer is not the same as "signed out": offline, a reader who was
+			// signed in still is, and the cookie is untouched. With nothing known
+			// yet, anonymous is the working assumption, and not an error to show.
+			if (error instanceof ApiError && error.status === 0) {
+				if (this.status === 'unknown') this.status = 'anonymous';
+				return;
+			}
+
+			this.clear();
 			// A 401 is the ordinary case — nobody is signed in. Anything else is
 			// worth keeping so the account page can say what went wrong.
 			if (error instanceof ApiError && !error.unauthorized && error.status !== 503) {
@@ -147,10 +175,7 @@ class AccountStore {
 			// Even a failed call should leave the app looking signed out; the
 			// cookie is gone either way on the next load.
 		} finally {
-			this.user = null;
-			this.storage = null;
-			this.status = 'anonymous';
-			this.leaderboard = { pending: [], entries: [] };
+			this.clear();
 			this.linkSentTo = null;
 			this.busy = false;
 		}
@@ -264,10 +289,7 @@ class AccountStore {
 
 	async deleteAccount(): Promise<void> {
 		await api('/api/v1/me', { method: 'DELETE' });
-		this.user = null;
-		this.storage = null;
-		this.leaderboard = { pending: [], entries: [] };
-		this.status = 'anonymous';
+		this.clear();
 	}
 }
 

@@ -112,7 +112,16 @@
 
 	/** Copies up to the account, and says plainly what would not go. */
 	async function keepInAccount(ids: string[]) {
-		const result = await history.sync(ids);
+		let result;
+		try {
+			result = await history.sync(ids);
+		} catch (error) {
+			toast('Nothing was copied to your account', {
+				description: error instanceof Error ? error.message : 'Something went wrong.',
+				closeButton: true
+			});
+			return;
+		}
 		if (result.failed.length > 0) {
 			toast(
 				result.failed.length === 1
@@ -163,9 +172,17 @@
 	}
 
 	async function removeFromAccount(ids: string[]) {
-		await history.forget(ids);
+		try {
+			await history.forget(ids);
+		} catch (error) {
+			toast('It could not be removed from your account', {
+				description: error instanceof Error ? error.message : 'Something went wrong.',
+				closeButton: true
+			});
+			return;
+		}
 		toast('Removed from your account', {
-			description: 'The copy in this browser is untouched.'
+			description: 'Links to the whole export are revoked. The copy in this browser is untouched.'
 		});
 	}
 
@@ -183,12 +200,24 @@
 		const missing = ids.filter((id) => !history.openable([id]));
 		if (missing.length === 0) return true;
 
-		const result = await history.pull(missing);
+		return pull(missing);
+	}
+
+	/** Fetches exports down, and says plainly what would not come. */
+	async function pull(ids: string[]): Promise<boolean> {
+		let result;
+		try {
+			result = await history.pull(ids);
+		} catch (error) {
+			toast('The fetch did not finish', {
+				description: error instanceof Error ? error.message : 'Something went wrong.',
+				closeButton: true
+			});
+			return false;
+		}
 		if (result.failed.length > 0) {
 			toast(
-				missing.length === 1
-					? 'That export could not be fetched'
-					: 'Some exports could not be fetched',
+				ids.length === 1 ? 'That export could not be fetched' : 'Some exports could not be fetched',
 				{ description: result.failed[0].reason, closeButton: true }
 			);
 			return false;
@@ -367,7 +396,7 @@
 										</DropdownMenu.Item>
 									{/if}
 									{#if account.signedIn && entry.remote && !entry.local}
-										<DropdownMenu.Item onclick={() => history.pull([entry.id])}>
+										<DropdownMenu.Item onclick={() => pull([entry.id])}>
 											<CloudDownloadIcon class="size-4" />
 											Fetch to this browser
 										</DropdownMenu.Item>
