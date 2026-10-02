@@ -55,10 +55,8 @@ to the bucket's entry in `wrangler.jsonc`:
 ]
 ```
 
-Nothing in the repository sets either today, so until both exist this way the
-privacy notice makes no claim about where the data is kept. **Once they do, the
-notice may say so**: the sentence under "Where it is stored" in
-`src/routes/legal/privacy/+page.svelte` can name the EU.
+Both were created this way, and the privacy notice says so under "Where it is
+stored". If they are ever recreated elsewhere, that sentence has to change.
 
 Then apply the migrations once by hand, so the first deploy is not also the
 first schema change:

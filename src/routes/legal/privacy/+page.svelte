@@ -86,9 +86,10 @@
 
 <h3>Where it is stored</h3>
 <p>
-	On Cloudflare's infrastructure: the database and the object storage are both Cloudflare services.
-	Cloudflare Inc. acts as our processor under a data processing agreement incorporating the EU
-	standard contractual clauses.
+	On Cloudflare's infrastructure: the database and the object storage are both Cloudflare services,
+	created in Cloudflare's EU jurisdiction so that the data is kept in the European Union. Cloudflare
+	Inc. acts as our processor under a data processing agreement incorporating the EU standard
+	contractual clauses.
 </p>
 
 <h3>Legal basis</h3>

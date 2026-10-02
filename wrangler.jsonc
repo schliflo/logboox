@@ -47,7 +47,9 @@
 	"r2_buckets": [
 		{
 			"binding": "STORAGE",
-			"bucket_name": "logboox-exports"
+			"bucket_name": "logboox-exports",
+			// Created with `--jurisdiction eu`, which a binding has to repeat.
+			"jurisdiction": "eu"
 		}
 	],
 	// Sign-in links and import reminders. The sender domain has to be verified
