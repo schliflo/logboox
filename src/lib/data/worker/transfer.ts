@@ -33,6 +33,19 @@ export class TransferError extends Error {
 	}
 }
 
+/**
+ * A built worker starts from a blob: URL, which has no base to resolve a bare
+ * path against, so every request is made absolute against the page's origin.
+ * A data: fallback worker has no origin at all, and cannot reach the account.
+ */
+function endpoint(path: string): string {
+	const origin = self.location.origin;
+	if (!origin || origin === 'null') {
+		throw new TransferError('This browser cannot reach the account from a background worker.');
+	}
+	return new URL(path, origin).href;
+}
+
 async function expectOk(response: Response, what: string): Promise<unknown> {
 	if (response.ok) return response.status === 204 ? null : response.json().catch(() => null);
 
@@ -80,7 +93,9 @@ export interface BoardCandidate {
  * Copies one kept export into the account: the record and its summary first,
  * then every buffer, then the acknowledgement that turns it into a listed
  * export. Until that last step it is invisible, so a failure halfway leaves
- * nothing to clean up by hand.
+ * nothing to clean up by hand. An export the account already holds in full is
+ * never sent again: the server says so in answer to the record, and that is
+ * the end of it.
  */
 export async function uploadExport(
 	id: string,
@@ -94,8 +109,8 @@ export async function uploadExport(
 	const derived = analyze(dataset, timeZone);
 	const summary = summarize(dataset, derived);
 
-	await expectOk(
-		await fetch(`/api/v1/exports/${encodeURIComponent(id)}`, {
+	const opened = (await expectOk(
+		await fetch(endpoint(`/api/v1/exports/${encodeURIComponent(id)}`), {
 			method: 'PUT',
 			credentials: 'same-origin',
 			headers: { 'content-type': 'application/json' },
@@ -109,7 +124,13 @@ export async function uploadExport(
 			})
 		}),
 		'Opening the upload'
-	);
+	)) as { complete?: boolean } | null;
+
+	// Finished exports are immutable on the server, so this one is synced.
+	if (opened?.complete) {
+		onProgress?.(entry.blobs.length, entry.blobs.length);
+		return [];
+	}
 
 	let done = 0;
 	onProgress?.(0, entry.blobs.length);
@@ -117,7 +138,9 @@ export async function uploadExport(
 	await pool(entry.blobs, async (blob) => {
 		await expectOk(
 			await fetch(
-				`/api/v1/exports/${encodeURIComponent(id)}/blobs/${encodeURIComponent(blob.name)}`,
+				endpoint(
+					`/api/v1/exports/${encodeURIComponent(id)}/blobs/${encodeURIComponent(blob.name)}`
+				),
 				{
 					method: 'PUT',
 					credentials: 'same-origin',
@@ -133,7 +156,7 @@ export async function uploadExport(
 	// Finishing is also when the server works out whether any of this would
 	// stand on a board, and says so in its reply.
 	const finished = (await expectOk(
-		await fetch(`/api/v1/exports/${encodeURIComponent(id)}/complete`, {
+		await fetch(endpoint(`/api/v1/exports/${encodeURIComponent(id)}/complete`), {
 			method: 'POST',
 			credentials: 'same-origin'
 		}),
@@ -149,7 +172,7 @@ export async function uploadExport(
  * column registry per export.
  */
 async function fetchRecord(id: string): Promise<ExportRecord> {
-	const response = await fetch(`/api/v1/exports/${encodeURIComponent(id)}/record`, {
+	const response = await fetch(endpoint(`/api/v1/exports/${encodeURIComponent(id)}/record`), {
 		credentials: 'same-origin'
 	});
 	return (await expectOk(response, 'Reading the export record')) as ExportRecord;
@@ -170,7 +193,7 @@ export async function downloadExport(id: string, onProgress?: TransferProgress):
 
 	await pool(names, async (name) => {
 		const response = await fetch(
-			`/api/v1/exports/${encodeURIComponent(id)}/blobs/${encodeURIComponent(name)}`,
+			endpoint(`/api/v1/exports/${encodeURIComponent(id)}/blobs/${encodeURIComponent(name)}`),
 			{ credentials: 'same-origin' }
 		);
 		if (!response.ok) throw new TransferError(`The account is missing ${name}.`);
@@ -193,7 +216,7 @@ export async function openSharedExport(
 	shareId: string,
 	onProgress?: TransferProgress
 ): Promise<Dataset> {
-	const response = await fetch(`/api/v1/shares/${encodeURIComponent(shareId)}/record`);
+	const response = await fetch(endpoint(`/api/v1/shares/${encodeURIComponent(shareId)}/record`));
 	const record = (await expectOk(response, 'Reading the shared export')) as ExportRecord;
 
 	const names = [TIME_BLOB, ...record.columns.map((column) => column.key)];
@@ -203,7 +226,7 @@ export async function openSharedExport(
 
 	await pool(names, async (name) => {
 		const part = await fetch(
-			`/api/v1/shares/${encodeURIComponent(shareId)}/blobs/${encodeURIComponent(name)}`
+			endpoint(`/api/v1/shares/${encodeURIComponent(shareId)}/blobs/${encodeURIComponent(name)}`)
 		);
 		if (!part.ok) throw new TransferError(`The shared export is missing ${name}.`);
 		blobs.push({ id: record.id, name, bytes: await part.arrayBuffer() });
