@@ -96,14 +96,18 @@ export function enumerateDays(dataset: Dataset, timeZone: string): string[] {
 	const first = dataset.time[0];
 	const last = dataset.time[dataset.time.length - 1];
 	const seen = new Set<string>();
-	// Step in half-days so a daylight-saving shift cannot skip a date.
-	for (let t = first; t <= last + 43200; t += 43200) {
+	const add = (t: number) => {
 		const key = localDayKey(t, timeZone);
 		if (!seen.has(key)) {
 			seen.add(key);
 			days.push(key);
 		}
-	}
+	};
+	// Step in half-days so a daylight-saving shift cannot skip a date, and end
+	// on the last sample itself: stepping past it would add the day after
+	// whenever the data stops in the afternoon.
+	for (let t = first; t < last; t += 43200) add(t);
+	add(last);
 	return days;
 }
 

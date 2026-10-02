@@ -19,6 +19,7 @@ import type { PhantomDrain, RangeEstimate, PackThermal } from './battery';
 import type { DoorActivity, TyreTrend } from './doorsTyres';
 import type { SpeedProfile, ExtremeEvent } from './drivingStyle';
 import { localParts } from './daily';
+import { tripLink } from '../range';
 
 export type FactTone = 'headline' | 'habit' | 'quirk' | 'privacy';
 
@@ -154,7 +155,7 @@ export function headlineFacts(input: FactInputs): Fact[] {
 			value: nf(longest.distanceKm),
 			unit: 'km',
 			detail: `${duration(longest.duration)} on ${formatTime(longest.startTime, timeZone)}.`,
-			href: `/dash/trips?trip=${longest.index}`,
+			href: tripLink(longest.startTime),
 			timestamp: longest.startTime
 		});
 	}
@@ -395,6 +396,18 @@ export function quirkFacts(input: FactInputs): Fact[] {
 			value: nf(dataset.duplicateRows),
 			detail:
 				'Identical rows repeated back to back — the fingerprint of a data pipeline that replays batches when it is unsure a delivery succeeded. Counting them as real would inflate every total.',
+			href: '/dash/privacy'
+		});
+	}
+
+	if (dataset.undatedRows > 0) {
+		facts.push({
+			id: 'undated-rows',
+			tone: 'quirk',
+			kicker: 'Rows with no usable time',
+			value: nf(dataset.undatedRows),
+			detail:
+				"Stamped before 2015 or with no date at all, usually because the car's clock had not been set. They are left out. Kept, they would stretch every chart back across the years in between.",
 			href: '/dash/privacy'
 		});
 	}

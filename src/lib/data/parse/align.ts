@@ -180,6 +180,7 @@ export function combineStreams(results: StreamParseResult[], exportId: string): 
 		exportId,
 		available,
 		duplicateRows: results.reduce((sum, r) => sum + r.duplicateRows, 0),
+		undatedRows: results.reduce((sum, r) => sum + r.undatedRows, 0),
 		unsortedStreams: results.filter((r) => r.wasUnsorted).map((r) => r.stream),
 		emptyColumns,
 		rowsParsed: results.reduce((sum, r) => sum + r.rows, 0),

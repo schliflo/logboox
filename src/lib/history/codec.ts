@@ -53,6 +53,8 @@ export interface ExportRecord {
 	columns: StoredColumn[];
 	available: Record<StreamId, boolean>;
 	duplicateRows: number;
+	/** Absent from records kept before undated rows were counted. */
+	undatedRows?: number;
 	unsortedStreams: string[];
 	emptyColumns: string[];
 	rowsParsed: number;
@@ -98,6 +100,45 @@ export function decompress(bytes: ArrayBuffer): ArrayBuffer {
 	return exactBuffer(gunzipSync(new Uint8Array(bytes)));
 }
 
+/** Deflate cannot shrink anything by more than about a thousand to one. */
+const MAX_INFLATE_RATIO = 1100;
+
+/**
+ * Gunzips a buffer that must come out exactly `expected` bytes.
+ *
+ * For anything whose size is known beforehand and which someone else may have
+ * written: fflate sizes its output from the last four bytes of the member
+ * (ISIZE, little-endian), which the writer chose, so a few dozen bytes can
+ * claim four gigabytes. The claim is checked first, against what was asked for
+ * and against what the input could possibly hold, and the output buffer is
+ * handed in so it is never grown. The trailer is only a claim, so the bytes
+ * that come out are counted as well.
+ *
+ * `subject` names the thing for the message, e.g. "This share's timeline".
+ */
+export function inflateExactly(bytes: ArrayBuffer, expected: number, subject: string): ArrayBuffer {
+	const view = new Uint8Array(bytes);
+	// Ten bytes of header and eight of trailer is the least a gzip member is.
+	if (view.length < 18 || view[0] !== 0x1f || view[1] !== 0x8b) {
+		throw new Error(`${subject} is not readable.`);
+	}
+
+	const claimed = new DataView(bytes).getUint32(bytes.byteLength - 4, true);
+	if (claimed !== expected || expected > view.length * MAX_INFLATE_RATIO) {
+		throw new Error(`${subject} is not the size it should be.`);
+	}
+
+	let out: Uint8Array;
+	try {
+		out = gunzipSync(view, { out: new Uint8Array(expected) });
+	} catch {
+		throw new Error(`${subject} is not readable.`);
+	}
+	// A forged trailer can agree with the record and still not be what inflates.
+	if (out.byteLength !== expected) throw new Error(`${subject} is not the size it should be.`);
+	return exactBuffer(out);
+}
+
 export async function encodeExport(
 	packed: PackedDataset,
 	derived: DerivedData,
@@ -138,6 +179,7 @@ export async function encodeExport(
 		columns,
 		available: packed.available,
 		duplicateRows: packed.duplicateRows,
+		undatedRows: packed.undatedRows,
 		unsortedStreams: packed.unsortedStreams,
 		emptyColumns: packed.emptyColumns,
 		rowsParsed: packed.rowsParsed,
@@ -193,12 +235,35 @@ export function reviveRecord(record: ExportRecord): ExportRecord {
 	};
 }
 
+/** Bytes per value, for a record that may have been written by somebody else. */
+function widthOf(stored: StoredColumn): number {
+	if (!Object.hasOwn(DTYPE_BYTES, stored.spec.dtype)) {
+		throw new Error(`The kept copy's ${stored.key} is not readable.`);
+	}
+	return DTYPE_BYTES[stored.spec.dtype];
+}
+
+/** Rows a record states; every buffer's size follows from it. */
+function rowsOf(record: ExportRecord): number {
+	if (!Number.isSafeInteger(record.rows) || record.rows < 0) {
+		throw new Error('The kept copy does not say how many rows it holds and cannot be opened.');
+	}
+	return record.rows;
+}
+
 function blobMap(blobs: StoredBlob[]): Map<string, StoredBlob> {
 	return new Map(blobs.map((blob) => [blob.name, blob]));
 }
 
+/**
+ * Every buffer is inflated to exactly the size the record says it has: rows
+ * times the width of its type, and four bytes a row for the timeline. A copy
+ * shared by somebody else is read through here too, and must not be able to
+ * ask for more memory than it declared.
+ */
 export function decodeExport(record: ExportRecord, blobs: StoredBlob[]): PackedDataset {
 	checkVersion(record);
+	const rows = rowsOf(record);
 	const byName = blobMap(blobs);
 	const time = byName.get(TIME_BLOB);
 	if (!time) throw new Error('The kept copy is missing its timeline and cannot be opened.');
@@ -209,7 +274,7 @@ export function decodeExport(record: ExportRecord, blobs: StoredBlob[]): PackedD
 		if (!blob) continue;
 		columns.push({
 			spec: specToUse(stored.spec),
-			buffer: decompress(blob.bytes),
+			buffer: inflateExactly(blob.bytes, rows * widthOf(stored), `The kept copy's ${stored.key}`),
 			nonNull: stored.nonNull,
 			min: stored.min,
 			max: stored.max
@@ -217,13 +282,14 @@ export function decodeExport(record: ExportRecord, blobs: StoredBlob[]): PackedD
 	}
 
 	return {
-		timeBuffer: decompress(time.bytes),
+		timeBuffer: inflateExactly(time.bytes, rows * 4, "The kept copy's timeline"),
 		columns,
 		vin: record.vin,
 		vmodel: record.vmodel,
 		exportId: record.exportId,
 		available: record.available,
 		duplicateRows: record.duplicateRows,
+		undatedRows: record.undatedRows ?? 0,
 		unsortedStreams: record.unsortedStreams,
 		emptyColumns: record.emptyColumns,
 		rowsParsed: record.rowsParsed,
@@ -240,6 +306,7 @@ export function decodeExport(record: ExportRecord, blobs: StoredBlob[]): PackedD
  */
 export function sourceFromExport(record: ExportRecord, blobs: StoredBlob[]): MergeSource {
 	checkVersion(record);
+	const rows = rowsOf(record);
 	const byName = blobMap(blobs);
 	const time = byName.get(TIME_BLOB);
 	if (!time) throw new Error('The kept copy is missing its timeline and cannot be opened.');
@@ -250,7 +317,7 @@ export function sourceFromExport(record: ExportRecord, blobs: StoredBlob[]): Mer
 		exportId: record.exportId,
 		vin: record.vin,
 		vmodel: record.vmodel,
-		time: new Uint32Array(decompress(time.bytes)),
+		time: new Uint32Array(inflateExactly(time.bytes, rows * 4, "The kept copy's timeline")),
 		keys: record.columns.map((column) => column.key),
 		column(key: string): Column | undefined {
 			const stored = specs.get(key);
@@ -259,7 +326,10 @@ export function sourceFromExport(record: ExportRecord, blobs: StoredBlob[]): Mer
 			const spec = specToUse(stored.spec);
 			return {
 				spec,
-				data: viewFor(spec, decompress(blob.bytes)),
+				data: viewFor(
+					spec,
+					inflateExactly(blob.bytes, rows * widthOf(stored), `The kept copy's ${key}`)
+				),
 				nonNull: stored.nonNull,
 				min: stored.min,
 				max: stored.max
@@ -267,6 +337,7 @@ export function sourceFromExport(record: ExportRecord, blobs: StoredBlob[]): Mer
 		},
 		available: record.available,
 		duplicateRows: record.duplicateRows,
+		undatedRows: record.undatedRows ?? 0,
 		unsortedStreams: record.unsortedStreams,
 		rowsParsed: record.rowsParsed,
 		bytesParsed: record.bytesParsed,

@@ -96,6 +96,61 @@ describe('decodeExport', () => {
 	});
 });
 
+describe('a record someone else wrote', () => {
+	/** The same bytes with the trailer's size claim replaced. */
+	function claiming(bytes: ArrayBuffer, claim: number): ArrayBuffer {
+		const copy = bytes.slice(0);
+		new DataView(copy).setUint32(copy.byteLength - 4, claim, true);
+		return copy;
+	}
+
+	const claimOf = (bytes: ArrayBuffer) => new DataView(bytes).getUint32(bytes.byteLength - 4, true);
+
+	it('reads back everything encodeExport wrote, to the byte', async () => {
+		const { record, blobs } = await keep(sample());
+		const packed = decodeExport(record, blobs);
+
+		expect(packed.timeBuffer.byteLength).toBe(record.rows * 4);
+		for (const column of packed.columns) {
+			const stored = record.columns.find((c) => c.key === column.spec.key)!;
+			const width = { u8: 1, i8: 1, u16: 2, i16: 2, u32: 4, f32: 4 }[stored.spec.dtype];
+			expect(column.buffer.byteLength).toBe(record.rows * width);
+		}
+	});
+
+	it('refuses a trailer that claims a size the record does not have', async () => {
+		const { record, blobs } = await keep(sample());
+		const forged = blobs.map((blob) =>
+			blob.name === '_time' ? { ...blob, bytes: claiming(blob.bytes, 0xffffffff) } : blob
+		);
+
+		expect(() => decodeExport(record, forged)).toThrow(/size/);
+		expect(() => sourceFromExport(record, forged)).toThrow(/size/);
+	});
+
+	it('refuses a record that states more rows than the buffers hold, trailers agreeing', async () => {
+		const { record, blobs } = await keep(sample());
+		const rows = record.rows * 2;
+		// Every trailer rewritten to match the lie; only counting the output gives it away.
+		const forged = blobs.map((blob) => ({
+			...blob,
+			bytes: claiming(blob.bytes, claimOf(blob.bytes) * 2)
+		}));
+
+		expect(() => decodeExport({ ...record, rows }, forged)).toThrow(/size/);
+	});
+
+	it('refuses a record whose rows no blob could hold, before allocating for them', async () => {
+		const { record, blobs } = await keep(sample());
+		const rows = 2 ** 29;
+		const forged = blobs.map((blob) => ({ ...blob, bytes: claiming(blob.bytes, 0) }));
+		forged[0] = { ...forged[0], bytes: claiming(blobs[0].bytes, rows * 4) };
+
+		expect(() => decodeExport({ ...record, rows }, forged)).toThrow(/size/);
+		expect(() => decodeExport({ ...record, rows: -1 }, blobs)).toThrow(/rows/);
+	});
+});
+
 describe('specToUse', () => {
 	it('takes the registry entry when the two agree on storage', async () => {
 		const { record } = await keep(sample());
