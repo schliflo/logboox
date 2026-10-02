@@ -13,11 +13,11 @@ import {
 	countShares,
 	createShare,
 	listShares
-} from '$lib/server/shares/repo';
-import { checkNewShare } from '$lib/server/shares/validate';
-import { getExportRow } from '$lib/server/exports/repo';
-import { requireDb, siteUrl } from '$lib/server/context';
-import { fail, json, readJson } from '$lib/server/response';
+} from '#lib/server/shares/repo.js';
+import { checkNewShare } from '#lib/server/shares/validate.js';
+import { getExportRow } from '#lib/server/exports/repo.js';
+import { requireDb, siteUrl } from '#lib/server/context.js';
+import { fail, json, readJson } from '#lib/server/response.js';
 
 export const GET: RequestHandler = async (event) => {
 	const auth = event.locals.auth;

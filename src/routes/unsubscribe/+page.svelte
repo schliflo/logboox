@@ -9,10 +9,10 @@
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
-	import * as Card from '$lib/components/ui/card';
-	import { Button } from '$lib/components/ui/button';
-	import Seo from '$lib/components/app/Seo.svelte';
-	import { api } from '$lib/api/client';
+	import * as Card from '#lib/components/ui/card/index.js';
+	import { Button } from '#lib/components/ui/button/index.js';
+	import Seo from '#lib/components/app/Seo.svelte';
+	import { api } from '#lib/api/client.js';
 
 	let token = $state<string | null>(null);
 	/** Which mail this link came from; each kind has its own switch and token. */

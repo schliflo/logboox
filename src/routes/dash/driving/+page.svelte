@@ -1,13 +1,13 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import * as Card from '$lib/components/ui/card';
-	import * as Table from '$lib/components/ui/table';
-	import BigStat from '$lib/components/charts/BigStat.svelte';
-	import Histogram from '$lib/components/charts/Histogram.svelte';
-	import GgDiagram from '$lib/components/charts/GgDiagram.svelte';
-	import { data } from '$lib/state/dataset.svelte';
-	import { tripLink } from '$lib/data/range';
-	import { dateTime, duration, num } from '$lib/utils/format';
+	import * as Card from '#lib/components/ui/card/index.js';
+	import * as Table from '#lib/components/ui/table/index.js';
+	import BigStat from '#lib/components/charts/BigStat.svelte';
+	import Histogram from '#lib/components/charts/Histogram.svelte';
+	import GgDiagram from '#lib/components/charts/GgDiagram.svelte';
+	import { data } from '#lib/state/dataset.svelte.js';
+	import { tripLink } from '#lib/data/range.js';
+	import { dateTime, duration, num } from '#lib/utils/format.js';
 
 	const stats = $derived(data.derived!);
 

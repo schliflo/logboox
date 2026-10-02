@@ -12,9 +12,9 @@ import {
 	UsernameTaken,
 	UsernameTooSoon,
 	setUsername
-} from '$lib/server/leaderboard/username';
-import { requireDb } from '$lib/server/context';
-import { fail, json, readJson } from '$lib/server/response';
+} from '#lib/server/leaderboard/username.js';
+import { requireDb } from '#lib/server/context.js';
+import { fail, json, readJson } from '#lib/server/response.js';
 
 export const PUT: RequestHandler = async (event) => {
 	const auth = event.locals.auth;

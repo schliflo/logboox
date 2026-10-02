@@ -8,7 +8,7 @@
 
 import { error } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types';
-import { BOARDS, TOP_N } from '$lib/leaderboard/boards';
+import { BOARDS, TOP_N } from '#lib/leaderboard/boards.js';
 import {
 	isMonthOpen,
 	isYearFinal,
@@ -18,10 +18,10 @@ import {
 	parsePeriod,
 	previousMonth,
 	yearOf
-} from '$lib/leaderboard/periods';
-import { monthBoards, yearBoards } from '$lib/server/leaderboard/repo';
-import { maybeDb } from '$lib/server/context';
-import { now as currentTime } from '$lib/server/db';
+} from '#lib/leaderboard/periods.js';
+import { monthBoards, yearBoards } from '#lib/server/leaderboard/repo.js';
+import { maybeDb } from '#lib/server/context.js';
+import { now as currentTime } from '#lib/server/db.js';
 
 export const prerender = false;
 export const ssr = true;

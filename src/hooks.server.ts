@@ -13,14 +13,14 @@
  */
 
 import type { Handle } from '@sveltejs/kit/hooks';
-import { validateToken } from '$lib/server/auth/apiTokens';
+import { validateToken } from '#lib/server/auth/apiTokens.js';
 import {
 	SESSION_COOKIE,
 	SESSION_COOKIE_OPTIONS,
 	authenticateSession
-} from '$lib/server/auth/session';
-import { bearer, parseApiToken, timingSafeEqual } from '$lib/server/auth/tokens';
-import { cronSecret, maybeDb } from '$lib/server/context';
+} from '#lib/server/auth/session.js';
+import { bearer, parseApiToken, timingSafeEqual } from '#lib/server/auth/tokens.js';
+import { cronSecret, maybeDb } from '#lib/server/context.js';
 
 /** Requests that carry a credential and may therefore not be forged. */
 const GUARDED = /^\/(api|internal)\//;

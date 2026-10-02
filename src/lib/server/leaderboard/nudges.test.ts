@@ -19,7 +19,7 @@ import {
 	sendBoardNudges,
 	sendYearRoundups
 } from './nudges';
-import { locksAt } from '$lib/leaderboard/periods';
+import { locksAt } from '#lib/leaderboard/periods.js';
 
 const SEPTEMBER = Math.floor(Date.UTC(2026, 8, 14, 9, 0) / 1000);
 const LOCKS = locksAt('2026-09');

@@ -1,15 +1,17 @@
 // See https://svelte.dev/docs/kit/types#app.d.ts
 // for information about these interfaces
 
-import type { Scope } from '$lib/server/auth/apiTokens';
-import type { User } from '$lib/server/auth/users';
+import type { Scope } from '#lib/server/auth/apiTokens.js';
+import type { User } from '#lib/server/auth/users.js';
 
 declare global {
 	namespace App {
 		interface Platform {
 			env: Env;
 			ctx: ExecutionContext;
-			caches: CacheStorage;
+			// The Workers `CacheStorage` carries `default`; the DOM one TypeScript
+			// resolves here does not, so the colo cache is named explicitly.
+			caches: CacheStorage & { readonly default: Cache };
 			cf?: IncomingRequestCfProperties;
 		}
 

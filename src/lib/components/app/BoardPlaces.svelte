@@ -8,17 +8,17 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { toast } from 'svelte-sonner';
-	import * as Card from '$lib/components/ui/card';
-	import { Badge } from '$lib/components/ui/badge';
-	import { Button } from '$lib/components/ui/button';
-	import { Input } from '$lib/components/ui/input';
-	import { Label } from '$lib/components/ui/label';
-	import { Switch } from '$lib/components/ui/switch';
-	import { Separator } from '$lib/components/ui/separator';
-	import { account, type BoardCandidate, type BoardEntry } from '$lib/state/account.svelte';
-	import { boardById, formatValue } from '$lib/leaderboard/boards';
-	import { monthLabel } from '$lib/leaderboard/periods';
-	import { dateOnly } from '$lib/utils/format';
+	import * as Card from '#lib/components/ui/card/index.js';
+	import { Badge } from '#lib/components/ui/badge/index.js';
+	import { Button } from '#lib/components/ui/button/index.js';
+	import { Input } from '#lib/components/ui/input/index.js';
+	import { Label } from '#lib/components/ui/label/index.js';
+	import { Switch } from '#lib/components/ui/switch/index.js';
+	import { Separator } from '#lib/components/ui/separator/index.js';
+	import { account, type BoardCandidate, type BoardEntry } from '#lib/state/account.svelte.js';
+	import { boardById, formatValue } from '#lib/leaderboard/boards.js';
+	import { monthLabel } from '#lib/leaderboard/periods.js';
+	import { dateOnly } from '#lib/utils/format.js';
 	import TrophyIcon from '@lucide/svelte/icons/trophy';
 	import ExternalIcon from '@lucide/svelte/icons/external-link';
 

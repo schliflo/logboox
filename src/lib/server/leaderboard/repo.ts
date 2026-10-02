@@ -12,7 +12,7 @@
  * every board, including the one where using less is better.
  */
 
-import type { ExportSummary, SessionSummary, TripSummary } from '$lib/data/analytics/summary';
+import type { ExportSummary, SessionSummary, TripSummary } from '#lib/data/analytics/summary.js';
 import {
 	BOARDS,
 	TOP_N,
@@ -25,8 +25,8 @@ import {
 	type BoardId,
 	type BoardKind,
 	type MonthTrip
-} from '$lib/leaderboard/boards';
-import { isMonthOpen, locksAt, monthOf, monthKey, monthWindow } from '$lib/leaderboard/periods';
+} from '#lib/leaderboard/boards.js';
+import { isMonthOpen, locksAt, monthOf, monthKey, monthWindow } from '#lib/leaderboard/periods.js';
 import { all, now as currentTime, one, rowId, run, type Db, type Statement } from '../db';
 
 export interface CandidateRow {

@@ -8,10 +8,10 @@
  */
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import type { ExportRecord } from '$lib/history/codec';
-import type { ExportSummary, TripSummary } from '$lib/data/analytics/summary';
-import { sessionSummary, tripSummary } from '$lib/leaderboard/testing';
-import { BOARDS, boardById, valueFor, type ItemBoard } from '$lib/leaderboard/boards';
+import type { ExportRecord } from '#lib/history/codec.js';
+import type { ExportSummary, TripSummary } from '#lib/data/analytics/summary.js';
+import { sessionSummary, tripSummary } from '#lib/leaderboard/testing.js';
+import { BOARDS, boardById, valueFor, type ItemBoard } from '#lib/leaderboard/boards.js';
 import { migratedDb, type TestDb } from '../testing/sqlite-d1';
 import { BATCH_SIZE, all, one, run, type Db } from '../db';
 import { findOrCreateUser } from '../auth/users';

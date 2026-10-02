@@ -7,9 +7,9 @@
  *
  * Read the same way as the SEO variables, and with the same rule: the value
  * must be set in `.env.production` for the prerender and in `wrangler.jsonc`
- * for the client, and the two must agree.
+ * for the client, and the two must agree. See `src/env.ts`.
  */
 
-import { env } from '$env/dynamic/public';
+import { PUBLIC_ACCOUNTS } from '$app/env/public';
 
-export const ACCOUNTS_ENABLED = env.PUBLIC_ACCOUNTS === '1';
+export const ACCOUNTS_ENABLED = PUBLIC_ACCOUNTS;

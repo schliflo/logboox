@@ -9,7 +9,7 @@
  */
 
 import { gunzipSync } from 'fflate';
-import { exactBuffer } from '$lib/history/codec';
+import { exactBuffer } from '#lib/history/codec.js';
 
 /** The inflated bytes, or null when they would be more than `limit`. */
 export function inflateAtMost(bytes: ArrayBuffer, limit: number): ArrayBuffer | null {

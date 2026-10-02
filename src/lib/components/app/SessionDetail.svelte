@@ -9,8 +9,8 @@
   through a public link draws exactly as one in the dashboard does.
 -->
 <script lang="ts">
-	import UPlotChart, { type ChartSeries } from '$lib/components/charts/UPlotChart.svelte';
-	import { decodeRange } from '$lib/data/store/columnar';
+	import UPlotChart, { type ChartSeries } from '#lib/components/charts/UPlotChart.svelte';
+	import { decodeRange } from '#lib/data/store/columnar.js';
 	import type { SampleSource } from './TripDetail.svelte';
 
 	interface Props {

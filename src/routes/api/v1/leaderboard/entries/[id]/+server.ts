@@ -7,9 +7,9 @@
  */
 
 import type { RequestHandler } from './$types';
-import { removeEntry } from '$lib/server/leaderboard/repo';
-import { requireDb } from '$lib/server/context';
-import { fail, json } from '$lib/server/response';
+import { removeEntry } from '#lib/server/leaderboard/repo.js';
+import { requireDb } from '#lib/server/context.js';
+import { fail, json } from '#lib/server/response.js';
 
 export const DELETE: RequestHandler = async (event) => {
 	const auth = event.locals.auth;

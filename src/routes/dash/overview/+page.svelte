@@ -1,11 +1,11 @@
 <script lang="ts">
-	import * as Card from '$lib/components/ui/card';
-	import BigStat from '$lib/components/charts/BigStat.svelte';
-	import CalendarHeatmap from '$lib/components/charts/CalendarHeatmap.svelte';
-	import Punchcard from '$lib/components/charts/Punchcard.svelte';
-	import { data } from '$lib/state/dataset.svelte';
-	import { settings } from '$lib/state/settings.svelte';
-	import { duration, num, percent, prettyDay } from '$lib/utils/format';
+	import * as Card from '#lib/components/ui/card/index.js';
+	import BigStat from '#lib/components/charts/BigStat.svelte';
+	import CalendarHeatmap from '#lib/components/charts/CalendarHeatmap.svelte';
+	import Punchcard from '#lib/components/charts/Punchcard.svelte';
+	import { data } from '#lib/state/dataset.svelte.js';
+	import { settings } from '#lib/state/settings.svelte.js';
+	import { duration, num, percent, prettyDay } from '#lib/utils/format.js';
 
 	const stats = $derived(data.derived!);
 	const dataset = $derived(data.dataset!);

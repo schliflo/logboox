@@ -6,7 +6,7 @@
   going back.
 -->
 <script lang="ts">
-	import MadeBy from '$lib/components/app/MadeBy.svelte';
+	import MadeBy from '#lib/components/app/MadeBy.svelte';
 	import { page } from '$app/state';
 
 	let { children } = $props();

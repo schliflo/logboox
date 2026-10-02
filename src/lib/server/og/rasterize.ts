@@ -19,7 +19,7 @@
 
 import { read } from '$app/server';
 import { initWasm, Resvg } from '@resvg/resvg-wasm';
-import { FONT_URLS } from '$lib/og/fonts';
+import { FONT_URLS } from '#lib/og/fonts.js';
 
 let started: Promise<void> | undefined;
 let loaded: Promise<Uint8Array[]> | undefined;

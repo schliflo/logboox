@@ -7,9 +7,9 @@
  */
 
 import type { RequestHandler } from './$types';
-import { getVehicle, listTrips, readWindow } from '$lib/server/exports/vehicles';
-import { requireDb } from '$lib/server/context';
-import { fail, json } from '$lib/server/response';
+import { getVehicle, listTrips, readWindow } from '#lib/server/exports/vehicles.js';
+import { requireDb } from '#lib/server/context.js';
+import { fail, json } from '#lib/server/response.js';
 
 export const GET: RequestHandler = async (event) => {
 	const auth = event.locals.auth;

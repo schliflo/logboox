@@ -22,7 +22,7 @@
 		SITE_DESCRIPTION,
 		SITE_NAME,
 		pageTitle
-	} from '$lib/seo';
+	} from '#lib/seo.js';
 
 	interface Props {
 		/** Page title without the site name; omit for the landing page. */

@@ -36,13 +36,17 @@ function chunk(chunk: FakeChunk) {
 }
 
 /** Runs the plugin over a made-up bundle and returns what it published. */
-function run(chunks: FakeChunk[], consumer: 'client' | 'server' = 'client') {
+function run(
+	chunks: FakeChunk[],
+	consumer: 'client' | 'server' = 'client',
+	name: 'client' | 'ssr' | 'serviceWorker' = 'client'
+) {
 	const plugin = onDemand({ entry: 'src/lib/export/pdf.ts' });
 	const emitted: Array<{ fileName?: string; source?: unknown }> = [];
 	const warnings: string[] = [];
 
 	const context = {
-		environment: { config: { consumer } },
+		environment: { name, config: { consumer } },
 		warn: (message: string) => warnings.push(String(message)),
 		emitFile: (file: { fileName?: string; source?: unknown }) => emitted.push(file)
 	};
@@ -136,6 +140,12 @@ describe('onDemand', () => {
 	it('publishes nothing at all from the server build', () => {
 		const server = run(BUNDLE, 'server');
 		expect(server.emitted).toHaveLength(0);
+	});
+
+	it("publishes nothing from the service worker's own build either", () => {
+		const worker = run([], 'client', 'serviceWorker');
+		expect(worker.emitted).toHaveLength(0);
+		expect(worker.warnings).toHaveLength(0);
 	});
 
 	it('publishes to a path the app can fetch, outside the immutable output', () => {

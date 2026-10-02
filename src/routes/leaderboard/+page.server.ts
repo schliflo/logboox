@@ -6,8 +6,8 @@
  */
 
 import { redirect } from '@sveltejs/kit';
-import { currentMonth } from '$lib/leaderboard/periods';
-import { now } from '$lib/server/db';
+import { currentMonth } from '#lib/leaderboard/periods.js';
+import { now } from '#lib/server/db.js';
 
 export const prerender = false;
 export const ssr = true;

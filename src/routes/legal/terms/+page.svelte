@@ -7,7 +7,7 @@
   about names.
 -->
 <script lang="ts">
-	import Seo from '$lib/components/app/Seo.svelte';
+	import Seo from '#lib/components/app/Seo.svelte';
 </script>
 
 <Seo title="Terms" description="The terms LogbooX is offered under." path="/legal/terms" />

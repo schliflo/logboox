@@ -9,14 +9,14 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { toast } from 'svelte-sonner';
-	import * as Card from '$lib/components/ui/card';
-	import * as Dialog from '$lib/components/ui/dialog';
-	import { Badge } from '$lib/components/ui/badge';
-	import { Button } from '$lib/components/ui/button';
-	import { Input } from '$lib/components/ui/input';
-	import { Label } from '$lib/components/ui/label';
-	import { api } from '$lib/api/client';
-	import { dateOnly } from '$lib/utils/format';
+	import * as Card from '#lib/components/ui/card/index.js';
+	import * as Dialog from '#lib/components/ui/dialog/index.js';
+	import { Badge } from '#lib/components/ui/badge/index.js';
+	import { Button } from '#lib/components/ui/button/index.js';
+	import { Input } from '#lib/components/ui/input/index.js';
+	import { Label } from '#lib/components/ui/label/index.js';
+	import { api } from '#lib/api/client.js';
+	import { dateOnly } from '#lib/utils/format.js';
 	import CopyIcon from '@lucide/svelte/icons/copy';
 	import KeyIcon from '@lucide/svelte/icons/key-round';
 	import PlusIcon from '@lucide/svelte/icons/plus';

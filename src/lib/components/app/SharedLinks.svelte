@@ -8,11 +8,11 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { toast } from 'svelte-sonner';
-	import * as Card from '$lib/components/ui/card';
-	import { Badge } from '$lib/components/ui/badge';
-	import { Button } from '$lib/components/ui/button';
-	import { api } from '$lib/api/client';
-	import { dateOnly } from '$lib/utils/format';
+	import * as Card from '#lib/components/ui/card/index.js';
+	import { Badge } from '#lib/components/ui/badge/index.js';
+	import { Button } from '#lib/components/ui/button/index.js';
+	import { api } from '#lib/api/client.js';
+	import { dateOnly } from '#lib/utils/format.js';
 	import CopyIcon from '@lucide/svelte/icons/copy';
 	import LinkIcon from '@lucide/svelte/icons/link';
 	import TrashIcon from '@lucide/svelte/icons/trash-2';

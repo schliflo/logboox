@@ -6,9 +6,9 @@
  */
 
 import type { RequestHandler } from './$types';
-import { ClaimRefused, claim } from '$lib/server/leaderboard/repo';
-import { requireDb } from '$lib/server/context';
-import { fail, json, readJson } from '$lib/server/response';
+import { ClaimRefused, claim } from '#lib/server/leaderboard/repo.js';
+import { requireDb } from '#lib/server/context.js';
+import { fail, json, readJson } from '#lib/server/response.js';
 
 const STATUS: Record<string, number> = {
 	gone: 404,

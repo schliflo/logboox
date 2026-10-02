@@ -19,17 +19,17 @@
   export has: those notes would belong to whoever owns the car.
 -->
 <script lang="ts">
-	import * as Card from '$lib/components/ui/card';
-	import { Badge } from '$lib/components/ui/badge';
-	import { Button } from '$lib/components/ui/button';
-	import { Input } from '$lib/components/ui/input';
-	import { Label } from '$lib/components/ui/label';
-	import { logbook } from '$lib/state/logbook.svelte';
-	import { data } from '$lib/state/dataset.svelte';
-	import { settings } from '$lib/state/settings.svelte';
-	import { suggestDestinations, suggestOrigin, suggestPurpose } from '$lib/logbook/suggest';
-	import { PURPOSES, type Annotation, type Purpose } from '$lib/logbook/types';
-	import type { Trip } from '$lib/data/analytics/trips';
+	import * as Card from '#lib/components/ui/card/index.js';
+	import { Badge } from '#lib/components/ui/badge/index.js';
+	import { Button } from '#lib/components/ui/button/index.js';
+	import { Input } from '#lib/components/ui/input/index.js';
+	import { Label } from '#lib/components/ui/label/index.js';
+	import { logbook } from '#lib/state/logbook.svelte.js';
+	import { data } from '#lib/state/dataset.svelte.js';
+	import { settings } from '#lib/state/settings.svelte.js';
+	import { suggestDestinations, suggestOrigin, suggestPurpose } from '#lib/logbook/suggest.js';
+	import { PURPOSES, type Annotation, type Purpose } from '#lib/logbook/types.js';
+	import type { Trip } from '#lib/data/analytics/trips.js';
 	import { toast } from 'svelte-sonner';
 	import CloudIcon from '@lucide/svelte/icons/cloud';
 	import MapPinIcon from '@lucide/svelte/icons/map-pin';

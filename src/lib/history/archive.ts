@@ -22,7 +22,7 @@ import { reviveRecord, RECORD_VERSION, type ExportRecord, type StoredBlob } from
 /**
  * Format identifier written into every manifest and checked on restore. It is
  * the app's original name and stays that way on purpose: changing it would
- * reject every backup made so far. The product name lives in `$lib/seo`.
+ * reject every backup made so far. The product name lives in `#lib/seo.js`.
  */
 export const BACKUP_APP = 'xpeng-data-export-browser';
 export const BACKUP_FORMAT = 1;

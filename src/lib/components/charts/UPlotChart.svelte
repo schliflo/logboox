@@ -14,7 +14,7 @@
 <script lang="ts">
 	import { onMount, untrack } from 'svelte';
 	import type uPlot from 'uplot';
-	import { settings } from '$lib/state/settings.svelte';
+	import { settings } from '#lib/state/settings.svelte.js';
 	import ChartTooltip from './ChartTooltip.svelte';
 	import { isolatedPoints, withGaps } from './gaps';
 

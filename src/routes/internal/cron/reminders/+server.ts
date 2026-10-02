@@ -11,9 +11,9 @@
  */
 
 import type { RequestHandler } from './$types';
-import { everySendFailed, sendReminders } from '$lib/server/reminders/run';
-import { mailSecret, mailer, maybeStorage, requireDb, siteUrl } from '$lib/server/context';
-import { fail, json } from '$lib/server/response';
+import { everySendFailed, sendReminders } from '#lib/server/reminders/run.js';
+import { mailSecret, mailer, maybeStorage, requireDb, siteUrl } from '#lib/server/context.js';
+import { fail, json } from '#lib/server/response.js';
 
 export const POST: RequestHandler = async (event) => {
 	if (!event.locals.cron) return fail(401, 'Not the daily run.');

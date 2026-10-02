@@ -16,9 +16,9 @@ import {
 	findUserByUnsubscribeToken,
 	updateSettings,
 	type MailKind
-} from '$lib/server/auth/users';
-import { mailSecret, requireDb } from '$lib/server/context';
-import { fail, json, readJson } from '$lib/server/response';
+} from '#lib/server/auth/users.js';
+import { mailSecret, requireDb } from '#lib/server/context.js';
+import { fail, json, readJson } from '#lib/server/response.js';
 
 export const POST: RequestHandler = async (event) => {
 	const body = await readJson<{ token?: unknown; kind?: unknown }>(event.request);

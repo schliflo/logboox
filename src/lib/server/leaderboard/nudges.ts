@@ -16,8 +16,8 @@ import { failureStreak, logSendFailure, type FailureStreak } from '../mail/batch
 import type { Mailer } from '../mail/mailer';
 import { boardNudgeMail, yearRoundupMail } from '../mail/templates';
 import { unsubscribeLinks } from '../mail/unsubscribe';
-import { boardById, formatValue } from '$lib/leaderboard/boards';
-import { isYearFinal, monthLabel, monthsOfYear } from '$lib/leaderboard/periods';
+import { boardById, formatValue } from '#lib/leaderboard/boards.js';
+import { isYearFinal, monthLabel, monthsOfYear } from '#lib/leaderboard/periods.js';
 
 /** How long an offer sits unseen before it is worth a message. */
 export const QUIET_SECONDS = 2 * 86400;

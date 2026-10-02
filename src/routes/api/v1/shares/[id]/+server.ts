@@ -7,11 +7,11 @@
  */
 
 import type { RequestHandler } from './$types';
-import { countView, getShare, revokeShare } from '$lib/server/shares/repo';
-import { storedMeta } from '$lib/server/shares/validate';
-import { deletePrefix, sharePrefix } from '$lib/server/exports/r2';
-import { maybeStorage, requireDb } from '$lib/server/context';
-import { fail, json } from '$lib/server/response';
+import { countView, getShare, revokeShare } from '#lib/server/shares/repo.js';
+import { storedMeta } from '#lib/server/shares/validate.js';
+import { deletePrefix, sharePrefix } from '#lib/server/exports/r2.js';
+import { maybeStorage, requireDb } from '#lib/server/context.js';
+import { fail, json } from '#lib/server/response.js';
 
 export const GET: RequestHandler = async (event) => {
 	const share = await getShare(requireDb(event), event.params.id);

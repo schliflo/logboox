@@ -13,7 +13,7 @@
  * one worth drawing would mean pulling tens of megabytes into a Worker to make
  * a picture 1200 pixels wide.
  *
- * `json()` from `$lib/server/response` is deliberately not used here: it forces
+ * `json()` from `#lib/server/response.js` is deliberately not used here: it forces
  * `private, no-store`, which is right for everything else on this server and
  * exactly wrong for a picture meant to be cached by strangers.
  */
@@ -25,20 +25,20 @@ import {
 	MAX_SHARE_MANIFEST_BYTES,
 	SHARE_UPLOAD_WINDOW_SECONDS,
 	getShare
-} from '$lib/server/shares/repo';
-import { parseManifest, storedMeta } from '$lib/server/shares/validate';
-import { sharePrefix } from '$lib/server/exports/r2';
-import { maybeDb, maybeStorage } from '$lib/server/context';
-import { now } from '$lib/server/db';
-import { decodeRange } from '$lib/data/store/columnar';
-import { viewFor } from '$lib/data/worker/protocol';
-import { TIME_BLOB } from '$lib/history/codec';
-import { shareFigures, shareHeading, shareSummary } from '$lib/share/describe';
-import { shareCard, type Series } from '$lib/server/og/card';
-import { inflateAtMost } from '$lib/server/og/inflate';
-import { decimate, toPath } from '$lib/server/og/series';
-import { renderPng } from '$lib/server/og/rasterize';
-import { OG_IMAGE } from '$lib/seo';
+} from '#lib/server/shares/repo.js';
+import { parseManifest, storedMeta } from '#lib/server/shares/validate.js';
+import { sharePrefix } from '#lib/server/exports/r2.js';
+import { maybeDb, maybeStorage } from '#lib/server/context.js';
+import { now } from '#lib/server/db.js';
+import { decodeRange } from '#lib/data/store/columnar.js';
+import { viewFor } from '#lib/data/worker/protocol.js';
+import { TIME_BLOB } from '#lib/history/codec.js';
+import { shareFigures, shareHeading, shareSummary } from '#lib/share/describe.js';
+import { shareCard, type Series } from '#lib/server/og/card.js';
+import { inflateAtMost } from '#lib/server/og/inflate.js';
+import { decimate, toPath } from '#lib/server/og/series.js';
+import { renderPng } from '#lib/server/og/rasterize.js';
+import { OG_IMAGE } from '#lib/seo.js';
 
 export const prerender = false;
 

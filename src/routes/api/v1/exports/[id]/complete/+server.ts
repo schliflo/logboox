@@ -7,13 +7,13 @@
  */
 
 import type { RequestHandler } from './$types';
-import type { ExportSummary } from '$lib/data/analytics/summary';
-import { completeUpload } from '$lib/server/exports/upload';
-import { getExportRow } from '$lib/server/exports/repo';
-import { detectCandidates } from '$lib/server/leaderboard/repo';
-import { all, type Db } from '$lib/server/db';
-import { requireDb, requireStorage } from '$lib/server/context';
-import { fail, json } from '$lib/server/response';
+import type { ExportSummary } from '#lib/data/analytics/summary.js';
+import { completeUpload } from '#lib/server/exports/upload.js';
+import { getExportRow } from '#lib/server/exports/repo.js';
+import { detectCandidates } from '#lib/server/leaderboard/repo.js';
+import { all, type Db } from '#lib/server/db.js';
+import { requireDb, requireStorage } from '#lib/server/context.js';
+import { fail, json } from '#lib/server/response.js';
 
 export const POST: RequestHandler = async (event) => {
 	const auth = event.locals.auth;

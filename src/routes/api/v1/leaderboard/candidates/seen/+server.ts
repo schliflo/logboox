@@ -6,9 +6,9 @@
  */
 
 import type { RequestHandler } from './$types';
-import { markSeen } from '$lib/server/leaderboard/repo';
-import { requireDb } from '$lib/server/context';
-import { fail, json, readJson } from '$lib/server/response';
+import { markSeen } from '#lib/server/leaderboard/repo.js';
+import { requireDb } from '#lib/server/context.js';
+import { fail, json, readJson } from '#lib/server/response.js';
 
 /** More than anyone could have pending; a cap, not a page size. */
 const MAX_IDS = 100;

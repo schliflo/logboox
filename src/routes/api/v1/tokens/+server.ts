@@ -7,9 +7,9 @@
  */
 
 import type { RequestHandler } from './$types';
-import { TooManyTokens, createToken, listTokens } from '$lib/server/auth/apiTokens';
-import { requireDb } from '$lib/server/context';
-import { fail, json, readJson } from '$lib/server/response';
+import { TooManyTokens, createToken, listTokens } from '#lib/server/auth/apiTokens.js';
+import { requireDb } from '#lib/server/context.js';
+import { fail, json, readJson } from '#lib/server/response.js';
 
 export const GET: RequestHandler = async (event) => {
 	const auth = event.locals.auth;

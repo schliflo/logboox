@@ -8,12 +8,12 @@
  */
 
 import type { RequestHandler } from './$types';
-import { InvalidEmail, RateLimited, requestMagicLink } from '$lib/server/auth/magic';
-import { findUserByEmail } from '$lib/server/auth/users';
-import { clientIp, mailer, maybeDb, siteUrl } from '$lib/server/context';
-import { magicLinkMail } from '$lib/server/mail/templates';
-import { redactAddresses } from '$lib/server/mail/batch';
-import { fail, json, readJson } from '$lib/server/response';
+import { InvalidEmail, RateLimited, requestMagicLink } from '#lib/server/auth/magic.js';
+import { findUserByEmail } from '#lib/server/auth/users.js';
+import { clientIp, mailer, maybeDb, siteUrl } from '#lib/server/context.js';
+import { magicLinkMail } from '#lib/server/mail/templates.js';
+import { redactAddresses } from '#lib/server/mail/batch.js';
+import { fail, json, readJson } from '#lib/server/response.js';
 
 export const POST: RequestHandler = async (event) => {
 	const body = await readJson<{ email?: unknown }>(event.request);

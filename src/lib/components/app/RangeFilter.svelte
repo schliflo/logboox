@@ -14,12 +14,12 @@
   account or shared is always the whole export.
 -->
 <script lang="ts">
-	import * as Popover from '$lib/components/ui/popover';
-	import { Button, buttonVariants } from '$lib/components/ui/button';
-	import { Input } from '$lib/components/ui/input';
-	import { Label } from '$lib/components/ui/label';
-	import { data } from '$lib/state/dataset.svelte';
-	import { settings } from '$lib/state/settings.svelte';
+	import * as Popover from '#lib/components/ui/popover/index.js';
+	import { Button, buttonVariants } from '#lib/components/ui/button/index.js';
+	import { Input } from '#lib/components/ui/input/index.js';
+	import { Label } from '#lib/components/ui/label/index.js';
+	import { data } from '#lib/state/dataset.svelte.js';
+	import { settings } from '#lib/state/settings.svelte.js';
 	import {
 		customRange,
 		EVERYTHING,
@@ -27,7 +27,7 @@
 		rangePresets,
 		recordedSpan,
 		type TimeRange
-	} from '$lib/data/range';
+	} from '#lib/data/range.js';
 	import CalendarIcon from '@lucide/svelte/icons/calendar-range';
 	import LoaderIcon from '@lucide/svelte/icons/loader-circle';
 	import CheckIcon from '@lucide/svelte/icons/check';

@@ -11,11 +11,11 @@
  */
 
 import type { RequestHandler } from './$types';
-import { blobKey, isSafeBlobName } from '$lib/server/exports/r2';
-import { MAX_BLOB_BYTES } from '$lib/server/exports/limits';
-import { storeBlob } from '$lib/server/exports/upload';
-import { requireDb, requireStorage } from '$lib/server/context';
-import { fail, json } from '$lib/server/response';
+import { blobKey, isSafeBlobName } from '#lib/server/exports/r2.js';
+import { MAX_BLOB_BYTES } from '#lib/server/exports/limits.js';
+import { storeBlob } from '#lib/server/exports/upload.js';
+import { requireDb, requireStorage } from '#lib/server/context.js';
+import { fail, json } from '#lib/server/response.js';
 
 /**
  * Stores one buffer of an upload in progress, charged to the account before

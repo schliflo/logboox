@@ -11,20 +11,20 @@
  * place or a deleted account's name has to leave the card as quickly as the
  * app promises it leaves the board.
  *
- * `json()` from `$lib/server/response` is deliberately not used here: it forces
+ * `json()` from `#lib/server/response.js` is deliberately not used here: it forces
  * `private, no-store`, which is right for everything else on this server and
  * exactly wrong for a picture meant to be cached by strangers.
  */
 
 import { error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { BOARDS, boardById, formatValue } from '$lib/leaderboard/boards';
-import { isMonthOpen, locksAt, monthLabel, parsePeriod } from '$lib/leaderboard/periods';
-import { monthBoards, yearBoards } from '$lib/server/leaderboard/repo';
-import { maybeDb } from '$lib/server/context';
-import { now as currentTime } from '$lib/server/db';
-import { boardCard, type Tile } from '$lib/server/og/card';
-import { renderPng } from '$lib/server/og/rasterize';
+import { BOARDS, boardById, formatValue } from '#lib/leaderboard/boards.js';
+import { isMonthOpen, locksAt, monthLabel, parsePeriod } from '#lib/leaderboard/periods.js';
+import { monthBoards, yearBoards } from '#lib/server/leaderboard/repo.js';
+import { maybeDb } from '#lib/server/context.js';
+import { now as currentTime } from '#lib/server/db.js';
+import { boardCard, type Tile } from '#lib/server/og/card.js';
+import { renderPng } from '#lib/server/og/rasterize.js';
 
 export const prerender = false;
 

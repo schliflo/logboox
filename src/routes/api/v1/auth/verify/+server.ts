@@ -7,10 +7,10 @@
  */
 
 import type { RequestHandler } from './$types';
-import { consumeMagicLink } from '$lib/server/auth/magic';
-import { SESSION_COOKIE, SESSION_COOKIE_OPTIONS, createSession } from '$lib/server/auth/session';
-import { requireDb } from '$lib/server/context';
-import { fail, json, readJson } from '$lib/server/response';
+import { consumeMagicLink } from '#lib/server/auth/magic.js';
+import { SESSION_COOKIE, SESSION_COOKIE_OPTIONS, createSession } from '#lib/server/auth/session.js';
+import { requireDb } from '#lib/server/context.js';
+import { fail, json, readJson } from '#lib/server/response.js';
 
 export const POST: RequestHandler = async (event) => {
 	const body = await readJson<{ token?: unknown }>(event.request);

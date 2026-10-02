@@ -5,9 +5,9 @@
  */
 
 import type { RequestHandler } from './$types';
-import { getExportRow, getRecord } from '$lib/server/exports/repo';
-import { requireDb } from '$lib/server/context';
-import { fail, json } from '$lib/server/response';
+import { getExportRow, getRecord } from '#lib/server/exports/repo.js';
+import { requireDb } from '#lib/server/context.js';
+import { fail, json } from '#lib/server/response.js';
 
 export const GET: RequestHandler = async (event) => {
 	const auth = event.locals.auth;

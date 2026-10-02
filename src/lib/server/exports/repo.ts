@@ -8,9 +8,9 @@
  * name with a slash in it by asking.
  */
 
-import type { ExportRecord } from '$lib/history/codec';
-import type { ExportSummary, SessionSummary, TripSummary } from '$lib/data/analytics/summary';
-import { EARLIEST_PLAUSIBLE } from '$lib/data/parse/order';
+import type { ExportRecord } from '#lib/history/codec.js';
+import type { ExportSummary, SessionSummary, TripSummary } from '#lib/data/analytics/summary.js';
+import { EARLIEST_PLAUSIBLE } from '#lib/data/parse/order.js';
 import { all, now, one, run, runBatched, type Db, type Statement } from '../db';
 import { MAX_ACCOUNT_BYTES, MAX_COLUMNS } from './limits';
 import { isSafeBlobName } from './r2';

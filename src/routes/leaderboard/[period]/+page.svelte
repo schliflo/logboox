@@ -7,17 +7,17 @@
   exactly the question of where its numbers came from.
 -->
 <script lang="ts">
-	import * as Card from '$lib/components/ui/card';
-	import { Badge } from '$lib/components/ui/badge';
-	import { Button } from '$lib/components/ui/button';
-	import Seo from '$lib/components/app/Seo.svelte';
-	import MadeBy from '$lib/components/app/MadeBy.svelte';
-	import AccountMenu from '$lib/components/app/AccountMenu.svelte';
-	import { boardById, formatValue } from '$lib/leaderboard/boards';
-	import { monthLabel } from '$lib/leaderboard/periods';
-	import { dateOnly, num } from '$lib/utils/format';
-	import { account } from '$lib/state/account.svelte';
-	import { absolute } from '$lib/seo';
+	import * as Card from '#lib/components/ui/card/index.js';
+	import { Badge } from '#lib/components/ui/badge/index.js';
+	import { Button } from '#lib/components/ui/button/index.js';
+	import Seo from '#lib/components/app/Seo.svelte';
+	import MadeBy from '#lib/components/app/MadeBy.svelte';
+	import AccountMenu from '#lib/components/app/AccountMenu.svelte';
+	import { boardById, formatValue } from '#lib/leaderboard/boards.js';
+	import { monthLabel } from '#lib/leaderboard/periods.js';
+	import { dateOnly, num } from '#lib/utils/format.js';
+	import { account } from '#lib/state/account.svelte.js';
+	import { absolute } from '#lib/seo.js';
 	import ArrowLeftIcon from '@lucide/svelte/icons/arrow-left';
 	import ArrowRightIcon from '@lucide/svelte/icons/arrow-right';
 	import TrophyIcon from '@lucide/svelte/icons/trophy';

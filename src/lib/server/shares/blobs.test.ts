@@ -4,7 +4,7 @@
  */
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import type { SliceManifest } from '$lib/share/slice';
+import type { SliceManifest } from '#lib/share/slice.js';
 import { migratedDb, type TestDb } from '../testing/sqlite-d1';
 import { memoryBucket, type MemoryBucket } from '../testing/memory-bucket';
 import { one } from '../db';

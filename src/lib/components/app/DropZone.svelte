@@ -6,9 +6,9 @@
   in this tab and read there.
 -->
 <script lang="ts">
-	import { Button } from '$lib/components/ui/button';
-	import { data } from '$lib/state/dataset.svelte';
-	import { bytes } from '$lib/utils/format';
+	import { Button } from '#lib/components/ui/button/index.js';
+	import { data } from '#lib/state/dataset.svelte.js';
+	import { bytes } from '#lib/utils/format.js';
 	import UploadIcon from '@lucide/svelte/icons/upload';
 	import FileIcon from '@lucide/svelte/icons/file-spreadsheet';
 

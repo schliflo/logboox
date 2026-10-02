@@ -1,9 +1,9 @@
 /** Charging sessions for one car, newest first. Same window as trips. */
 
 import type { RequestHandler } from './$types';
-import { getVehicle, listCharging, readWindow } from '$lib/server/exports/vehicles';
-import { requireDb } from '$lib/server/context';
-import { fail, json } from '$lib/server/response';
+import { getVehicle, listCharging, readWindow } from '#lib/server/exports/vehicles.js';
+import { requireDb } from '#lib/server/context.js';
+import { fail, json } from '#lib/server/response.js';
 
 export const GET: RequestHandler = async (event) => {
 	const auth = event.locals.auth;

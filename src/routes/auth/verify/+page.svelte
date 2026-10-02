@@ -15,11 +15,11 @@
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
 	import { toast } from 'svelte-sonner';
-	import * as Card from '$lib/components/ui/card';
-	import { Button } from '$lib/components/ui/button';
-	import Seo from '$lib/components/app/Seo.svelte';
-	import { account } from '$lib/state/account.svelte';
-	import { ACCOUNTS_ENABLED } from '$lib/features';
+	import * as Card from '#lib/components/ui/card/index.js';
+	import { Button } from '#lib/components/ui/button/index.js';
+	import Seo from '#lib/components/app/Seo.svelte';
+	import { account } from '#lib/state/account.svelte.js';
+	import { ACCOUNTS_ENABLED } from '#lib/features.js';
 	import CheckIcon from '@lucide/svelte/icons/check';
 	import AlertIcon from '@lucide/svelte/icons/triangle-alert';
 

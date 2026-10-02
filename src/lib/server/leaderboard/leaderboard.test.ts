@@ -9,9 +9,9 @@
  */
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import type { ExportSummary } from '$lib/data/analytics/summary';
-import { sessionSummary, tripSummary } from '$lib/leaderboard/testing';
-import { GRACE_DAYS, locksAt } from '$lib/leaderboard/periods';
+import type { ExportSummary } from '#lib/data/analytics/summary.js';
+import { sessionSummary, tripSummary } from '#lib/leaderboard/testing.js';
+import { GRACE_DAYS, locksAt } from '#lib/leaderboard/periods.js';
 import { migratedDb, type TestDb } from '../testing/sqlite-d1';
 import { all, one, run } from '../db';
 import { findOrCreateUser } from '../auth/users';

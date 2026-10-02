@@ -51,8 +51,12 @@ export function onDemand({ entry, fileName = '_app/on-demand.json' }: OnDemandOp
 		apply: 'build',
 
 		generateBundle(_options, bundle) {
-			// Only the browser build has a service worker to inform.
+			// Only the browser build has a service worker to inform. SvelteKit builds
+			// the worker itself as a second client environment, with none of the
+			// app's chunks in it; left to run there, this would publish an empty
+			// list over the real one.
 			if (this.environment.config.consumer !== 'client') return;
+			if (this.environment.name === 'serviceWorker') return;
 
 			const chunks = Object.values(bundle).filter((part) => part.type === 'chunk');
 			const byName = new Map(chunks.map((chunk) => [chunk.fileName, chunk]));

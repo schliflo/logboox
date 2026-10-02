@@ -12,26 +12,26 @@
 -->
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import * as Card from '$lib/components/ui/card';
-	import { Badge } from '$lib/components/ui/badge';
-	import { Button } from '$lib/components/ui/button';
-	import BigStat from '$lib/components/charts/BigStat.svelte';
-	import TripDetail from '$lib/components/app/TripDetail.svelte';
-	import SessionDetail from '$lib/components/app/SessionDetail.svelte';
-	import Seo from '$lib/components/app/Seo.svelte';
-	import MadeBy from '$lib/components/app/MadeBy.svelte';
-	import { apiBytes } from '$lib/api/client';
-	import { data as dataset } from '$lib/state/dataset.svelte';
+	import * as Card from '#lib/components/ui/card/index.js';
+	import { Badge } from '#lib/components/ui/badge/index.js';
+	import { Button } from '#lib/components/ui/button/index.js';
+	import BigStat from '#lib/components/charts/BigStat.svelte';
+	import TripDetail from '#lib/components/app/TripDetail.svelte';
+	import SessionDetail from '#lib/components/app/SessionDetail.svelte';
+	import Seo from '#lib/components/app/Seo.svelte';
+	import MadeBy from '#lib/components/app/MadeBy.svelte';
+	import { apiBytes } from '#lib/api/client.js';
+	import { data as dataset } from '#lib/state/dataset.svelte.js';
 	import {
 		SHARED_COLUMNS,
 		decodeSlice,
 		type Slice,
 		type SliceKind,
 		type SliceManifest
-	} from '$lib/share/slice';
-	import { shareHeading, shareImageAlt, shareSummary } from '$lib/share/describe';
-	import { TIME_BLOB } from '$lib/history/codec';
-	import { duration, num, percent } from '$lib/utils/format';
+	} from '#lib/share/slice.js';
+	import { shareHeading, shareImageAlt, shareSummary } from '#lib/share/describe.js';
+	import { TIME_BLOB } from '#lib/history/codec.js';
+	import { duration, num, percent } from '#lib/utils/format.js';
 	import ArrowRightIcon from '@lucide/svelte/icons/arrow-right';
 	import ShieldIcon from '@lucide/svelte/icons/shield-check';
 	import type { PageData } from './$types';

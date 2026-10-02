@@ -5,7 +5,7 @@
   guessing it would be worse than leaving a blank somebody has to fill in.
 -->
 <script lang="ts">
-	import Seo from '$lib/components/app/Seo.svelte';
+	import Seo from '#lib/components/app/Seo.svelte';
 </script>
 
 <Seo title="Imprint" description="Who runs LogbooX." path="/legal/imprint" />

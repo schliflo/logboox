@@ -1,7 +1,7 @@
 /**
  * Numbers for the generated images.
  *
- * A deliberate copy of four functions from `$lib/utils/format`, which cannot
+ * A deliberate copy of four functions from `#lib/utils/format.js`, which cannot
  * be imported here: it reaches for the `settings` rune to know the viewer's
  * timezone, and a card has no viewer — it is drawn once, on a server, for
  * whoever the link is later pasted in front of. The copies take everything they

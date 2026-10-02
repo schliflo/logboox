@@ -6,10 +6,10 @@
  * shapes, roughly the same sizes — before anyone else gets to read it.
  */
 
-import { TIME_BLOB } from '$lib/history/codec';
-import { DTYPE_CTOR } from '$lib/data/schema/columns';
-import { isValidTimeZone } from '$lib/leaderboard/periods';
-import type { SliceManifest } from '$lib/share/slice';
+import { TIME_BLOB } from '#lib/history/codec.js';
+import { DTYPE_CTOR } from '#lib/data/schema/columns.js';
+import { isValidTimeZone } from '#lib/leaderboard/periods.js';
+import type { SliceManifest } from '#lib/share/slice.js';
 import { isSafeBlobName } from '../exports/r2';
 import {
 	MAX_SHARE_BLOBS,

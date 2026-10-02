@@ -16,13 +16,13 @@ import {
 	MAX_SHARE_BLOB_BYTES,
 	MAX_SHARE_MANIFEST_BYTES,
 	getShare
-} from '$lib/server/shares/repo';
-import { storeShareBlob } from '$lib/server/shares/blobs';
-import { MANIFEST_BLOB, declaredLength, readAtMost } from '$lib/server/shares/validate';
-import { blobKey, isSafeBlobName, shareBlobKey } from '$lib/server/exports/r2';
-import { now } from '$lib/server/db';
-import { requireDb, requireStorage } from '$lib/server/context';
-import { fail, json } from '$lib/server/response';
+} from '#lib/server/shares/repo.js';
+import { storeShareBlob } from '#lib/server/shares/blobs.js';
+import { MANIFEST_BLOB, declaredLength, readAtMost } from '#lib/server/shares/validate.js';
+import { blobKey, isSafeBlobName, shareBlobKey } from '#lib/server/exports/r2.js';
+import { now } from '#lib/server/db.js';
+import { requireDb, requireStorage } from '#lib/server/context.js';
+import { fail, json } from '#lib/server/response.js';
 
 export const PUT: RequestHandler = async (event) => {
 	const auth = event.locals.auth;

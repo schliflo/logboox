@@ -1,12 +1,12 @@
 <script lang="ts">
-	import * as Card from '$lib/components/ui/card';
-	import * as Table from '$lib/components/ui/table';
-	import BigStat from '$lib/components/charts/BigStat.svelte';
-	import UPlotChart, { type ChartSeries } from '$lib/components/charts/UPlotChart.svelte';
-	import { data } from '$lib/state/dataset.svelte';
-	import { breakAtGaps, selectSeries } from '$lib/data/store/decimate';
-	import { AWAKE_GAP_SECONDS } from '$lib/data/analytics/sessions';
-	import { dateTime, duration, num } from '$lib/utils/format';
+	import * as Card from '#lib/components/ui/card/index.js';
+	import * as Table from '#lib/components/ui/table/index.js';
+	import BigStat from '#lib/components/charts/BigStat.svelte';
+	import UPlotChart, { type ChartSeries } from '#lib/components/charts/UPlotChart.svelte';
+	import { data } from '#lib/state/dataset.svelte.js';
+	import { breakAtGaps, selectSeries } from '#lib/data/store/decimate.js';
+	import { AWAKE_GAP_SECONDS } from '#lib/data/analytics/sessions.js';
+	import { dateTime, duration, num } from '#lib/utils/format.js';
 
 	const stats = $derived(data.derived!);
 	const dataset = $derived(data.dataset!);

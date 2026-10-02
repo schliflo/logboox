@@ -8,7 +8,7 @@
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { ExportRecord } from '$lib/history/codec';
+import type { ExportRecord } from '#lib/history/codec.js';
 import { migratedDb, type TestDb } from '../testing/sqlite-d1';
 import { all, now, one, run } from '../db';
 import { findOrCreateUser, findUserByUnsubscribeToken, updateSettings } from '../auth/users';

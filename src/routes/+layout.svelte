@@ -2,9 +2,9 @@
 	import './layout.css';
 	import 'uplot/dist/uPlot.min.css';
 	import { ModeWatcher } from 'mode-watcher';
-	import { Toaster } from '$lib/components/ui/sonner';
-	import OfflineSupport from '$lib/components/app/OfflineSupport.svelte';
-	import { AUTHOR, AUTHOR_URL, SITE_DESCRIPTION, SITE_NAME, SITE_URL, absolute } from '$lib/seo';
+	import { Toaster } from '#lib/components/ui/sonner/index.js';
+	import OfflineSupport from '#lib/components/app/OfflineSupport.svelte';
+	import { AUTHOR, AUTHOR_URL, SITE_DESCRIPTION, SITE_NAME, SITE_URL, absolute } from '#lib/seo.js';
 
 	let { children } = $props();
 

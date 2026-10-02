@@ -15,9 +15,9 @@
   own through a public link.
 -->
 <script lang="ts">
-	import UPlotChart, { type ChartSeries } from '$lib/components/charts/UPlotChart.svelte';
-	import { decodeRange, type Column } from '$lib/data/store/columnar';
-	import { instantPowerKw } from '$lib/data/analytics/energy';
+	import UPlotChart, { type ChartSeries } from '#lib/components/charts/UPlotChart.svelte';
+	import { decodeRange, type Column } from '#lib/data/store/columnar.js';
+	import { instantPowerKw } from '#lib/data/analytics/energy.js';
 
 	export interface SampleSource {
 		time: Uint32Array;

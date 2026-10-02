@@ -10,9 +10,9 @@
 
 import { error } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types';
-import { getShare } from '$lib/server/shares/repo';
-import { storedMeta } from '$lib/server/shares/validate';
-import { maybeDb } from '$lib/server/context';
+import { getShare } from '#lib/server/shares/repo.js';
+import { storedMeta } from '#lib/server/shares/validate.js';
+import { maybeDb } from '#lib/server/context.js';
 
 export const prerender = false;
 export const ssr = true;

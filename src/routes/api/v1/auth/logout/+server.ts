@@ -4,9 +4,9 @@
  */
 
 import type { RequestHandler } from './$types';
-import { SESSION_COOKIE, revokeSession } from '$lib/server/auth/session';
-import { maybeDb } from '$lib/server/context';
-import { json } from '$lib/server/response';
+import { SESSION_COOKIE, revokeSession } from '#lib/server/auth/session.js';
+import { maybeDb } from '#lib/server/context.js';
+import { json } from '#lib/server/response.js';
 
 export const POST: RequestHandler = async (event) => {
 	const cookie = event.cookies.get(SESSION_COOKIE);

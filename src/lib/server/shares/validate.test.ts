@@ -4,7 +4,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import type { SliceManifest } from '$lib/share/slice';
+import type { SliceManifest } from '#lib/share/slice.js';
 import { MAX_SHARE_BLOBS, MAX_SHARE_MANIFEST_BYTES, SHARE_UPLOAD_WINDOW_SECONDS } from './repo';
 import {
 	MANIFEST_BLOB,

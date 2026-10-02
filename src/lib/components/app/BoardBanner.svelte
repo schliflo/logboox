@@ -8,14 +8,14 @@
 -->
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
-	import { Button } from '$lib/components/ui/button';
-	import { Badge } from '$lib/components/ui/badge';
-	import { Input } from '$lib/components/ui/input';
-	import { account } from '$lib/state/account.svelte';
-	import { data } from '$lib/state/dataset.svelte';
-	import { boardById, formatValue } from '$lib/leaderboard/boards';
-	import { monthLabel } from '$lib/leaderboard/periods';
-	import { dateOnly } from '$lib/utils/format';
+	import { Button } from '#lib/components/ui/button/index.js';
+	import { Badge } from '#lib/components/ui/badge/index.js';
+	import { Input } from '#lib/components/ui/input/index.js';
+	import { account } from '#lib/state/account.svelte.js';
+	import { data } from '#lib/state/dataset.svelte.js';
+	import { boardById, formatValue } from '#lib/leaderboard/boards.js';
+	import { monthLabel } from '#lib/leaderboard/periods.js';
+	import { dateOnly } from '#lib/utils/format.js';
 	import TrophyIcon from '@lucide/svelte/icons/trophy';
 
 	interface Props {

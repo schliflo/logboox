@@ -4,15 +4,15 @@
  */
 
 import type { RequestHandler } from './$types';
-import { one } from '$lib/server/db';
-import { deletePrefix, sharePrefix } from '$lib/server/exports/r2';
-import { deleteUser, updateSettings } from '$lib/server/auth/users';
-import { SESSION_COOKIE } from '$lib/server/auth/session';
-import { listShareIds } from '$lib/server/shares/repo';
-import { listOwn, listPending } from '$lib/server/leaderboard/repo';
-import { maybeStorage, requireDb } from '$lib/server/context';
-import { fail, json, readJson } from '$lib/server/response';
-import { MAX_ACCOUNT_BYTES } from '$lib/server/exports/limits';
+import { one } from '#lib/server/db.js';
+import { deletePrefix, sharePrefix } from '#lib/server/exports/r2.js';
+import { deleteUser, updateSettings } from '#lib/server/auth/users.js';
+import { SESSION_COOKIE } from '#lib/server/auth/session.js';
+import { listShareIds } from '#lib/server/shares/repo.js';
+import { listOwn, listPending } from '#lib/server/leaderboard/repo.js';
+import { maybeStorage, requireDb } from '#lib/server/context.js';
+import { fail, json, readJson } from '#lib/server/response.js';
+import { MAX_ACCOUNT_BYTES } from '#lib/server/exports/limits.js';
 
 export const GET: RequestHandler = async (event) => {
 	const auth = event.locals.auth;

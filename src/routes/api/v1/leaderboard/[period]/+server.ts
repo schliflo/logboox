@@ -8,12 +8,12 @@
  */
 
 import type { RequestHandler } from './$types';
-import { BOARDS, TOP_N } from '$lib/leaderboard/boards';
-import { isMonthOpen, isYearFinal, locksAt, parsePeriod } from '$lib/leaderboard/periods';
-import { monthBoards, yearBoards } from '$lib/server/leaderboard/repo';
-import { maybeDb } from '$lib/server/context';
-import { now as currentTime } from '$lib/server/db';
-import { fail } from '$lib/server/response';
+import { BOARDS, TOP_N } from '#lib/leaderboard/boards.js';
+import { isMonthOpen, isYearFinal, locksAt, parsePeriod } from '#lib/leaderboard/periods.js';
+import { monthBoards, yearBoards } from '#lib/server/leaderboard/repo.js';
+import { maybeDb } from '#lib/server/context.js';
+import { now as currentTime } from '#lib/server/db.js';
+import { fail } from '#lib/server/response.js';
 
 /**
  * Long enough to be worth a cache and short enough that withdrawing a place

@@ -12,10 +12,10 @@ import {
 	listAnnotations,
 	mergeAnnotations,
 	type AnnotationInput
-} from '$lib/server/annotations/repo';
-import { isVin } from '$lib/server/exports/repo';
-import { requireDb } from '$lib/server/context';
-import { fail, json, readJson } from '$lib/server/response';
+} from '#lib/server/annotations/repo.js';
+import { isVin } from '#lib/server/exports/repo.js';
+import { requireDb } from '#lib/server/context.js';
+import { fail, json, readJson } from '#lib/server/response.js';
 
 function present(row: {
 	start_time: number;

@@ -13,8 +13,8 @@
   along the top, because a year of squares is no longer self-evidently a month.
 -->
 <script lang="ts">
-	import { prettyDay, num } from '$lib/utils/format';
-	import { WEEKDAYS } from '$lib/utils/format';
+	import { prettyDay, num } from '#lib/utils/format.js';
+	import { WEEKDAYS } from '#lib/utils/format.js';
 	import ChartTooltip from './ChartTooltip.svelte';
 
 	interface Day {

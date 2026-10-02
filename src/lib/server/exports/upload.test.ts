@@ -5,8 +5,8 @@
  */
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import type { ExportRecord } from '$lib/history/codec';
-import type { ExportSummary } from '$lib/data/analytics/summary';
+import type { ExportRecord } from '#lib/history/codec.js';
+import type { ExportSummary } from '#lib/data/analytics/summary.js';
 import { migratedDb, type TestDb } from '../testing/sqlite-d1';
 import { memoryBucket, type MemoryBucket } from '../testing/memory-bucket';
 import { one, run } from '../db';

@@ -1,20 +1,20 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
-	import * as Card from '$lib/components/ui/card';
-	import * as Table from '$lib/components/ui/table';
-	import { Button } from '$lib/components/ui/button';
-	import { Badge } from '$lib/components/ui/badge';
-	import BigStat from '$lib/components/charts/BigStat.svelte';
-	import SessionDetail from '$lib/components/app/SessionDetail.svelte';
-	import ShareButton from '$lib/components/app/ShareButton.svelte';
-	import BoardBanner from '$lib/components/app/BoardBanner.svelte';
-	import Histogram from '$lib/components/charts/Histogram.svelte';
-	import ExportMenu from '$lib/components/app/ExportMenu.svelte';
-	import { data } from '$lib/state/dataset.svelte';
-	import { sessionLink, startFromParam } from '$lib/data/range';
-	import { settings } from '$lib/state/settings.svelte';
-	import { CHARGING_COLUMNS } from '$lib/export/columns';
+	import * as Card from '#lib/components/ui/card/index.js';
+	import * as Table from '#lib/components/ui/table/index.js';
+	import { Button } from '#lib/components/ui/button/index.js';
+	import { Badge } from '#lib/components/ui/badge/index.js';
+	import BigStat from '#lib/components/charts/BigStat.svelte';
+	import SessionDetail from '#lib/components/app/SessionDetail.svelte';
+	import ShareButton from '#lib/components/app/ShareButton.svelte';
+	import BoardBanner from '#lib/components/app/BoardBanner.svelte';
+	import Histogram from '#lib/components/charts/Histogram.svelte';
+	import ExportMenu from '#lib/components/app/ExportMenu.svelte';
+	import { data } from '#lib/state/dataset.svelte.js';
+	import { sessionLink, startFromParam } from '#lib/data/range.js';
+	import { settings } from '#lib/state/settings.svelte.js';
+	import { CHARGING_COLUMNS } from '#lib/export/columns.js';
 	import {
 		dateTime,
 		duration,
@@ -23,8 +23,8 @@
 		num,
 		fullDateTime,
 		hourLabel
-	} from '$lib/utils/format';
-	import { localHour } from '$lib/data/analytics/charging';
+	} from '#lib/utils/format.js';
+	import { localHour } from '#lib/data/analytics/charging.js';
 	import ArrowLeftIcon from '@lucide/svelte/icons/arrow-left';
 
 	const stats = $derived(data.derived!);

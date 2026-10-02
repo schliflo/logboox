@@ -7,7 +7,7 @@
  * exactly once before this file existed, and a card that disagrees with the
  * page it links to is worse than no card.
  *
- * Pure, and formats through `#lib/og/format` rather than `$lib/utils/format`:
+ * Pure, and formats through `#lib/og/format` rather than `#lib/utils/format.js`:
  * the latter reads the viewer's timezone out of a rune, and a card has no
  * viewer. Nothing here touches a time, so nothing here needs one.
  *

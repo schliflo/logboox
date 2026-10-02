@@ -11,22 +11,22 @@
   and the next is the gap that invalidates it.
 -->
 <script lang="ts">
-	import * as Card from '$lib/components/ui/card';
-	import * as Select from '$lib/components/ui/select';
-	import * as Table from '$lib/components/ui/table';
-	import { Badge } from '$lib/components/ui/badge';
-	import { Button } from '$lib/components/ui/button';
-	import BigStat from '$lib/components/charts/BigStat.svelte';
-	import Punchcard from '$lib/components/charts/Punchcard.svelte';
-	import { data } from '$lib/state/dataset.svelte';
-	import { tripLink } from '$lib/data/range';
-	import { logbook } from '$lib/state/logbook.svelte';
-	import { settings } from '$lib/state/settings.svelte';
-	import ExportMenu from '$lib/components/app/ExportMenu.svelte';
-	import { analyseLogbook } from '$lib/logbook/analytics';
-	import { logbookDocument } from '$lib/logbook/document';
-	import { PURPOSES, type Purpose } from '$lib/logbook/types';
-	import { dateOnly, duration, maskVin, num, percent } from '$lib/utils/format';
+	import * as Card from '#lib/components/ui/card/index.js';
+	import * as Select from '#lib/components/ui/select/index.js';
+	import * as Table from '#lib/components/ui/table/index.js';
+	import { Badge } from '#lib/components/ui/badge/index.js';
+	import { Button } from '#lib/components/ui/button/index.js';
+	import BigStat from '#lib/components/charts/BigStat.svelte';
+	import Punchcard from '#lib/components/charts/Punchcard.svelte';
+	import { data } from '#lib/state/dataset.svelte.js';
+	import { tripLink } from '#lib/data/range.js';
+	import { logbook } from '#lib/state/logbook.svelte.js';
+	import { settings } from '#lib/state/settings.svelte.js';
+	import ExportMenu from '#lib/components/app/ExportMenu.svelte';
+	import { analyseLogbook } from '#lib/logbook/analytics.js';
+	import { logbookDocument } from '#lib/logbook/document.js';
+	import { PURPOSES, type Purpose } from '#lib/logbook/types.js';
+	import { dateOnly, duration, maskVin, num, percent } from '#lib/utils/format.js';
 	import BookIcon from '@lucide/svelte/icons/book-marked';
 	import ArrowRightIcon from '@lucide/svelte/icons/arrow-right';
 

@@ -10,8 +10,8 @@
  */
 
 import type { RequestHandler } from './$types';
-import type { ExportRecord } from '$lib/history/codec';
-import type { ExportSummary } from '$lib/data/analytics/summary';
+import type { ExportRecord } from '#lib/history/codec.js';
+import type { ExportSummary } from '#lib/data/analytics/summary.js';
 import {
 	Invalid,
 	QuotaExceeded,
@@ -19,11 +19,11 @@ import {
 	checkRecord,
 	deleteExport,
 	getExportRow
-} from '$lib/server/exports/repo';
-import { deletePrefix, exportPrefix, isSafeBlobName } from '$lib/server/exports/r2';
-import { maybeStorage, requireDb } from '$lib/server/context';
-import { isValidTimeZone } from '$lib/leaderboard/periods';
-import { fail, json, readJson } from '$lib/server/response';
+} from '#lib/server/exports/repo.js';
+import { deletePrefix, exportPrefix, isSafeBlobName } from '#lib/server/exports/r2.js';
+import { maybeStorage, requireDb } from '#lib/server/context.js';
+import { isValidTimeZone } from '#lib/leaderboard/periods.js';
+import { fail, json, readJson } from '#lib/server/response.js';
 
 export const PUT: RequestHandler = async (event) => {
 	const auth = event.locals.auth;

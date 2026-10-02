@@ -12,7 +12,7 @@ import { one, type Db } from '../db';
 import { MAX_ACCOUNT_BYTES, MAX_BLOB_BYTES } from './limits';
 import { blobKey, exportPrefix, listBlobSizes } from './r2';
 import { expectedBlobNames, settleExport } from './repo';
-import type { ExportRecord } from '$lib/history/codec';
+import type { ExportRecord } from '#lib/history/codec.js';
 
 /** Refused with the status the route answers; `missing` names absent buffers. */
 export interface Refused {

@@ -1,9 +1,9 @@
 /** Turning down a place, which is the end of the matter for that board. */
 
 import type { RequestHandler } from './$types';
-import { dismiss } from '$lib/server/leaderboard/repo';
-import { requireDb } from '$lib/server/context';
-import { fail, json } from '$lib/server/response';
+import { dismiss } from '#lib/server/leaderboard/repo.js';
+import { requireDb } from '#lib/server/context.js';
+import { fail, json } from '#lib/server/response.js';
 
 export const POST: RequestHandler = async (event) => {
 	const auth = event.locals.auth;

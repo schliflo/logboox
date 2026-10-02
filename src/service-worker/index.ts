@@ -19,7 +19,9 @@
  * every open tab, and the export on screen in each of them is held in memory.
  */
 
-import { base, build, files, prerendered, version } from '$service-worker';
+import { version } from '$app/env';
+import { assets, immutable, prerendered } from '$app/manifest';
+import { resolve } from '$app/paths';
 import {
 	deferrals,
 	fetchCacheMode,
@@ -29,12 +31,18 @@ import {
 	optionalFiles,
 	pageKey,
 	precacheList
-} from '$lib/offline/precache';
+} from '#lib/offline/precache.js';
 
 const sw = self as unknown as ServiceWorkerGlobalScope;
 
+// The manifest names everything relative to the base path, and the base is
+// whatever the root resolves to.
+const base = resolve('/').replace(/\/$/, '');
+const underBase = (entries: Array<{ path: string }>) =>
+	entries.map((entry) => `${base}/${entry.path}`);
+
 const STORE = `app-${version}`;
-const PRECACHE = precacheList(build, files, prerendered);
+const PRECACHE = precacheList(underBase(immutable), underBase(assets), underBase(prerendered));
 const OPTIONAL = optionalFiles(base);
 const KNOWN = new Set([...PRECACHE, ...OPTIONAL]);
 const IMMUTABLE = immutablePrefix(base);

@@ -11,16 +11,16 @@
 -->
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
-	import * as Dialog from '$lib/components/ui/dialog';
-	import { Button, buttonVariants } from '$lib/components/ui/button';
-	import { Input } from '$lib/components/ui/input';
-	import { Label } from '$lib/components/ui/label';
-	import { api } from '$lib/api/client';
-	import { account } from '$lib/state/account.svelte';
-	import { data } from '$lib/state/dataset.svelte';
-	import { settings } from '$lib/state/settings.svelte';
-	import { exactBuffer } from '$lib/history/codec';
-	import { encodeSlice, manifestOf, sliceDataset } from '$lib/share/slice';
+	import * as Dialog from '#lib/components/ui/dialog/index.js';
+	import { Button, buttonVariants } from '#lib/components/ui/button/index.js';
+	import { Input } from '#lib/components/ui/input/index.js';
+	import { Label } from '#lib/components/ui/label/index.js';
+	import { api } from '#lib/api/client.js';
+	import { account } from '#lib/state/account.svelte.js';
+	import { data } from '#lib/state/dataset.svelte.js';
+	import { settings } from '#lib/state/settings.svelte.js';
+	import { exactBuffer } from '#lib/history/codec.js';
+	import { encodeSlice, manifestOf, sliceDataset } from '#lib/share/slice.js';
 	import CopyIcon from '@lucide/svelte/icons/copy';
 	import ShareIcon from '@lucide/svelte/icons/share-2';
 

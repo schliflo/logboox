@@ -13,17 +13,17 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { toast } from 'svelte-sonner';
-	import * as Card from '$lib/components/ui/card';
-	import * as Dialog from '$lib/components/ui/dialog';
-	import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
-	import { Badge } from '$lib/components/ui/badge';
-	import { Button, buttonVariants } from '$lib/components/ui/button';
-	import { api } from '$lib/api/client';
-	import { data } from '$lib/state/dataset.svelte';
-	import { account } from '$lib/state/account.svelte';
-	import { history, type LibraryEntry, type VehicleGroup } from '$lib/state/history.svelte';
-	import { settings } from '$lib/state/settings.svelte';
-	import { bytes, dateOnly, maskVin, num } from '$lib/utils/format';
+	import * as Card from '#lib/components/ui/card/index.js';
+	import * as Dialog from '#lib/components/ui/dialog/index.js';
+	import * as DropdownMenu from '#lib/components/ui/dropdown-menu/index.js';
+	import { Badge } from '#lib/components/ui/badge/index.js';
+	import { Button, buttonVariants } from '#lib/components/ui/button/index.js';
+	import { api } from '#lib/api/client.js';
+	import { data } from '#lib/state/dataset.svelte.js';
+	import { account } from '#lib/state/account.svelte.js';
+	import { history, type LibraryEntry, type VehicleGroup } from '#lib/state/history.svelte.js';
+	import { settings } from '#lib/state/settings.svelte.js';
+	import { bytes, dateOnly, maskVin, num } from '#lib/utils/format.js';
 	import CarIcon from '@lucide/svelte/icons/car';
 	import CloudIcon from '@lucide/svelte/icons/cloud';
 	import CloudOffIcon from '@lucide/svelte/icons/cloud-off';

@@ -1,15 +1,15 @@
 <script lang="ts">
-	import DropZone from '$lib/components/app/DropZone.svelte';
-	import ExportLibrary from '$lib/components/app/ExportLibrary.svelte';
-	import ParseProgress from '$lib/components/app/ParseProgress.svelte';
-	import { Button } from '$lib/components/ui/button';
-	import * as Card from '$lib/components/ui/card';
-	import { Badge } from '$lib/components/ui/badge';
-	import MadeBy from '$lib/components/app/MadeBy.svelte';
-	import MovedNotice from '$lib/components/app/MovedNotice.svelte';
-	import AccountMenu from '$lib/components/app/AccountMenu.svelte';
-	import Seo from '$lib/components/app/Seo.svelte';
-	import { data } from '$lib/state/dataset.svelte';
+	import DropZone from '#lib/components/app/DropZone.svelte';
+	import ExportLibrary from '#lib/components/app/ExportLibrary.svelte';
+	import ParseProgress from '#lib/components/app/ParseProgress.svelte';
+	import { Button } from '#lib/components/ui/button/index.js';
+	import * as Card from '#lib/components/ui/card/index.js';
+	import { Badge } from '#lib/components/ui/badge/index.js';
+	import MadeBy from '#lib/components/app/MadeBy.svelte';
+	import MovedNotice from '#lib/components/app/MovedNotice.svelte';
+	import AccountMenu from '#lib/components/app/AccountMenu.svelte';
+	import Seo from '#lib/components/app/Seo.svelte';
+	import { data } from '#lib/state/dataset.svelte.js';
 	import ShieldIcon from '@lucide/svelte/icons/shield-check';
 	import ZapIcon from '@lucide/svelte/icons/zap';
 	import GaugeIcon from '@lucide/svelte/icons/gauge';

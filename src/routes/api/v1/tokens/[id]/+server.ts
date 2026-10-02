@@ -1,9 +1,9 @@
 /** Revokes one token. It stops working at once, everywhere. */
 
 import type { RequestHandler } from './$types';
-import { revokeToken } from '$lib/server/auth/apiTokens';
-import { requireDb } from '$lib/server/context';
-import { fail, json } from '$lib/server/response';
+import { revokeToken } from '#lib/server/auth/apiTokens.js';
+import { requireDb } from '#lib/server/context.js';
+import { fail, json } from '#lib/server/response.js';
 
 export const DELETE: RequestHandler = async (event) => {
 	const auth = event.locals.auth;

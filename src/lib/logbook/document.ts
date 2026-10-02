@@ -1,7 +1,7 @@
 /**
  * The Fahrtenbuch as something to hand over.
  *
- * The rows are the easy part and live in `$lib/export/columns`. This is
+ * The rows are the easy part and live in `#lib/export/columns.js`. This is
  * everything around them: which period the file covers, what was driven for
  * what reason, and — the part that matters most — how many kilometres the book
  * cannot account for.

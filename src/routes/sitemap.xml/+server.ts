@@ -4,7 +4,7 @@
  * no absolute URL to publish, so the sitemap is served empty but valid.
  */
 
-import { SITE_URL } from '$lib/seo';
+import { SITE_URL } from '#lib/seo.js';
 
 export const prerender = true;
 

@@ -11,11 +11,11 @@
  */
 
 import type { RequestHandler } from './$types';
-import type { ExportRecord } from '$lib/history/codec';
-import { getShare } from '$lib/server/shares/repo';
-import { getRecord } from '$lib/server/exports/repo';
-import { requireDb } from '$lib/server/context';
-import { fail } from '$lib/server/response';
+import type { ExportRecord } from '#lib/history/codec.js';
+import { getShare } from '#lib/server/shares/repo.js';
+import { getRecord } from '#lib/server/exports/repo.js';
+import { requireDb } from '#lib/server/context.js';
+import { fail } from '#lib/server/response.js';
 
 /** Same shape as a VIN, so nothing downstream has to special-case it. */
 const REDACTED_VIN = 'SHARED00000000000';

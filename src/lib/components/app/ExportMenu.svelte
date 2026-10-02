@@ -15,13 +15,13 @@
 -->
 <script lang="ts" generics="T">
 	import { toast } from 'svelte-sonner';
-	import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
-	import { buttonVariants } from '$lib/components/ui/button';
-	import { downloadBlob } from '$lib/utils/download';
-	import { toCsv } from '$lib/export/csv';
-	import { exportFileName, type ExportKind } from '$lib/export/filenames';
-	import type { Column } from '$lib/export/columns';
-	import type { Sheet } from '$lib/export/xlsx';
+	import * as DropdownMenu from '#lib/components/ui/dropdown-menu/index.js';
+	import { buttonVariants } from '#lib/components/ui/button/index.js';
+	import { downloadBlob } from '#lib/utils/download.js';
+	import { toCsv } from '#lib/export/csv.js';
+	import { exportFileName, type ExportKind } from '#lib/export/filenames.js';
+	import type { Column } from '#lib/export/columns.js';
+	import type { Sheet } from '#lib/export/xlsx.js';
 	import DownloadIcon from '@lucide/svelte/icons/download';
 	import TableIcon from '@lucide/svelte/icons/table';
 	import SheetIcon from '@lucide/svelte/icons/sheet';
@@ -80,7 +80,7 @@
 	}
 
 	async function xlsx() {
-		const { toXlsx } = await import('$lib/export/xlsx');
+		const { toXlsx } = await import('#lib/export/xlsx.js');
 		const sheets = [{ name: title, columns, rows, timeZone }, ...(extraSheet ? [extraSheet] : [])];
 		save(
 			'xlsx',
@@ -91,7 +91,7 @@
 	}
 
 	async function pdf() {
-		const { toPdf } = await import('$lib/export/pdf');
+		const { toPdf } = await import('#lib/export/pdf.js');
 		const bytes = await toPdf({ title, subtitle, columns, rows, timeZone, totals, notes });
 		save('pdf', bytes, 'application/pdf');
 	}

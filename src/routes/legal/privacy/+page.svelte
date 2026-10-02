@@ -10,7 +10,7 @@
   and says what it reveals. That page is about the car; this one is about us.
 -->
 <script lang="ts">
-	import Seo from '$lib/components/app/Seo.svelte';
+	import Seo from '#lib/components/app/Seo.svelte';
 </script>
 
 <Seo
