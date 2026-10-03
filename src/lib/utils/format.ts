@@ -84,6 +84,20 @@ export function timeOnly(epochSeconds: number): string {
 	);
 }
 
+/** "Sunday 30 August 2026", in the reader's time zone. */
+export function fullDay(epochSeconds: number): string {
+	return formatter({ weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }).format(
+		new Date(epochSeconds * 1000)
+	);
+}
+
+/** "Sun 30 Aug", in the reader's time zone. */
+export function shortDay(epochSeconds: number): string {
+	return formatter({ weekday: 'short', day: 'numeric', month: 'short' }).format(
+		new Date(epochSeconds * 1000)
+	);
+}
+
 export function dateOnly(epochSeconds: number): string {
 	return formatter({ day: 'numeric', month: 'short', year: 'numeric' }).format(
 		new Date(epochSeconds * 1000)

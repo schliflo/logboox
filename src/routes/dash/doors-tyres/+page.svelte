@@ -1,4 +1,5 @@
 <script lang="ts">
+	import PageFindings from '#lib/components/app/PageFindings.svelte';
 	import * as Card from '#lib/components/ui/card/index.js';
 	import BigStat from '#lib/components/charts/BigStat.svelte';
 	import Punchcard from '#lib/components/charts/Punchcard.svelte';
@@ -47,6 +48,7 @@
 </script>
 
 <div class="mx-auto max-w-6xl space-y-6">
+	<PageFindings />
 	<Card.Root>
 		<Card.Header>
 			<Card.Title>Your car knows your schedule</Card.Title>

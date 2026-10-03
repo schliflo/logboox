@@ -50,6 +50,66 @@ export interface DataSource {
 	demo: boolean;
 }
 
+/**
+ * What was on screen, so a reload or a bookmark into the dashboard can open it
+ * again instead of starting over: which kept exports, and which range. Only
+ * ids and dates — the data itself is in IndexedDB, and only there.
+ */
+const LAST_KEY = 'logboox.last';
+
+interface Last {
+	ids: string[];
+	/** The range on screen; null for everything, absent when never chosen. */
+	range?: TimeRange | null;
+}
+
+function recall(): Last | null {
+	try {
+		const raw = localStorage.getItem(LAST_KEY);
+		return raw ? (JSON.parse(raw) as Last) : null;
+	} catch {
+		return null;
+	}
+}
+
+function remember(patch: Partial<Last>): void {
+	try {
+		const next = { ...(recall() ?? { ids: [] }), ...patch };
+		localStorage.setItem(LAST_KEY, JSON.stringify(next));
+	} catch {
+		// Private windows and full storage: a reload will start from the beginning.
+	}
+}
+
+/** Whether a dashboard opened cold here has something to reopen. */
+export function hasRecord(): boolean {
+	return (recall()?.ids.length ?? 0) > 0;
+}
+
+/** The most a whole record opened in one go may ask of a tab. */
+const RECORD_BUDGET = 1024 * 1024 * 1024;
+
+/**
+ * The exports that make up a car's record as it is opened in one go: the
+ * newest first, stopping before the tab would have to hold more than it
+ * sensibly can. Without a VIN, the newest car's — a real one over the
+ * demonstration month whenever there is one.
+ */
+export function recordIds(vin?: string): string[] {
+	const real = history.entries.filter((entry) => !entry.isDemo);
+	const candidates = real.length > 0 ? real : history.entries;
+	const car = vin ?? [...candidates].sort((a, b) => b.endTime - a.endTime)[0]?.vin;
+	if (!car) return [];
+	const ids: string[] = [];
+	for (const entry of candidates
+		.filter((other) => other.vin === car)
+		.sort((a, b) => b.endTime - a.endTime)) {
+		if (ids.length > 0 && history.estimate([...ids, entry.id]).bytes > RECORD_BUDGET) break;
+		ids.push(entry.id);
+	}
+	return ids;
+}
+
 class DatasetStore {
 	status = $state<Status>('empty');
 	progress = $state<LoadProgress | null>(null);
@@ -93,6 +153,8 @@ class DatasetStore {
 	}
 
 	private settle(dataset: Dataset, derived: DerivedData, source: DataSource) {
+		// Someone else's export is never kept here, so there is nothing to reopen.
+		if (source.kind !== 'shared') remember({ ids: source.ids, range: undefined });
 		this.full = { dataset, derived };
 		this.show(dataset, derived);
 		this.source = source;
@@ -131,6 +193,8 @@ class DatasetStore {
 		// A range around every sample is everything, without a copy to analyse.
 		const { time } = full.dataset;
 		if (range && range.from <= time[0] && range.to > time[time.length - 1]) range = null;
+
+		if (!quiet) remember({ range });
 
 		if (!range) {
 			this.generation++;
@@ -230,6 +294,8 @@ class DatasetStore {
 			return;
 		}
 
+		// What reopens after a reload is the kept copy, under the id it was kept as.
+		if (this.source.kind === 'fresh') remember({ ids: [kept.id] });
 		const first = history.entries.length === 0;
 		await history.requestPersistence();
 		await history.refresh();
@@ -307,6 +373,61 @@ class DatasetStore {
 		}
 	}
 
+	/**
+	 * Adds newly dropped files to the record on screen rather than replacing it.
+	 *
+	 * The files are read and kept like any other, and then every export of the
+	 * same car this browser holds is opened as one timeline. Nobody should have
+	 * to know which files a month came in; they see one continuous record that
+	 * got longer. When nothing else of that car is kept here — or the new copy
+	 * could not be kept — what was dropped is shown on its own.
+	 */
+	async extend(files: File[]) {
+		await goto('/');
+		this.begin();
+		try {
+			const result = await loadFiles(files, settings.timeZone, (progress) => {
+				this.progress = progress;
+			});
+
+			if (result.kind === 'restored') {
+				this.status = 'empty';
+				this.progress = null;
+				await history.refresh();
+				toast(
+					result.ids.length === 1 ? 'Restored one export' : `Restored ${result.ids.length} exports`
+				);
+				return;
+			}
+
+			await this.afterKeep(result.kept);
+			const record = recordIds(result.dataset.vin);
+
+			if (result.kept?.ok && record.length > 1 && record.includes(result.kept.id)) {
+				await this.open(record);
+				return;
+			}
+
+			this.settle(result.dataset, result.derived, {
+				kind: 'fresh',
+				ids: [result.dataset.exportId],
+				demo: false
+			});
+			await this.applyDefaultRange();
+			await goto('/dash/overview');
+		} catch (error) {
+			this.fail(error);
+		}
+	}
+
+	/**
+	 * Opens the newest car's whole record: every export of it kept in this
+	 * browser, as one timeline. What "pick up where you left off" means.
+	 */
+	async openRecord() {
+		await this.open(recordIds());
+	}
+
 	async loadDemoData() {
 		this.begin();
 		try {
@@ -331,7 +452,21 @@ class DatasetStore {
 	 * timeline, which is the only way to see more than the thirty days any
 	 * single export covers.
 	 */
-	async open(ids: string[]) {
+	/**
+	 * Opens what was on screen last time, landing on `to`, for a dashboard
+	 * address opened cold. False when there is nothing kept to go back to.
+	 */
+	async restore(to: string): Promise<boolean> {
+		const last = recall();
+		if (!last || last.ids.length === 0) return false;
+		await history.refresh();
+		if (!history.openable(last.ids)) return false;
+		await this.open(last.ids, to);
+		if (this.status === 'ready' && last.range !== undefined) await this.setRange(last.range);
+		return this.status === 'ready';
+	}
+
+	async open(ids: string[], to = '/dash/overview') {
 		if (ids.length === 0) return;
 		this.begin();
 		try {
@@ -347,7 +482,7 @@ class DatasetStore {
 			await this.applyDefaultRange();
 			// Straight to the dashboard: the opening sequence is for the moment
 			// an export is first read, not for every time it is picked up again.
-			await goto('/dash/overview');
+			await goto(to);
 		} catch (error) {
 			this.fail(error);
 		}

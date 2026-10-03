@@ -21,6 +21,15 @@ import type { SpeedProfile, ExtremeEvent } from './drivingStyle';
 import { localParts } from './daily';
 import { tripLink } from '../range';
 
+/** `YYYY-MM-DD` as "Sun 9 Aug". */
+const prettyDay = (key: string) =>
+	new Intl.DateTimeFormat('en-GB', {
+		weekday: 'short',
+		day: 'numeric',
+		month: 'short',
+		timeZone: 'UTC'
+	}).format(new Date(`${key}T00:00:00Z`));
+
 export type FactTone = 'headline' | 'habit' | 'quirk' | 'privacy';
 
 export interface Fact {
@@ -289,8 +298,8 @@ export function habitFacts(input: FactInputs): Fact[] {
 			kicker: 'Days the car never moved',
 			value: `${idleDays.length}`,
 			detail: `${idleDays
-				.map((d) => d.date)
 				.slice(0, 5)
+				.map((d) => prettyDay(d.date))
 				.join(
 					', '
 				)}${idleDays.length > 5 ? ' and more' : ''}. A parked car still writes a full second-by-second log.`,
@@ -309,7 +318,7 @@ export function habitFacts(input: FactInputs): Fact[] {
 			kicker: 'Your busiest day',
 			value: nf(busiest.distanceKm),
 			unit: 'km',
-			detail: `${busiest.date}, with ${busiest.trips} trips and ${duration(busiest.drivingSeconds)} of driving.`,
+			detail: `${prettyDay(busiest.date)}, with ${busiest.trips} trips and ${duration(busiest.drivingSeconds)} of driving.`,
 			href: '/dash/overview'
 		});
 	}

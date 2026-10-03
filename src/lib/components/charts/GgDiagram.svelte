@@ -108,7 +108,7 @@
 		}
 
 		context.fillStyle = muted;
-		context.font = '10px Inter Variable, system-ui, sans-serif';
+		context.font = '10px Geist Variable, system-ui, sans-serif';
 		context.textAlign = 'center';
 		context.fillText('accelerating', side / 2, 12);
 		context.fillText('braking', side / 2, side - 4);

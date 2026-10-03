@@ -137,6 +137,11 @@ Worker has, backed by a local database and bucket under `.wrangler/state`. In
 how you follow a sign-in link locally. Unsubscribe links are signed with a fixed
 development secret unless `.dev.vars` sets `MAIL_SECRET`.
 
+`pnpm db:seed:local` fills the local database with a made-up community: fifteen
+drivers with places on every board for this month and the three before it, the
+same every run. Sign in as `dev@logboox.test` to see the boards with places of
+your own. Its rows all start `seed-`, and running it again replaces them.
+
 Anywhere else the printing fallback is gone: if the `EMAIL` binding or
 `MAIL_FROM` is missing, sending mail is an error, never a silent print.
 

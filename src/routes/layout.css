@@ -1,7 +1,7 @@
 @import 'tailwindcss';
 @import 'tw-animate-css';
 @import 'shadcn-svelte/tailwind.css';
-@import '@fontsource-variable/inter';
+@import '@fontsource-variable/geist';
 
 @custom-variant dark (&:is(.dark *));
 
@@ -29,7 +29,7 @@
 	--chart-3: oklch(0.439 0 0);
 	--chart-4: oklch(0.371 0 0);
 	--chart-5: oklch(0.269 0 0);
-	--radius: 0.625rem;
+	--radius: 0.75rem;
 	--sidebar: oklch(0.985 0 0);
 	--sidebar-foreground: oklch(0.141 0.005 285.823);
 	--sidebar-primary: oklch(0.21 0.006 285.885);
@@ -41,37 +41,38 @@
 }
 
 .dark {
-	--background: oklch(0.141 0.005 285.823);
-	--foreground: oklch(0.985 0 0);
-	--card: oklch(0.21 0.006 285.885);
-	--card-foreground: oklch(0.985 0 0);
-	--popover: oklch(0.21 0.006 285.885);
-	--popover-foreground: oklch(0.985 0 0);
-	--primary: oklch(0.92 0.004 286.32);
-	--primary-foreground: oklch(0.21 0.006 285.885);
-	--secondary: oklch(0.274 0.006 286.033);
-	--secondary-foreground: oklch(0.985 0 0);
-	--muted: oklch(0.274 0.006 286.033);
-	--muted-foreground: oklch(0.705 0.015 286.067);
-	--accent: oklch(0.274 0.006 286.033);
-	--accent-foreground: oklch(0.985 0 0);
-	--destructive: oklch(0.704 0.191 22.216);
-	--border: oklch(1 0 0 / 10%);
-	--input: oklch(1 0 0 / 15%);
-	--ring: oklch(0.552 0.016 285.938);
+	/* Near-black ground, raised cards, quiet borders: the numbers carry the colour. */
+	--background: #0a0a0c;
+	--foreground: #f4f4f5;
+	--card: #141417;
+	--card-foreground: #f4f4f5;
+	--popover: #17171a;
+	--popover-foreground: #f4f4f5;
+	--primary: #f4f4f5;
+	--primary-foreground: #0a0a0c;
+	--secondary: #1f1f23;
+	--secondary-foreground: #f4f4f5;
+	--muted: #1c1c20;
+	--muted-foreground: #a1a1aa;
+	--accent: #1f1f23;
+	--accent-foreground: #f4f4f5;
+	--destructive: #f0605a;
+	--border: #232328;
+	--input: #34343a;
+	--ring: #3b82f6;
 	--chart-1: oklch(0.87 0 0);
 	--chart-2: oklch(0.556 0 0);
 	--chart-3: oklch(0.439 0 0);
 	--chart-4: oklch(0.371 0 0);
 	--chart-5: oklch(0.269 0 0);
-	--sidebar: oklch(0.21 0.006 285.885);
-	--sidebar-foreground: oklch(0.985 0 0);
-	--sidebar-primary: oklch(0.488 0.243 264.376);
-	--sidebar-primary-foreground: oklch(0.985 0 0);
-	--sidebar-accent: oklch(0.274 0.006 286.033);
-	--sidebar-accent-foreground: oklch(0.985 0 0);
-	--sidebar-border: oklch(1 0 0 / 10%);
-	--sidebar-ring: oklch(0.552 0.016 285.938);
+	--sidebar: #111113;
+	--sidebar-foreground: #d4d4d8;
+	--sidebar-primary: #3b82f6;
+	--sidebar-primary-foreground: #ffffff;
+	--sidebar-accent: #1f1f23;
+	--sidebar-accent-foreground: #ffffff;
+	--sidebar-border: #222226;
+	--sidebar-ring: #3b82f6;
 }
 
 /*
@@ -106,19 +107,19 @@
 }
 
 .dark {
-	--viz-surface: #1a1a19;
-	--viz-grid: #2c2c2a;
-	--viz-axis: #383835;
-	--viz-muted: #898781;
+	--viz-surface: #141417;
+	--viz-grid: #222226;
+	--viz-axis: #34343a;
+	--viz-muted: #8b8b94;
 
-	--viz-1: #3987e5;
-	--viz-2: #d95926;
-	--viz-3: #199e70;
-	--viz-4: #c98500;
-	--viz-5: #d55181;
-	--viz-6: #008300;
-	--viz-7: #9085e9;
-	--viz-8: #e66767;
+	--viz-1: #3b82f6;
+	--viz-2: #fb923c;
+	--viz-3: #10b981;
+	--viz-4: #f59e0b;
+	--viz-5: #f472b6;
+	--viz-6: #22c55e;
+	--viz-7: #a78bfa;
+	--viz-8: #f43f5e;
 }
 
 /* Semantic roles — one signal, one colour, everywhere. */
@@ -135,7 +136,7 @@
 }
 
 @theme inline {
-	--font-sans: 'Inter Variable', sans-serif;
+	--font-sans: 'Geist Variable', system-ui, sans-serif;
 	--color-viz-1: var(--viz-1);
 	--color-viz-2: var(--viz-2);
 	--color-viz-3: var(--viz-3);
@@ -202,9 +203,45 @@
 		@apply border-border outline-ring/50;
 	}
 	body {
-		@apply bg-background text-foreground;
+		@apply bg-background text-foreground antialiased;
 	}
 	html {
 		@apply font-sans;
+	}
+}
+
+/* Big figures and tables line their digits up. */
+@utility tabular {
+	font-variant-numeric: tabular-nums;
+}
+
+/* An uppercase label above a figure or a group of links. */
+@utility eyebrow {
+	font-size: 0.6875rem;
+	font-weight: 600;
+	letter-spacing: 0.1em;
+	text-transform: uppercase;
+	color: var(--muted-foreground);
+}
+
+/* A small tinted label, in the colour set as --chip. */
+@utility chip {
+	align-self: flex-start;
+	width: fit-content;
+	border-radius: 9999px;
+	padding: 0.125rem 0.625rem;
+	font-size: 0.75rem;
+	font-weight: 600;
+	color: var(--chip);
+	background: color-mix(in oklab, var(--chip) 16%, transparent);
+}
+
+/* An inline link to more of the same, in the link colour. */
+@utility text-primary-link {
+	color: var(--viz-1);
+	text-decoration: underline;
+	text-underline-offset: 3px;
+	&:hover {
+		color: color-mix(in oklab, var(--viz-1) 70%, white);
 	}
 }

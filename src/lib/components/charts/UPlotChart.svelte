@@ -157,13 +157,13 @@
 					stroke: labelColor,
 					grid: { stroke: gridColor, width: 1 },
 					ticks: { stroke: axisColor, width: 1 },
-					font: '11px Inter Variable, system-ui, sans-serif'
+					font: '11px Geist Variable, system-ui, sans-serif'
 				},
 				{
 					stroke: labelColor,
 					grid: { stroke: gridColor, width: 1 },
 					ticks: { stroke: axisColor, width: 1 },
-					font: '11px Inter Variable, system-ui, sans-serif',
+					font: '11px Geist Variable, system-ui, sans-serif',
 					size: 48
 				}
 			],
