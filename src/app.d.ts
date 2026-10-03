@@ -6,14 +6,9 @@ import type { User } from '#lib/server/auth/users.js';
 
 declare global {
 	namespace App {
-		interface Platform {
-			env: Env;
-			ctx: ExecutionContext;
-			// The Workers `CacheStorage` carries `default`; the DOM one TypeScript
-			// resolves here does not, so the colo cache is named explicitly.
-			caches: CacheStorage & { readonly default: Cache };
-			cf?: IncomingRequestCfProperties;
-		}
+		// No `Platform`, on purpose: the Cloudflare adapter no longer fills
+		// `event.platform`, and leaving it undeclared makes reading it a type
+		// error. Bindings come from `#lib/server/context.js`.
 
 		interface Locals {
 			/**

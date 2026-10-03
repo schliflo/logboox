@@ -13,7 +13,7 @@ permissions:
 
 jobs:
   check:
-    name: Lint, types, tests, build
+    name: Lint, types, tests, build, smoke
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -40,3 +40,7 @@ jobs:
       # would leave nothing to deploy, and the deploy itself would still pass.
       - name: The adapter produced a Worker
         run: test -f .svelte-kit/cloudflare/_worker.js
+
+      # The built Worker under Wrangler, with its bindings: what the unit
+      # tests cannot see. See tooling/smoke.ts.
+      - run: pnpm test:smoke
