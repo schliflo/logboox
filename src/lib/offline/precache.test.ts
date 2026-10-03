@@ -30,7 +30,7 @@ describe('precacheList', () => {
 	it('leaves out what only crawlers and link previews fetch', () => {
 		const list = precacheList(
 			[],
-			['/og.png', '/icon-192.png'],
+			['/og.png', '/bimi.svg', '/icon-192.png'],
 			['/', '/robots.txt', '/sitemap.xml']
 		);
 		expect(list).toEqual(['/icon-192.png', '/']);
