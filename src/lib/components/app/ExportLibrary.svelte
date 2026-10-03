@@ -36,11 +36,8 @@
 	import TrashIcon from '@lucide/svelte/icons/trash-2';
 
 	/** Above this, a merged timeline is worth warning about before it is built. */
-	const HEAVY = 500 * 1024 * 1024;
 	const VERY_HEAVY = 1024 * 1024 * 1024;
 
-	let selected = $state<string[]>([]);
-	let selectedVin = $state<string | null>(null);
 	let confirmingClear = $state(false);
 
 	onMount(() => {
@@ -56,22 +53,7 @@
 		if (account.signedIn) history.refreshRemote();
 	});
 
-	const estimate = $derived(history.estimate(selected));
 	const notInAccount = $derived(history.notInAccount);
-
-	function toggle(entry: LibraryEntry) {
-		// Exports only merge within one vehicle, so picking another vehicle
-		// starts a fresh selection rather than offering an impossible combination.
-		if (selectedVin !== entry.vin) {
-			selectedVin = entry.vin;
-			selected = [entry.id];
-			return;
-		}
-		selected = selected.includes(entry.id)
-			? selected.filter((id) => id !== entry.id)
-			: [...selected, entry.id];
-		if (selected.length === 0) selectedVin = null;
-	}
 
 	/** Everything one vehicle's exports cover end to end, holes included. */
 	function span(group: VehicleGroup): string {
@@ -99,15 +81,11 @@
 
 	async function remove(ids: string[]) {
 		await history.remove(ids);
-		selected = selected.filter((id) => !ids.includes(id));
-		if (selected.length === 0) selectedVin = null;
 	}
 
 	async function clearEverything() {
 		confirmingClear = false;
 		await history.removeAll();
-		selected = [];
-		selectedVin = null;
 	}
 
 	/** Copies up to the account, and says plainly what would not go. */
@@ -237,18 +215,14 @@
 </script>
 
 {#if history.count > 0}
-	<section class="mt-10 space-y-4">
+	<section class="mt-4 space-y-4">
 		<div class="flex flex-wrap items-end justify-between gap-2">
 			<div>
-				<h2 class="text-lg font-medium">Your exports</h2>
+				<h2 class="text-base font-medium">Imported files</h2>
 				<p class="text-sm text-muted-foreground">
-					{#if account.signedIn}
-						Kept in this browser, in your account, or both. Open one, or every export from the same
-						car as a single timeline.
-					{:else}
-						Stored on this device only. Open one, or every export from the same car as a single
-						timeline.
-					{/if}
+					What your record is made of{account.signedIn
+						? ', kept in this browser, in your account, or both'
+						: ', stored on this device only'}. Nothing here needs looking after day to day.
 				</p>
 			</div>
 			<div class="flex items-center gap-2">
@@ -306,12 +280,13 @@
 
 						{#if group.entries.length > 1}
 							<Button
+								variant="outline"
 								size="sm"
 								disabled={data.status === 'loading' || history.busy}
 								onclick={() => openTogether(ids)}
 							>
 								<LayersIcon class="size-4" />
-								Open all {group.entries.length}
+								Open as one record
 							</Button>
 						{/if}
 					</div>
@@ -319,19 +294,9 @@
 
 				<Card.Content class="space-y-1">
 					{#each group.entries as entry (entry.id)}
-						{@const checked = selected.includes(entry.id)}
 						<div
 							class="flex flex-wrap items-center gap-3 rounded-lg px-2 py-2 transition-colors hover:bg-muted/50"
-							class:bg-muted={checked}
 						>
-							<input
-								type="checkbox"
-								class="size-4 shrink-0 accent-primary"
-								{checked}
-								onchange={() => toggle(entry)}
-								aria-label="Select the export from {dateOnly(entry.startTime)}"
-							/>
-
 							<div class="min-w-40 flex-1">
 								<p class="flex items-center gap-2 text-sm font-medium">
 									{dateOnly(entry.startTime)} – {dateOnly(entry.endTime)}
@@ -361,28 +326,23 @@
 								</p>
 							</div>
 
-							{#if entry.local}
-								<Button variant="secondary" size="sm" onclick={() => data.open([entry.id])}>
-									Open
-								</Button>
-							{:else}
-								<Button
-									variant="secondary"
-									size="sm"
-									disabled={history.busy}
-									onclick={() => fetchAndOpen(entry)}
-								>
-									<CloudDownloadIcon class="size-4" />
-									Fetch and open
-								</Button>
-							{/if}
-
 							<DropdownMenu.Root>
 								<DropdownMenu.Trigger class={buttonVariants({ variant: 'ghost', size: 'icon' })}>
 									<EllipsisIcon class="size-4" />
 									<span class="sr-only">More for this export</span>
 								</DropdownMenu.Trigger>
 								<DropdownMenu.Content align="end">
+									{#if entry.local}
+										<DropdownMenu.Item onclick={() => data.open([entry.id])}>
+											<LayersIcon class="size-4" />
+											Open on its own
+										</DropdownMenu.Item>
+									{:else}
+										<DropdownMenu.Item disabled={history.busy} onclick={() => fetchAndOpen(entry)}>
+											<CloudDownloadIcon class="size-4" />
+											Fetch and open
+										</DropdownMenu.Item>
+									{/if}
 									{#if entry.local}
 										<DropdownMenu.Item onclick={() => backup([entry.id])}>
 											<DownloadIcon class="size-4" />
@@ -423,27 +383,6 @@
 							</DropdownMenu.Root>
 						</div>
 					{/each}
-
-					{#if selectedVin === group.vin && selected.length > 1}
-						<div class="mt-3 flex flex-wrap items-center gap-3 rounded-lg border bg-background p-3">
-							<Button
-								size="sm"
-								disabled={data.status === 'loading' || history.busy}
-								onclick={() => openTogether(selected)}
-							>
-								<LayersIcon class="size-4" />
-								Open {selected.length} together
-							</Button>
-							<p class="text-xs text-muted-foreground">
-								One timeline from {selected.length} exports, using up to {bytes(estimate.bytes)} of memory.
-								{#if estimate.bytes > VERY_HEAVY}
-									That is a great deal to hold at once, and a browser tab may not manage it.
-								{:else if estimate.bytes > HEAVY}
-									Where they overlap it will be less, but expect it to take a moment.
-								{/if}
-							</p>
-						</div>
-					{/if}
 				</Card.Content>
 			</Card.Root>
 		{/each}

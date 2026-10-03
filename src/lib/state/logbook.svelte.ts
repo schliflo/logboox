@@ -71,6 +71,21 @@ class LogbookStore {
 		return count;
 	});
 
+	/**
+	 * The logbook's to-do across the whole record, whatever range is on screen:
+	 * narrowing to a week should not look like a month of trips got labelled.
+	 */
+	record = $derived.by(() => {
+		const trips = data.full?.derived.trips ?? data.derived?.trips ?? [];
+		const bound = trips === data.derived?.trips ? this.bound : bindAnnotations(trips, this.entries);
+		let unlabelled = 0;
+		for (const trip of trips) {
+			const entry = bound.byTrip.get(trip.startTime);
+			if (!entry?.origin && !entry?.destination) unlabelled++;
+		}
+		return { trips: trips.length, unlabelled };
+	});
+
 	for(trip: Trip): Annotation {
 		return (
 			this.bound.byTrip.get(trip.startTime) ??
@@ -190,6 +205,26 @@ class LogbookStore {
 		// also keep the note from the account.
 		this.queue(next);
 		await putAnnotations([next]);
+	}
+
+	/** Several notes in one write, for filling in or undoing many trips at once. */
+	async saveMany(entries: Annotation[]): Promise<void> {
+		const vin = this.vin;
+		if (!vin || !this.loaded) throw new Error('There is no logbook open to keep these notes in.');
+		if (entries.length === 0) return;
+
+		const now = Date.now();
+		const next = entries.map((entry) => {
+			const note: Annotation = { ...entry, vin, updatedAt: now };
+			if (isBlank(note) && !note.deletedAt) note.deletedAt = now;
+			if (!isBlank(note)) note.deletedAt = null;
+			return note;
+		});
+		const touched = new Set(next.map((note) => note.startTime));
+
+		this.entries = [...this.entries.filter((held) => !touched.has(held.startTime)), ...next];
+		for (const note of next) this.queue(note);
+		await putAnnotations(next);
 	}
 
 	private queue(entry: Annotation): void {

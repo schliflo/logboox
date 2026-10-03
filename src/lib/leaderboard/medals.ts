@@ -23,6 +23,31 @@ export function medalFor(rank: number): Medal | null {
 	return Number.isInteger(rank) ? (MEDALS[rank - 1] ?? null) : null;
 }
 
+/** How each metal is drawn, on the page and on the badge alike. */
+export interface Metal {
+	name: string;
+	light: string;
+	dark: string;
+	/** The ring, a shade past `dark`. */
+	rim: string;
+	/** The icon, dark enough to read on this metal. */
+	ink: string;
+}
+
+export const METALS: Record<Medal, Metal> = {
+	gold: { name: 'Gold', light: '#f5c84c', dark: '#b8860b', rim: '#fbe38e', ink: '#4a3200' },
+	silver: { name: 'Silver', light: '#e8e8ea', dark: '#8d9096', rim: '#f6f6f7', ink: '#2c2e33' },
+	bronze: { name: 'Bronze', light: '#e0a070', dark: '#8c5a2b', rim: '#f0c4a0', ink: '#3d2210' }
+};
+
+/** The boards in the order the page offers them, in groups a reader would look for. */
+export const BOARD_GROUPS: Array<{ label: string; boards: BoardId[] }> = [
+	{ label: 'Driving', boards: ['longest-drive', 'monthly-distance'] },
+	{ label: 'Efficiency', boards: ['efficient-drive', 'best-regen'] },
+	{ label: 'Charging', boards: ['peak-charge', 'biggest-charge'] },
+	{ label: 'Handling', boards: ['hardest-launch', 'most-grip'] }
+];
+
 /** The size a badge is drawn for. The `@2x` file is twice this in pixels. */
 export const BADGE_WIDTH = 560;
 export const BADGE_HEIGHT = 160;

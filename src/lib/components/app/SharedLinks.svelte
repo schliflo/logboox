@@ -70,7 +70,7 @@
 </script>
 
 {#if shares.length > 0}
-	<Card.Root>
+	<Card.Root id="links">
 		<Card.Header>
 			<Card.Title>Shared links</Card.Title>
 			<Card.Description>

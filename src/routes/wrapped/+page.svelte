@@ -11,6 +11,7 @@
 	import { Button } from '#lib/components/ui/button/index.js';
 	import { Badge } from '#lib/components/ui/badge/index.js';
 	import Seo from '#lib/components/app/Seo.svelte';
+	import LogoMark from '#lib/components/app/LogoMark.svelte';
 	import { data } from '#lib/state/dataset.svelte.js';
 	import type { Fact } from '#lib/data/analytics/facts.js';
 	import ArrowRightIcon from '@lucide/svelte/icons/arrow-right';
@@ -40,12 +41,16 @@
 	let active = $state(0);
 
 	onMount(() => {
-		if (!data.isReady) {
-			goto('/');
-			return;
-		}
+		if (data.isReady || data.status === 'loading') return;
+		// Opened cold: reopen the last record, or start over when there is none.
+		void data.restore('/wrapped').then((ok) => {
+			if (!ok) goto('/');
+		});
+	});
 
-		// Track which card is in view for the progress dots.
+	// Track which card is in view for the progress dots, once there are cards.
+	$effect(() => {
+		if (!container || cards.length === 0) return;
 		const observer = new IntersectionObserver(
 			(entries) => {
 				for (const entry of entries) {
@@ -56,7 +61,7 @@
 			},
 			{ threshold: 0.6 }
 		);
-		container?.querySelectorAll('[data-index]').forEach((el) => observer.observe(el));
+		container.querySelectorAll('[data-index]').forEach((el) => observer.observe(el));
 		return () => observer.disconnect();
 	});
 
@@ -80,21 +85,21 @@
 				class="relative flex h-svh snap-start items-center justify-center px-6"
 			>
 				<div
-					class="pointer-events-none absolute inset-0 opacity-50"
+					class="pointer-events-none absolute inset-0"
 					style="background: radial-gradient(70% 60% at 50% 45%, color-mix(in oklab, var({accents[
 						index % accents.length
-					]}) 20%, transparent), transparent 70%)"
+					]}) 26%, transparent), transparent 72%)"
 					aria-hidden="true"
 				></div>
 
 				<div class="relative mx-auto max-w-2xl text-center">
-					<p class="text-sm font-medium tracking-widest text-muted-foreground uppercase">
+					<p class="text-sm font-semibold tracking-[0.18em] text-muted-foreground uppercase">
 						{fact.kicker}
 					</p>
 
 					<p class="mt-6 flex flex-wrap items-baseline justify-center gap-3">
 						<span
-							class="text-7xl font-semibold tracking-tighter tabular-nums sm:text-9xl"
+							class="text-8xl font-extrabold tracking-tighter tabular-nums sm:text-[11rem] sm:leading-none"
 							style="color: var({accents[index % accents.length]})"
 						>
 							{fact.value}
@@ -135,15 +140,28 @@
 		{/each}
 	</div>
 
+	<a
+		href="/dash/overview"
+		class="fixed top-6 left-6 z-10 flex items-center gap-2.5 font-semibold tracking-tight"
+		aria-label="LogbooX — to the dashboard"
+	>
+		<LogoMark size={28} />
+		<span class="hidden sm:inline">Your highlights</span>
+	</a>
+
 	<!-- Progress rail, and an escape hatch for anyone who wants the data now. -->
 	<div class="fixed top-6 right-6 z-10 flex items-center gap-3">
 		{#if data.isDemo}
 			<Badge variant="secondary">Demonstration data</Badge>
 		{/if}
-		<Button variant="ghost" size="sm" onclick={() => goto('/dash/overview')}>Skip</Button>
+		<Button variant="ghost" size="sm" onclick={() => goto('/dash/overview')}
+			>Skip to dashboard</Button
+		>
 	</div>
 
-	<div class="fixed top-1/2 right-6 z-10 hidden -translate-y-1/2 flex-col gap-2 sm:flex">
+	<div
+		class="fixed top-1/2 right-6 z-10 hidden w-6 -translate-y-1/2 flex-col items-end gap-2 sm:flex"
+	>
 		{#each cards as fact, index (fact.id)}
 			<button
 				type="button"

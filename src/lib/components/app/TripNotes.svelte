@@ -29,6 +29,7 @@
 	import { settings } from '#lib/state/settings.svelte.js';
 	import { suggestDestinations, suggestOrigin, suggestPurpose } from '#lib/logbook/suggest.js';
 	import { PURPOSES, type Annotation, type Purpose } from '#lib/logbook/types.js';
+	import { PURPOSE_COLOR } from './PurposeChip.svelte';
 	import type { Trip } from '#lib/data/analytics/trips.js';
 	import { toast } from 'svelte-sonner';
 	import CloudIcon from '@lucide/svelte/icons/cloud';
@@ -162,22 +163,26 @@
 
 			<div class="space-y-2">
 				<Label>Purpose</Label>
-				<div class="flex flex-wrap gap-2">
+				<div class="grid grid-cols-3 gap-2">
 					{#each PURPOSES as option (option.value)}
-						<Button
-							variant={note.purpose === option.value ? 'default' : 'outline'}
-							size="sm"
+						{@const color = PURPOSE_COLOR[option.value]}
+						{@const chosen = note.purpose === option.value}
+						<button
+							type="button"
+							aria-pressed={chosen}
 							onclick={() => setPurpose(option.value)}
+							class="h-12 rounded-xl border-2 text-sm font-semibold transition-colors hover:bg-accent/50 focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none"
+							style={chosen
+								? `color: ${color}; border-color: ${color}; background: color-mix(in oklab, ${color} 14%, transparent)`
+								: ''}
 						>
 							{option.label}
-						</Button>
+						</button>
 					{/each}
-					{#if !note.purpose && purpose}
-						<span class="self-center text-xs text-muted-foreground">
-							Trips like this one are usually {purpose}.
-						</span>
-					{/if}
 				</div>
+				{#if !note.purpose && purpose}
+					<p class="text-xs text-muted-foreground">Trips like this one are usually {purpose}.</p>
+				{/if}
 			</div>
 
 			<div class="space-y-2">

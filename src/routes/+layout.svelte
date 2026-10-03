@@ -42,7 +42,8 @@
 
 <!-- Dark by default: the charts were stepped for a dark surface first. -->
 <ModeWatcher defaultMode="dark" />
-<Toaster />
+<!-- Lifted on phones, clear of the dashboard's tab bar. -->
+<Toaster mobileOffset={{ bottom: 'calc(4.5rem + env(safe-area-inset-bottom))' }} />
 <OfflineSupport />
 
 {@render children()}

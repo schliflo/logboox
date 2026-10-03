@@ -1,4 +1,5 @@
 <script lang="ts">
+	import PageFindings from '#lib/components/app/PageFindings.svelte';
 	import * as Card from '#lib/components/ui/card/index.js';
 	import * as Table from '#lib/components/ui/table/index.js';
 	import BigStat from '#lib/components/charts/BigStat.svelte';
@@ -59,6 +60,7 @@
 </script>
 
 <div class="mx-auto max-w-6xl space-y-6">
+	<PageFindings />
 	<div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
 		<Card.Root>
 			<Card.Content>

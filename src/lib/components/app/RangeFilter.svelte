@@ -32,6 +32,16 @@
 	import LoaderIcon from '@lucide/svelte/icons/loader-circle';
 	import CheckIcon from '@lucide/svelte/icons/check';
 
+	interface Props {
+		/**
+		 * Presets already offered as buttons beside this one. When one of them
+		 * is on, the trigger stays a plain "More" rather than repeating it.
+		 */
+		quick?: string[];
+	}
+
+	let { quick = [] }: Props = $props();
+
 	let open = $state(false);
 	let fromDay = $state('');
 	let toDay = $state('');
@@ -41,6 +51,8 @@
 	const span = $derived(loaded ? recordedSpan(loaded, settings.timeZone) : null);
 	const label = $derived(data.range?.label ?? EVERYTHING);
 	const active = $derived(data.range?.preset ?? null);
+	/** True when what is on screen was picked here rather than from a quick button. */
+	const elsewhere = $derived(data.range !== null && !quick.includes(data.range.preset));
 	const custom = $derived(loaded ? customRange(loaded, fromDay, toDay, settings.timeZone) : null);
 
 	const groups = $derived(
@@ -90,8 +102,8 @@
 	}}
 >
 	<Popover.Trigger
-		class={buttonVariants({ variant: data.range ? 'secondary' : 'ghost', size: 'sm' })}
-		aria-label="Time range: {label}"
+		class={buttonVariants({ variant: elsewhere ? 'secondary' : 'ghost', size: 'sm' })}
+		aria-label={quick.length && !elsewhere ? 'More time ranges' : `Time range: ${label}`}
 		aria-busy={data.refining}
 	>
 		{#if data.refining}
@@ -99,14 +111,18 @@
 		{:else}
 			<CalendarIcon class="size-4" />
 		{/if}
-		<span
-			class={[
-				'truncate',
-				data.range ? 'max-w-[11ch] sm:max-w-[18ch]' : 'hidden max-w-[18ch] sm:inline'
-			]}
-		>
-			{label}
-		</span>
+		{#if quick.length && !elsewhere}
+			<span class="hidden sm:inline">More</span>
+		{:else}
+			<span
+				class={[
+					'truncate',
+					data.range ? 'max-w-[11ch] sm:max-w-[18ch]' : 'hidden max-w-[18ch] sm:inline'
+				]}
+			>
+				{label}
+			</span>
+		{/if}
 	</Popover.Trigger>
 	<Popover.Content class="w-72 gap-3" align="end">
 		{#if data.range}

@@ -31,29 +31,29 @@
 	}: Props = $props();
 
 	const valueSize = {
-		sm: 'text-2xl sm:text-3xl',
+		sm: 'text-3xl sm:text-4xl',
 		md: 'text-4xl sm:text-5xl',
 		lg: 'text-6xl sm:text-8xl'
 	} as const;
 </script>
 
-<div class="flex flex-col gap-1 {className}">
-	<span class="text-xs font-medium tracking-wide text-muted-foreground uppercase">
+<div class="flex flex-col gap-2 {className}">
+	<span class="eyebrow">
 		{kicker}
 	</span>
-	<span class="flex items-baseline gap-2">
+	<span class="flex flex-wrap items-baseline gap-x-2 gap-y-1">
 		<span
-			class="font-semibold tracking-tight tabular-nums {valueSize[size]}"
+			class="leading-none font-bold tracking-tight tabular-nums {valueSize[size]}"
 			style="color: var({accent})"
 		>
 			{value}
 		</span>
 		{#if unit}
-			<span class="text-sm font-medium text-muted-foreground sm:text-base">{unit}</span>
+			<span class="text-sm font-medium whitespace-nowrap text-muted-foreground">{unit}</span>
 		{/if}
 	</span>
 	{#if detail}
-		<p class="mt-1 text-sm leading-relaxed text-muted-foreground">{detail}</p>
+		<p class="text-sm leading-relaxed text-muted-foreground">{detail}</p>
 	{/if}
 	{@render children?.()}
 </div>
