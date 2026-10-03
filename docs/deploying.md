@@ -75,6 +75,19 @@ a month are included, which is a great many sign-in links.
 
 The address messages come from is `MAIL_FROM` in `wrangler.jsonc`.
 
+### Show the logo beside the sender (BIMI)
+
+Three DNS records' worth of work, none of it in the deploy:
+
+1. `_dmarc` must enforce: `p=quarantine` or `p=reject`, and no `pct` below 100.
+2. `default._bimi` TXT: `v=BIMI1; l=https://logboox.app/bimi.svg; a=`
+3. With a mark certificate (VMC or CMC), host its PEM beside the logo and put
+   the address in `a=`. Gmail shows nothing without one.
+
+`static/bimi.svg` is the mark in SVG Tiny PS, the only profile BIMI accepts;
+`favicon.svg` is not. A certificate is issued for one exact file, so changing
+the logo afterwards means a new certificate.
+
 ### Make the API token
 
 **My Profile → API Tokens → Create Token**, with:

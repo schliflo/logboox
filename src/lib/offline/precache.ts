@@ -6,8 +6,8 @@
  * shows up in a browser with the network switched off.
  */
 
-/** Files only crawlers and link previews ever ask for; the app never does. */
-const CRAWLER_ONLY = /\/(og\.png|robots\.txt|sitemap\.xml)$/;
+/** Files only crawlers, link previews and mailbox providers ever ask for; the app never does. */
+const CRAWLER_ONLY = /\/(og\.png|bimi\.svg|robots\.txt|sitemap\.xml)$/;
 
 /**
  * Paths that must always reach the server.
