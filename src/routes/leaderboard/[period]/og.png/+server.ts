@@ -21,7 +21,7 @@ import type { RequestHandler } from './$types';
 import { BOARDS, boardById, formatValue } from '#lib/leaderboard/boards.js';
 import { isMonthOpen, locksAt, monthLabel, parsePeriod } from '#lib/leaderboard/periods.js';
 import { monthBoards, yearBoards } from '#lib/server/leaderboard/repo.js';
-import { maybeDb } from '#lib/server/context.js';
+import { afterResponse, edgeCache, maybeDb } from '#lib/server/context.js';
 import { now as currentTime } from '#lib/server/db.js';
 import { boardCard, type Tile } from '#lib/server/og/card.js';
 import { renderPng } from '#lib/server/og/rasterize.js';
@@ -30,15 +30,6 @@ export const prerender = false;
 
 /** Long enough to absorb a link being passed around, short enough for a take-down. */
 const MAX_AGE = 300;
-
-/** The edge cache of this colo, or null where there is none (dev, tests). */
-function edgeCache(event: Parameters<RequestHandler>[0]) {
-	try {
-		return event.platform?.caches?.default ?? null;
-	} catch {
-		return null;
-	}
-}
 
 function settled(date: number): string {
 	return new Intl.DateTimeFormat('en-GB', {
@@ -53,7 +44,7 @@ export const GET: RequestHandler = async (event) => {
 	if (!period) error(404, 'That is not a month or a year.');
 
 	// Keyed on the path alone, so a query string cannot mint a render per guess.
-	const cache = edgeCache(event);
+	const cache = edgeCache();
 	const key = `${event.url.origin}${event.url.pathname}`;
 	// The cache speaks the Workers types, the handler the DOM ones; the casts
 	// below bridge the two and nothing else.
@@ -116,6 +107,6 @@ export const GET: RequestHandler = async (event) => {
 		}
 	});
 
-	if (cache) event.platform?.ctx.waitUntil(cache.put(key, response.clone() as never));
+	if (cache) afterResponse(cache.put(key, response.clone() as never));
 	return response;
 };
