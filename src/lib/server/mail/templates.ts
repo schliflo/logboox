@@ -2,18 +2,17 @@
  * The messages this app sends.
  *
  * Plain text first, with a plain HTML twin built from the same parts in the
- * same order: no tracking pixel, no link wrapping, and nothing fetched to show
- * the logo. A mail that asks to be trusted with a sign-in link should not be
+ * same order: no tracking pixel, no link wrapping, and no picture
+ * beyond the logo. A mail that asks to be trusted with a sign-in link should not be
  * indistinguishable from a marketing one.
  *
- * The one fetched picture is a medal's badge, in the mails about winning one.
+ * The other picture is a medal's badge, in the mails about winning one.
  * It is the public badge itself, at the address a forum would load it from —
  * which names the winner, so a client that fetches it makes a request we could
  * in principle tell apart. Nothing reads that; the privacy page says so.
  */
 
 import type { Medal } from '#lib/leaderboard/medals.js';
-import { LOGO_CID } from './logo';
 import type { Message } from './mailer';
 
 const BRAND = 'LogbooX';
@@ -33,6 +32,9 @@ function escapeHtml(value: string): string {
  * read somewhere else entirely and a relative link would be meaningless.
  */
 const SITE = 'https://logboox.app';
+
+/** The mark beside the wordmark. The site's own icon, the same file for every reader. */
+const LOGO_URL = `${SITE}/favicon-96.png`;
 
 /** What the HTML footer says, for the part of the message that has no HTML. */
 const TEXT_FOOTER = `--
@@ -104,8 +106,9 @@ interface Page {
 /**
  * One column, one typeface, a wordmark above and the small print below.
  *
- * Inline styles and nothing a mail client has to fetch or run: the logo travels
- * inside the message; see `logo.ts`.
+ * Inline styles and nothing a mail client has to run. The logo is the one
+ * thing fetched, from an address that is the same for everybody: Gmail does not
+ * show a picture attached inline, which is how it travelled at first.
  */
 function layout({ preview, heading, body, unsubscribe }: Page): string {
 	const out = unsubscribe
@@ -115,7 +118,7 @@ function layout({ preview, heading, body, unsubscribe }: Page): string {
 	return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head><body style="margin:0;padding:24px 12px;background:#f6f6f5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:${INK};line-height:1.6">
 <div style="display:none;max-height:0;overflow:hidden;opacity:0">${escapeHtml(preview)}</div>
 <div style="max-width:560px;margin:0 auto">
-<p style="margin:0 4px 14px;font-size:18px;font-weight:600;letter-spacing:-0.4px"><a href="${SITE}" style="color:${INK};text-decoration:none"><img src="cid:${LOGO_CID}" width="28" height="28" alt="" style="vertical-align:middle;border:0;border-radius:7px;margin-right:10px">${BRAND}</a></p>
+<p style="margin:0 4px 14px;font-size:18px;font-weight:600;letter-spacing:-0.4px"><a href="${SITE}" style="color:${INK};text-decoration:none"><img src="${LOGO_URL}" width="28" height="28" alt="" style="vertical-align:middle;border:0;border-radius:7px;margin-right:10px">${BRAND}</a></p>
 <div style="background:#fff;border:1px solid ${RULE};border-radius:14px;overflow:hidden">
 <div style="height:4px;background:#3987e5;background-image:linear-gradient(90deg,#3987e5,#199e70)"></div>
 <div style="padding:28px 28px 12px">
