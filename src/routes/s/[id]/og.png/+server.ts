@@ -28,7 +28,7 @@ import {
 } from '#lib/server/shares/repo.js';
 import { parseManifest, storedMeta } from '#lib/server/shares/validate.js';
 import { sharePrefix } from '#lib/server/exports/r2.js';
-import { maybeDb, maybeStorage } from '#lib/server/context.js';
+import { afterResponse, maybeDb, maybeStorage } from '#lib/server/context.js';
 import { now } from '#lib/server/db.js';
 import { decodeRange } from '#lib/data/store/columnar.js';
 import { viewFor } from '#lib/data/worker/protocol.js';
@@ -176,14 +176,14 @@ export const GET: RequestHandler = async (event) => {
 	// Writes go behind the response: the reader has their picture either way,
 	// and a scraper should not wait on an object store to get it.
 	if (!body) {
-		event.platform?.ctx?.waitUntil(storage.put(failed(share.id), ''));
+		afterResponse(storage.put(failed(share.id), ''));
 		redirect(302, OG_IMAGE);
 	}
 
 	// Until the upload window closes, a card without its curve may only mean the
 	// buffers are still on their way.
 	if (series || now() > share.created_at + SHARE_UPLOAD_WINDOW_SECONDS) {
-		event.platform?.ctx?.waitUntil(storage.put(key, body));
+		afterResponse(storage.put(key, body));
 	}
 
 	return png(body, body.byteLength);

@@ -8,6 +8,7 @@
 
 import { dev } from '$app/env';
 import { error } from '@sveltejs/kit';
+import { env, waitUntil } from 'cloudflare:workers';
 import type { RequestEvent } from '@sveltejs/kit';
 import type { Db } from './db';
 import { cloudflareMailer, consoleMailer, type Mailer } from './mail/mailer';
@@ -32,6 +33,9 @@ function unavailable(): never {
 /**
  * One binding, or null.
  *
+ * Read from `cloudflare:workers`: since SvelteKit 3 the adapter no longer puts
+ * anything on `event.platform`.
+ *
  * Reading a binding has to be guarded rather than optional-chained. The
  * Cloudflare adapter hands prerenderable routes an environment whose every
  * property getter throws — deliberately, so that a page baked at build time
@@ -40,9 +44,9 @@ function unavailable(): never {
  * on all of them, so asking for a binding that is not there must be an answer
  * rather than an exception.
  */
-function binding<K extends keyof Env>(event: RequestEvent, key: K): NonNullable<Env[K]> | null {
+function binding<K extends keyof Env>(_event: RequestEvent, key: K): NonNullable<Env[K]> | null {
 	try {
-		return event.platform?.env?.[key] ?? null;
+		return (env as Env)[key] ?? null;
 	} catch {
 		return null;
 	}
@@ -90,6 +94,24 @@ export function mailer(event: RequestEvent): Mailer {
 		throw new Error('Mail is not configured: the EMAIL binding or MAIL_FROM is missing.');
 	}
 	return cloudflareMailer(email, from);
+}
+
+/** Lets work outlive the response. A no-op where there is no Worker to keep alive. */
+export function afterResponse(promise: Promise<unknown>): void {
+	try {
+		waitUntil(promise);
+	} catch {
+		// Not in a Worker: the promise runs on its own.
+	}
+}
+
+/** The edge cache of this colo, or null where there is none (tests). */
+export function edgeCache(): Cache | null {
+	try {
+		return (caches as CacheStorage & { readonly default?: Cache }).default ?? null;
+	} catch {
+		return null;
+	}
 }
 
 /** Where this deployment answers, for links that travel in mail. */
