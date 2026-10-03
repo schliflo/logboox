@@ -140,10 +140,10 @@
 	at the end of a year. Reminders have a switch of their own on the account page. Board and medal
 	messages and the yearly summary share another. Every message other than a sign-in link carries its
 	own unsubscribe link, which does not expire, and a <code>List-Unsubscribe</code> header. There are no
-	tracking pixels and no click tracking; the messages are plain text with a plain HTML twin, and our logo
-	travels inside the message rather than being fetched. The one exception is a message about a medal,
-	which shows the badge: your mail program loads that picture from the same public address as everyone
-	else, and we do not record who loads it. Mail is delivered through Cloudflare's e-mail service.
+	tracking pixels and no click tracking; the messages are plain text with a plain HTML twin. Two pictures
+	are loaded from logboox.app when your mail program shows them: our logo, which is the same file for
+	everyone, and, in a message about a medal, the badge, from the same public address as everyone else.
+	We do not record who loads either. Mail is delivered through Cloudflare's e-mail service.
 </p>
 
 <h2>Cookies</h2>
