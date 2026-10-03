@@ -124,6 +124,11 @@ try {
 	await expectStatus(card, 200, 'the leaderboard card');
 	assert.equal(card.headers.get('content-type'), 'image/png');
 
+	// A badge nobody holds: reaches the database, and says so to any origin.
+	const badge = await app('/badge/2020-01/peak-charge/nobody.png');
+	await expectStatus(badge, 404, 'a badge nobody holds');
+	assert.equal(badge.headers.get('cross-origin-resource-policy'), 'cross-origin');
+
 	// The daily run, through the cron Worker's own code, so that the request
 	// under test is the one production sends.
 	const report = await cron.fetch(new Request('http://cron.invalid/'), {

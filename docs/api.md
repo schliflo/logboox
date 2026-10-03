@@ -202,6 +202,12 @@ The links the account has made and not revoked: `id`, `url`, `kind` (`trip`,
 The account itself: address, settings, and how much room the exports are using.
 Useful as a check that a token works.
 
+`leaderboard.badges` lists the medals the account holds, newest first: one per
+top-three place in a locked month or a final year, each with `period`
+(`YYYY-MM` or `YYYY`), `board`, `medal` (`gold`, `silver` or `bronze`), `rank`
+and `value`. They are worked out on request, so a place taken down drops its
+medal.
+
 ## Errors
 
 Every error body is `{ "error": "…", "hint": "…" }`, written to be read by a

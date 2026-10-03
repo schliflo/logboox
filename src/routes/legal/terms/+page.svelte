@@ -48,7 +48,9 @@
 <h2>Names and leaderboards</h2>
 <p>
 	Putting something on a board is voluntary and reversible: you choose a name, you claim a place,
-	and you can take it down at any time, including after the month has closed.
+	and you can take it down at any time, including after the month has closed. A place in the top
+	three of a settled board also gets a public badge image showing your name, which you may embed
+	elsewhere.
 </p>
 <p>A name must not:</p>
 <ul>

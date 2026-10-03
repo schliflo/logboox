@@ -21,6 +21,7 @@
 	import ArrowLeftIcon from '@lucide/svelte/icons/arrow-left';
 	import ArrowRightIcon from '@lucide/svelte/icons/arrow-right';
 	import TrophyIcon from '@lucide/svelte/icons/trophy';
+	import MedalIcon from '@lucide/svelte/icons/medal';
 	import type { PageData } from './$types';
 
 	let { data }: { data: PageData } = $props();
@@ -39,6 +40,8 @@
 	);
 
 	const empty = $derived(listings.every((listing) => listing.entries.length === 0));
+
+	const MEDAL_COLORS = ['#d4a017', '#9aa0a6', '#b0703a'];
 
 	function reading(boardId: string, value: number): string {
 		const board = boardById(boardId);
@@ -176,7 +179,16 @@
 											? 'font-medium'
 											: ''}"
 									>
-										<span class="w-6 shrink-0 text-sm text-muted-foreground tabular-nums">
+										<span
+											class="flex w-6 shrink-0 items-center gap-0.5 text-sm text-muted-foreground tabular-nums"
+										>
+											{#if !data.open && entry.rank >= 1 && entry.rank <= 3}
+												<MedalIcon
+													class="size-3.5"
+													style="color: {MEDAL_COLORS[entry.rank - 1]}"
+													aria-hidden="true"
+												/>
+											{/if}
 											{entry.rank}
 										</span>
 										<span class="min-w-24 flex-1 truncate text-sm">

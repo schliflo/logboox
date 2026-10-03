@@ -61,7 +61,8 @@ const USER_COLUMNS = {
 	username_changed_at: 1,
 	board_notify: 1,
 	board_mailed_at: 1,
-	roundup_mailed_year: 1
+	roundup_mailed_year: 1,
+	award_mailed_month: 1
 } satisfies Record<keyof User, 1>;
 
 const USER_SELECT = Object.keys(USER_COLUMNS)

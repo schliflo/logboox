@@ -21,13 +21,16 @@ import {
 	claim,
 	detectCandidates,
 	dismiss,
+	listBadges,
 	listOwn,
 	listPending,
 	markSeen,
 	monthBoards,
+	monthMedal,
 	rankOf,
 	removeEntry,
-	yearBoards
+	yearBoards,
+	yearMedal
 } from './repo';
 import { UsernameInvalid, UsernameTaken, UsernameTooSoon, setUsername } from './username';
 
@@ -737,6 +740,126 @@ describe('the year', () => {
 	});
 });
 
+describe('medals', () => {
+	const LOCKED = locksAt('2026-09') + 60;
+	const FINAL = locksAt('2026-12') + 60;
+
+	/** A place written straight into the table, so the score is exactly what is asked. */
+	async function held(id: string, score: number, month = '2026-09', board = 'longest-drive') {
+		const entry = `entry-${id}-${board}-${month}`;
+		await run(
+			db,
+			`INSERT INTO board_entries (id, board, month, user_id, kind, vin, start_time, value,
+				score, detail_json, vmodel, claimed_at)
+			 VALUES (?, ?, ?, ?, 'trip', 'VIN', ?, ?, ?, '{}', 'F30b', ?)`,
+			entry,
+			board,
+			month,
+			id,
+			SEPTEMBER,
+			score,
+			score,
+			SEPTEMBER
+		);
+		return entry;
+	}
+
+	async function podium() {
+		const ant = await account('a@example.com', 'Ant');
+		const bea = await account('b@example.com', 'bea');
+		const cat = await account('c@example.com', 'cat');
+		const dan = await account('d@example.com', 'dan');
+		await held(ant, 500);
+		await held(bea, 400);
+		await held(cat, 300);
+		await held(dan, 200);
+		return { ant, bea, cat, dan };
+	}
+
+	it('are not handed out while the month is open', async () => {
+		await podium();
+		expect(await monthMedal(db, '2026-09', 'longest-drive', 'Ant', SOON)).toBeNull();
+		expect(
+			await monthMedal(db, '2026-09', 'longest-drive', 'Ant', locksAt('2026-09') - 1)
+		).toBeNull();
+	});
+
+	it('go to the top three once it locks, and not the fourth', async () => {
+		await podium();
+		const medals = await Promise.all(
+			['Ant', 'bea', 'cat', 'dan'].map((name) =>
+				monthMedal(db, '2026-09', 'longest-drive', name, LOCKED)
+			)
+		);
+		expect(medals.map((medal) => medal?.medal ?? null)).toEqual(['gold', 'silver', 'bronze', null]);
+		expect(medals[0]).toEqual({
+			username: 'Ant',
+			vmodel: 'F30b',
+			value: 500,
+			rank: 1,
+			medal: 'gold'
+		});
+	});
+
+	it('match the name in any case, and print it as stored', async () => {
+		await podium();
+		expect((await monthMedal(db, '2026-09', 'longest-drive', 'ANT', LOCKED))?.username).toBe('Ant');
+	});
+
+	it('are shared by a tie', async () => {
+		const { dan } = await podium();
+		await run(db, 'UPDATE board_entries SET score = 400 WHERE user_id = ?', dan);
+		expect((await monthMedal(db, '2026-09', 'longest-drive', 'dan', LOCKED))?.medal).toBe('silver');
+		expect((await monthMedal(db, '2026-09', 'longest-drive', 'bea', LOCKED))?.medal).toBe('silver');
+		expect(await monthMedal(db, '2026-09', 'longest-drive', 'cat', LOCKED)).toBeNull();
+	});
+
+	it('go with a place taken down, and the next one moves up', async () => {
+		const { ant } = await podium();
+		await removeEntry(db, ant, `entry-${ant}-longest-drive-2026-09`);
+		expect(await monthMedal(db, '2026-09', 'longest-drive', 'Ant', LOCKED)).toBeNull();
+		expect((await monthMedal(db, '2026-09', 'longest-drive', 'bea', LOCKED))?.medal).toBe('gold');
+		expect((await monthMedal(db, '2026-09', 'longest-drive', 'dan', LOCKED))?.medal).toBe('bronze');
+	});
+
+	it('are nothing for a board or a month that does not exist', async () => {
+		await podium();
+		expect(await monthMedal(db, '2026-09', 'top-speed', 'Ant', LOCKED)).toBeNull();
+		expect(await monthMedal(db, '2026-13', 'longest-drive', 'Ant', LOCKED)).toBeNull();
+	});
+
+	it('come for a year only once it is final', async () => {
+		await podium();
+		expect(await yearMedal(db, 2026, 'longest-drive', 'ant', LOCKED)).toBeNull();
+		expect(await yearMedal(db, 2026, 'longest-drive', 'ant', FINAL)).toMatchObject({
+			username: 'Ant',
+			medal: 'gold',
+			value: 500
+		});
+		expect(await yearMedal(db, 2026, 'longest-drive', 'dan', FINAL)).toBeNull();
+	});
+
+	it('are listed for the account, newest first, year after its months', async () => {
+		const { bea, dan } = await podium();
+		await held(bea, 600, '2026-10');
+		await held(bea, 50, '2026-11', 'peak-charge');
+		await held(dan, 900, '2026-11', 'peak-charge');
+
+		expect(await listBadges(db, bea, SOON)).toEqual([]);
+		expect(await listBadges(db, bea, LOCKED)).toEqual([
+			{ period: '2026-09', board: 'longest-drive', medal: 'silver', rank: 2, value: 400 }
+		]);
+		expect(await listBadges(db, bea, FINAL)).toEqual([
+			{ period: '2026', board: 'peak-charge', medal: 'silver', rank: 2, value: 50 },
+			{ period: '2026', board: 'longest-drive', medal: 'gold', rank: 1, value: 600 },
+			{ period: '2026-11', board: 'peak-charge', medal: 'silver', rank: 2, value: 50 },
+			{ period: '2026-10', board: 'longest-drive', medal: 'gold', rank: 1, value: 600 },
+			{ period: '2026-09', board: 'longest-drive', medal: 'silver', rank: 2, value: 400 }
+		]);
+		expect(await listBadges(db, dan, LOCKED)).toEqual([]);
+	});
+});
+
 describe('the board queries', () => {
 	/** The plan of whatever SQL `read` sends, captured as it goes by. */
 	async function plansFor(read: () => Promise<unknown>): Promise<string[]> {
@@ -776,6 +899,11 @@ describe('the board queries', () => {
 
 	it('ranks a whole account in one statement', async () => {
 		const plans = await plansFor(() => listOwn(db, userId));
+		expect(plans).toHaveLength(1);
+	});
+
+	it('finds an account’s month medals in one statement', async () => {
+		const plans = await plansFor(() => listBadges(db, userId));
 		expect(plans).toHaveLength(1);
 	});
 });

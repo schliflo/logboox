@@ -9,7 +9,7 @@ import { deletePrefix, sharePrefix } from '#lib/server/exports/r2.js';
 import { deleteUser, updateSettings } from '#lib/server/auth/users.js';
 import { SESSION_COOKIE } from '#lib/server/auth/session.js';
 import { listShareIds } from '#lib/server/shares/repo.js';
-import { listOwn, listPending } from '#lib/server/leaderboard/repo.js';
+import { listBadges, listOwn, listPending } from '#lib/server/leaderboard/repo.js';
 import { maybeStorage, requireDb } from '#lib/server/context.js';
 import { fail, json, readJson } from '#lib/server/response.js';
 import { MAX_ACCOUNT_BYTES } from '#lib/server/exports/limits.js';
@@ -43,7 +43,8 @@ export const GET: RequestHandler = async (event) => {
 		},
 		leaderboard: {
 			pending: await listPending(db, auth.user.id),
-			entries: await listOwn(db, auth.user.id)
+			entries: await listOwn(db, auth.user.id),
+			badges: await listBadges(db, auth.user.id)
 		}
 	});
 };

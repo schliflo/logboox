@@ -53,18 +53,18 @@ function fonts(): Promise<Uint8Array[]> {
 }
 
 /**
- * Render an SVG document at its own dimensions.
+ * Render an SVG document at its own dimensions, or at twice them for `scale` 2.
  *
  * The renderer and its image hold memory on the WebAssembly heap that no
  * garbage collector will reclaim, so both are freed before returning — a Worker
  * isolate serves many requests, and a leak here would end them all.
  */
-export async function renderPng(svg: string): Promise<Uint8Array<ArrayBuffer>> {
+export async function renderPng(svg: string, scale: 1 | 2 = 1): Promise<Uint8Array<ArrayBuffer>> {
 	const [, fontBuffers] = await Promise.all([ready(), fonts()]);
 
 	const renderer = new Resvg(svg, {
 		font: { fontBuffers, defaultFontFamily: 'Inter' },
-		fitTo: { mode: 'original' }
+		fitTo: scale === 2 ? { mode: 'zoom', value: 2 } : { mode: 'original' }
 	});
 
 	try {

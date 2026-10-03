@@ -13,12 +13,16 @@ import { one, run } from '../db';
 import { findOrCreateUser, findUserByUnsubscribeToken } from '../auth/users';
 import type { Mailer, Message } from '../mail/mailer';
 import {
+	AWARD_WINDOW_SECONDS,
 	MIN_REMAINING_SECONDS,
 	QUIET_SECONDS,
 	REPEAT_AFTER_SECONDS,
+	lastLockedMonth,
+	sendAwardMails,
 	sendBoardNudges,
 	sendYearRoundups
 } from './nudges';
+import { setUsername } from './username';
 import { locksAt } from '#lib/leaderboard/periods.js';
 
 const SEPTEMBER = Math.floor(Date.UTC(2026, 8, 14, 9, 0) / 1000);
@@ -257,6 +261,150 @@ describe('the year in review', () => {
 			(await sendYearRoundups(db, mailer, 'https://logboox.app', SECRET, locksAt('2026-12') + 60))
 				.sent
 		).toBe(0);
+	});
+});
+
+describe('telling the podium', () => {
+	const LOCKED = locksAt('2026-09') + 60;
+
+	async function placed(email: string, name: string, score: number, board = 'longest-drive') {
+		const id = (await findOrCreateUser(db, email)).user.id;
+		await setUsername(db, id, name, SEPTEMBER);
+		await run(
+			db,
+			`INSERT INTO board_entries (id, user_id, board, month, kind, vin, start_time, value,
+				score, detail_json, vmodel, claimed_at)
+			 VALUES (?, ?, ?, '2026-09', 'trip', 'VIN', ?, ?, ?, '{}', 'F30b', ?)`,
+			`entry-${id}-${board}`,
+			id,
+			board,
+			SEPTEMBER,
+			score,
+			score,
+			SEPTEMBER
+		);
+		return id;
+	}
+
+	it('knows which month locked last', () => {
+		expect(lastLockedMonth(LOCKED)).toBe('2026-09');
+		expect(lastLockedMonth(LOCKED - 120)).toBe('2026-08');
+	});
+
+	it('writes to the top three once the month locks, with the badge in it', async () => {
+		await placed('a@example.com', 'ant', 500);
+		await placed('b@example.com', 'bea', 400);
+		await placed('c@example.com', 'cat', 300);
+		await placed('d@example.com', 'dan', 200);
+
+		const mailer = collector();
+		const report = await sendAwardMails(db, mailer, 'https://logboox.app', SECRET, LOCKED);
+
+		expect(report.sent).toBe(3);
+		expect(mailer.sent.map((message) => message.to).sort()).toEqual([
+			'a@example.com',
+			'b@example.com',
+			'c@example.com'
+		]);
+		const gold = mailer.sent.find((message) => message.to === 'a@example.com')!;
+		expect(gold.subject).toBe('Gold for longest drive — September 2026');
+		expect(gold.html).toContain(
+			'src="https://logboox.app/badge/2026-09/longest-drive/ant@2x.png" width="560" height="160"'
+		);
+		expect(gold.html).toContain('alt="ant — Gold, Longest drive, September 2026 · LogbooX"');
+		expect(gold.html).toContain('https://logboox.app/account#leaderboard');
+		expect(gold.text).toContain('https://logboox.app/badge/2026-09/longest-drive/ant@2x.png');
+		expect(gold.text).toContain('https://logboox.app/leaderboard/2026-09');
+		expect(gold.text).toContain('kind=leaderboard');
+	});
+
+	it('says nothing while the month is still open', async () => {
+		await placed('a@example.com', 'ant', 500);
+		const mailer = collector();
+		expect((await sendAwardMails(db, mailer, 'https://logboox.app', SECRET, LATER)).sent).toBe(0);
+	});
+
+	it('gathers several medals into one message, and writes it once', async () => {
+		await placed('a@example.com', 'ant', 500);
+		const ant = (await findOrCreateUser(db, 'a@example.com')).user.id;
+		await run(
+			db,
+			`INSERT INTO board_entries (id, user_id, board, month, kind, vin, start_time, value,
+				score, detail_json, vmodel, claimed_at)
+			 VALUES ('second', ?, 'peak-charge', '2026-09', 'charging', 'VIN', ?, 120, 120, '{}', 'F30b', ?)`,
+			ant,
+			SEPTEMBER,
+			SEPTEMBER
+		);
+
+		const mailer = collector();
+		await sendAwardMails(db, mailer, 'https://logboox.app', SECRET, LOCKED);
+		expect(mailer.sent).toHaveLength(1);
+		expect(mailer.sent[0].subject).toBe('2 medals on the September 2026 boards');
+
+		expect(
+			(await sendAwardMails(db, mailer, 'https://logboox.app', SECRET, LOCKED + 86400)).sent
+		).toBe(0);
+	});
+
+	it('respects the switch', async () => {
+		const ant = await placed('a@example.com', 'ant', 500);
+		await run(db, 'UPDATE users SET board_notify = 0 WHERE id = ?', ant);
+		const mailer = collector();
+		expect((await sendAwardMails(db, mailer, 'https://logboox.app', SECRET, LOCKED)).sent).toBe(0);
+	});
+
+	it('stays quiet about a month that locked more than a fortnight ago', async () => {
+		await placed('a@example.com', 'ant', 500);
+		const mailer = collector();
+		const late = locksAt('2026-09') + AWARD_WINDOW_SECONDS;
+		expect((await sendAwardMails(db, mailer, 'https://logboox.app', SECRET, late)).sent).toBe(0);
+	});
+
+	it('says nothing about a place taken down before it ran', async () => {
+		const ant = await placed('a@example.com', 'ant', 500);
+		await run(db, 'UPDATE board_entries SET removed_at = ? WHERE user_id = ?', SEPTEMBER, ant);
+		const mailer = collector();
+		expect((await sendAwardMails(db, mailer, 'https://logboox.app', SECRET, LOCKED)).sent).toBe(0);
+	});
+
+	it('keeps the mark when the send fails', async () => {
+		const ant = await placed('a@example.com', 'ant', 500);
+		const quiet = vi.spyOn(console, 'error').mockImplementation(() => {});
+		const down: Mailer = {
+			async send() {
+				throw new Error('down');
+			}
+		};
+		const report = await sendAwardMails(db, down, 'https://logboox.app', SECRET, LOCKED);
+		quiet.mockRestore();
+
+		expect(report).toMatchObject({ sent: 0, failed: 1 });
+		const user = await one<{ award_mailed_month: string | null }>(
+			db,
+			'SELECT award_mailed_month FROM users WHERE id = ?',
+			ant
+		);
+		expect(user?.award_mailed_month).toBe('2026-09');
+		expect(
+			(await sendAwardMails(db, collector(), 'https://logboox.app', SECRET, LOCKED + 86400))
+				.considered
+		).toBe(0);
+	});
+
+	it('puts the year medals into the roundup', async () => {
+		await placed('a@example.com', 'ant', 500);
+		await placed('b@example.com', 'bea', 400);
+		const mailer = collector();
+		await sendYearRoundups(db, mailer, 'https://logboox.app', SECRET, locksAt('2026-12') + 60);
+
+		const ant = mailer.sent.find((message) => message.to === 'a@example.com')!;
+		expect(ant.text).toContain('you took gold for longest drive');
+		expect(ant.html).toContain('https://logboox.app/badge/2026/longest-drive/ant@2x.png');
+		expect(ant.text).toContain('https://logboox.app/account#leaderboard');
+		const bea = mailer.sent.find((message) => message.to === 'b@example.com')!;
+		expect(bea.html).toContain('/badge/2026/longest-drive/bea@2x.png');
+		expect(bea.html).not.toContain('/ant@2x.png');
 	});
 });
 

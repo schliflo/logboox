@@ -14,10 +14,19 @@
 import { all, now as currentTime, run, type Db } from '../db';
 import { failureStreak, logSendFailure, type FailureStreak } from '../mail/batch';
 import type { Mailer } from '../mail/mailer';
-import { boardNudgeMail, yearRoundupMail } from '../mail/templates';
+import { awardMail, boardNudgeMail, yearRoundupMail, type BadgeFacts } from '../mail/templates';
 import { unsubscribeLinks } from '../mail/unsubscribe';
-import { boardById, formatValue } from '#lib/leaderboard/boards.js';
-import { isYearFinal, monthLabel, monthsOfYear } from '#lib/leaderboard/periods.js';
+import { yearBoards } from './repo';
+import { boardById, formatValue, type BoardId } from '#lib/leaderboard/boards.js';
+import { badgeAlt, badgePath, medalFor, periodLabel, type Medal } from '#lib/leaderboard/medals.js';
+import {
+	isYearFinal,
+	locksAt,
+	monthLabel,
+	monthOf,
+	monthsOfYear,
+	previousMonth
+} from '#lib/leaderboard/periods.js';
 
 /** How long an offer sits unseen before it is worth a message. */
 export const QUIET_SECONDS = 2 * 86400;
@@ -35,6 +44,12 @@ export const MIN_REMAINING_SECONDS = 2 * 86400;
 
 /** One run's worth, well inside a Worker's budget. */
 export const BATCH = 100;
+
+/**
+ * How long after a month locks its medals are still news. Past this a first
+ * deploy or an outage stays quiet rather than mailing about old months.
+ */
+export const AWARD_WINDOW_SECONDS = 14 * 86400;
 
 interface PendingRow {
 	id: string;
@@ -150,6 +165,127 @@ export async function sendBoardNudges(
 	return { considered: byUser.size, sent, failed };
 }
 
+/** A medal as a mail shows it, with the badge's own address. */
+function badgeFacts(
+	origin: string,
+	period: string,
+	boardId: string,
+	username: string,
+	medal: Medal,
+	value: number
+): BadgeFacts {
+	const board = boardById(boardId);
+	return {
+		medal,
+		board: board?.label ?? boardId,
+		reading: board ? `${formatValue(board, value)} ${board.unit}` : String(value),
+		period: periodLabel(period),
+		imageUrl: `${origin}${badgePath(period, boardId, username, 2)}`,
+		alt: badgeAlt({ period, board: boardId as BoardId, medal }, username)
+	};
+}
+
+/** The latest month that has locked by `now`. */
+export function lastLockedMonth(now: number): string {
+	let month = monthOf(now, 'UTC');
+	while (locksAt(month) > now) month = previousMonth(month);
+	return month;
+}
+
+interface AwardRow {
+	user_id: string;
+	email: string;
+	username: string;
+	board: string;
+	value: number;
+	rank: number;
+}
+
+/**
+ * Tells the top three of each board that they won something, once the month
+ * has locked and the podium cannot change under them.
+ *
+ * Only the latest locked month, and only for a fortnight after it locks. The
+ * same discipline as the nudges: marked before sending, the mark kept when a
+ * send fails, and one message per person however many medals.
+ */
+export async function sendAwardMails(
+	db: Db,
+	mailer: Mailer,
+	origin: string,
+	mailSecret: string,
+	now = currentTime(),
+	streak: FailureStreak = failureStreak()
+): Promise<NudgeReport> {
+	const month = lastLockedMonth(now);
+	if (streak.stopped || now >= locksAt(month) + AWARD_WINDOW_SECONDS) {
+		return { considered: 0, sent: 0, failed: 0 };
+	}
+
+	const rows = await all<AwardRow>(
+		db,
+		`SELECT r.user_id, u.email, u.username, r.board, r.value, r.rank FROM (
+			SELECT e.user_id AS user_id, e.board AS board, e.value AS value,
+				RANK() OVER (PARTITION BY e.board ORDER BY e.score DESC) AS rank
+			FROM board_entries e
+			JOIN users u ON u.id = e.user_id
+			WHERE e.month = ?1 AND e.removed_at IS NULL AND u.username IS NOT NULL
+		) r
+		JOIN users u ON u.id = r.user_id
+		WHERE r.rank <= 3 AND u.board_notify = 1
+			AND (u.award_mailed_month IS NULL OR u.award_mailed_month < ?1)
+		ORDER BY r.user_id, r.rank`,
+		month
+	);
+
+	const byUser = new Map<string, AwardRow[]>();
+	for (const row of rows) {
+		if (!boardById(row.board)) continue;
+		if (!byUser.has(row.user_id) && byUser.size >= BATCH) continue;
+		byUser.set(row.user_id, [...(byUser.get(row.user_id) ?? []), row]);
+	}
+
+	let sent = 0;
+	let failed = 0;
+
+	for (const [userId, medals] of byUser) {
+		if (streak.stopped) break;
+		// Conditional, so two runs that overlap cannot both claim the same person.
+		const marked = await run(
+			db,
+			`UPDATE users SET award_mailed_month = ?1 WHERE id = ?2
+			 AND (award_mailed_month IS NULL OR award_mailed_month < ?1)`,
+			month,
+			userId
+		);
+		if (marked === 0) continue;
+		const links = await unsubscribeLinks(origin, mailSecret, userId, 'leaderboard');
+		const { email, username } = medals[0];
+
+		try {
+			await mailer.send(
+				awardMail(email, {
+					month: monthLabel(month),
+					badges: medals.map((row) =>
+						badgeFacts(origin, month, row.board, username, medalFor(row.rank)!, row.value)
+					),
+					boardUrl: `${origin}/leaderboard/${month}`,
+					embedUrl: `${origin}/account#leaderboard`,
+					...links
+				})
+			);
+			sent++;
+			streak.succeeded();
+		} catch (error) {
+			logSendFailure('award', userId, error);
+			failed++;
+			streak.failed();
+		}
+	}
+
+	return { considered: byUser.size, sent, failed };
+}
+
 interface RoundupRow {
 	user_id: string;
 	email: string;
@@ -201,6 +337,22 @@ export async function sendYearRoundups(
 		BATCH
 	);
 
+	// The year's own podium, read once for the whole run and matched by name.
+	const medals = new Map<string, BadgeFacts[]>();
+	if (rows.length > 0) {
+		for (const listing of (await yearBoards(db, year)).boards) {
+			for (const entry of listing.entries) {
+				const medal = medalFor(entry.rank);
+				if (!medal) continue;
+				const key = entry.username.toLowerCase();
+				medals.set(key, [
+					...(medals.get(key) ?? []),
+					badgeFacts(origin, String(year), listing.board, entry.username, medal, entry.value)
+				]);
+			}
+		}
+	}
+
 	let sent = 0;
 	let failed = 0;
 
@@ -216,6 +368,8 @@ export async function sendYearRoundups(
 					places: row.places,
 					wins: row.wins,
 					url: `${origin}/leaderboard/${year}`,
+					badges: row.username ? (medals.get(row.username.toLowerCase()) ?? []) : [],
+					embedUrl: `${origin}/account#leaderboard`,
 					...links
 				})
 			);
