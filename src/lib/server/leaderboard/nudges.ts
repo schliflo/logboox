@@ -205,7 +205,9 @@ interface AwardRow {
  * Tells the top three of each board that they won something, once the month
  * has locked and the podium cannot change under them.
  *
- * Only the latest locked month, and only for a fortnight after it locks. The
+ * Only the latest locked month, and only for a fortnight after it locks — and
+ * never December, which closes at the same instant its year does: those medals
+ * go out in the year's roundup instead of as a second message that day. The
  * same discipline as the nudges: marked before sending, the mark kept when a
  * send fails, and one message per person however many medals.
  */
@@ -218,7 +220,7 @@ export async function sendAwardMails(
 	streak: FailureStreak = failureStreak()
 ): Promise<NudgeReport> {
 	const month = lastLockedMonth(now);
-	if (streak.stopped || now >= locksAt(month) + AWARD_WINDOW_SECONDS) {
+	if (streak.stopped || month.endsWith('-12') || now >= locksAt(month) + AWARD_WINDOW_SECONDS) {
 		return { considered: 0, sent: 0, failed: 0 };
 	}
 
@@ -353,6 +355,36 @@ export async function sendYearRoundups(
 		}
 	}
 
+	// December's podium, which has no message of its own; see `sendAwardMails`.
+	const december = new Map<string, BadgeFacts[]>();
+	if (rows.length > 0) {
+		const podium = await all<{
+			user_id: string;
+			username: string;
+			board: string;
+			value: number;
+			rank: number;
+		}>(
+			db,
+			`SELECT user_id, username, board, value, rank FROM (
+				SELECT e.user_id AS user_id, u.username AS username, e.board AS board, e.value AS value,
+					RANK() OVER (PARTITION BY e.board ORDER BY e.score DESC) AS rank
+				FROM board_entries e
+				JOIN users u ON u.id = e.user_id
+				WHERE e.month = ? AND e.removed_at IS NULL AND u.username IS NOT NULL
+			) WHERE rank <= 3
+			ORDER BY rank`,
+			months[11]
+		);
+		for (const row of podium) {
+			if (!boardById(row.board)) continue;
+			december.set(row.user_id, [
+				...(december.get(row.user_id) ?? []),
+				badgeFacts(origin, months[11], row.board, row.username, medalFor(row.rank)!, row.value)
+			]);
+		}
+	}
+
 	let sent = 0;
 	let failed = 0;
 
@@ -369,6 +401,7 @@ export async function sendYearRoundups(
 					wins: row.wins,
 					url: `${origin}/leaderboard/${year}`,
 					badges: row.username ? (medals.get(row.username.toLowerCase()) ?? []) : [],
+					monthBadges: december.get(row.user_id) ?? [],
 					embedUrl: `${origin}/account#leaderboard`,
 					...links
 				})

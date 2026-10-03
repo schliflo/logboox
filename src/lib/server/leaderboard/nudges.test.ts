@@ -309,7 +309,7 @@ describe('telling the podium', () => {
 		const gold = mailer.sent.find((message) => message.to === 'a@example.com')!;
 		expect(gold.subject).toBe('Gold for longest drive — September 2026');
 		expect(gold.html).toContain(
-			'src="https://logboox.app/badge/2026-09/longest-drive/ant@2x.png" width="560" height="160"'
+			'src="https://logboox.app/badge/2026-09/longest-drive/ant@2x.png" width="504" height="144"'
 		);
 		expect(gold.html).toContain('alt="ant — Gold, Longest drive, September 2026 · LogbooX"');
 		expect(gold.html).toContain('https://logboox.app/account#leaderboard');
@@ -405,6 +405,27 @@ describe('telling the podium', () => {
 		const bea = mailer.sent.find((message) => message.to === 'b@example.com')!;
 		expect(bea.html).toContain('/badge/2026/longest-drive/bea@2x.png');
 		expect(bea.html).not.toContain('/ant@2x.png');
+	});
+
+	it('leaves December to the roundup, so nobody gets two messages that day', async () => {
+		const id = await placed('a@example.com', 'ant', 500);
+		await run(db, "UPDATE board_entries SET month = '2026-12' WHERE user_id = ?", id);
+		const closed = locksAt('2026-12') + 60;
+
+		const awards = collector();
+		expect(
+			(await sendAwardMails(db, awards, 'https://logboox.app', SECRET, closed)).considered
+		).toBe(0);
+		expect(awards.sent).toHaveLength(0);
+
+		const roundups = collector();
+		await sendYearRoundups(db, roundups, 'https://logboox.app', SECRET, closed);
+		expect(roundups.sent).toHaveLength(1);
+		expect(roundups.sent[0].text).toContain(
+			'December 2026 closed with it: you took gold for longest drive.'
+		);
+		expect(roundups.sent[0].html).toContain('/badge/2026-12/longest-drive/ant@2x.png');
+		expect(roundups.sent[0].html).toContain('/badge/2026/longest-drive/ant@2x.png');
 	});
 });
 
