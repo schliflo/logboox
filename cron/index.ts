@@ -47,9 +47,15 @@ async function trigger(env: Env): Promise<string> {
 		return JSON.stringify({ error: message });
 	}
 
+	// The content type is what lets this through: SvelteKit refuses a POST
+	// that has no `Origin` unless it is plainly not a form.
 	const response = await fetch(`${env.LOGBOOX_ORIGIN}/internal/cron/reminders`, {
 		method: 'POST',
-		headers: { authorization: `Bearer ${env.CRON_SECRET}` }
+		headers: {
+			authorization: `Bearer ${env.CRON_SECRET}`,
+			'content-type': 'application/json'
+		},
+		body: '{}'
 	});
 
 	const body = await response.text();
