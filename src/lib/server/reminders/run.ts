@@ -20,7 +20,7 @@ import { pruneMagicLinks } from '../auth/magic';
 import { pruneSessions } from '../auth/session';
 import { deleteExport, staleUploads } from '../exports/repo';
 import { deletePrefix, exportPrefix } from '../exports/r2';
-import { sendBoardNudges, sendYearRoundups } from '../leaderboard/nudges';
+import { sendAwardMails, sendBoardNudges, sendYearRoundups } from '../leaderboard/nudges';
 
 /** Once a week at most, however far past due someone is. */
 export const REPEAT_AFTER_SECONDS = 7 * 86400;
@@ -77,6 +77,9 @@ export interface ReminderReport {
 	/** People told that something of theirs would stand on a board. */
 	nudged: number;
 	nudgeFailed: number;
+	/** People told they finished in a month's top three. */
+	awards: number;
+	awardFailed: number;
 	/** Year-in-review messages, sent once a year has closed for good. */
 	roundups: number;
 	roundupFailed: number;
@@ -89,8 +92,8 @@ export interface ReminderReport {
  * misconfigured sender looks like, and what the cron route answers 502 to.
  */
 export function everySendFailed(report: ReminderReport): boolean {
-	const sent = report.sent + report.nudged + report.roundups;
-	const failed = report.failed + report.nudgeFailed + report.roundupFailed;
+	const sent = report.sent + report.nudged + report.awards + report.roundups;
+	const failed = report.failed + report.nudgeFailed + report.awardFailed + report.roundupFailed;
 	return failed > 0 && sent === 0;
 }
 
@@ -147,6 +150,7 @@ export async function sendReminders(
 	// missed export is the more consequential of the two: the window closes on
 	// it for good, whereas a place on a board is only ever a nice-to-have.
 	const nudges = await sendBoardNudges(db, mailer, origin, mailSecret, now(), streak);
+	const awards = await sendAwardMails(db, mailer, origin, mailSecret, now(), streak);
 	const roundups = await sendYearRoundups(db, mailer, origin, mailSecret, now(), streak);
 
 	return {
@@ -155,6 +159,8 @@ export async function sendReminders(
 		failed,
 		nudged: nudges.sent,
 		nudgeFailed: nudges.failed,
+		awards: awards.sent,
+		awardFailed: awards.failed,
 		roundups: roundups.sent,
 		roundupFailed: roundups.failed,
 		stopped: streak.stopped,

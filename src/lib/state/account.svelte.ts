@@ -12,6 +12,7 @@ import { browser } from '$app/env';
 import { ApiError, api } from '../api/client';
 import { ACCOUNTS_ENABLED } from '../features';
 import { boardById } from '../leaderboard/boards';
+import type { OwnBadge } from '../leaderboard/medals';
 
 export interface AccountUser {
 	email: string;
@@ -57,6 +58,12 @@ export interface BoardEntry {
 export interface LeaderboardState {
 	pending: BoardCandidate[];
 	entries: BoardEntry[];
+	/** Medals held in locked months and final years, newest first. */
+	badges: OwnBadge[];
+}
+
+function emptyLeaderboard(): LeaderboardState {
+	return { pending: [], entries: [], badges: [] };
 }
 
 export interface StorageUsage {
@@ -78,7 +85,7 @@ class AccountStore {
 	status = $state<Status>('unknown');
 	user = $state<AccountUser | null>(null);
 	storage = $state<StorageUsage | null>(null);
-	leaderboard = $state<LeaderboardState>({ pending: [], entries: [] });
+	leaderboard = $state<LeaderboardState>(emptyLeaderboard());
 	busy = $state(false);
 	error = $state<string | null>(null);
 	/** Set once a link has been asked for, so the form can say so. */
@@ -104,7 +111,7 @@ class AccountStore {
 		this.user = null;
 		this.storage = null;
 		this.status = 'anonymous';
-		this.leaderboard = { pending: [], entries: [] };
+		this.leaderboard = emptyLeaderboard();
 		for (const listener of this.signedOutListeners) listener();
 	}
 
@@ -121,7 +128,8 @@ class AccountStore {
 			const me = await api<MeResponse>('/api/v1/me');
 			this.user = me.user;
 			this.storage = me.storage;
-			this.leaderboard = me.leaderboard ?? { pending: [], entries: [] };
+			// Older servers answer without some of these.
+			this.leaderboard = { ...emptyLeaderboard(), ...me.leaderboard };
 			this.status = 'signed-in';
 			this.error = null;
 		} catch (error) {
@@ -264,10 +272,17 @@ class AccountStore {
 
 	async removeEntry(id: string): Promise<void> {
 		await api(`/api/v1/leaderboard/entries/${encodeURIComponent(id)}`, { method: 'DELETE' });
+		const removed = this.leaderboard.entries.find((entry) => entry.id === id);
 		this.leaderboard = {
 			...this.leaderboard,
-			entries: this.leaderboard.entries.filter((entry) => entry.id !== id)
+			entries: this.leaderboard.entries.filter((entry) => entry.id !== id),
+			// Its month medal goes at once; a year medal may too, which the
+			// refresh below settles.
+			badges: this.leaderboard.badges.filter(
+				(badge) => !removed || badge.period !== removed.month || badge.board !== removed.board
+			)
 		};
+		await this.refresh();
 	}
 
 	async updateSettings(

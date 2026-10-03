@@ -125,15 +125,24 @@
 	automatically: the app tells you privately when something of yours would rank, and only you can put
 	it up. You can take it down again at any time, including after a month has closed.
 </p>
+<p>
+	<strong>Badges.</strong> A place in the top three of a settled board has a public badge image at its
+	own address, showing the name you chose, the board, the figure and the period. Anyone who has the address
+	can load it, and it can be embedded on other sites. It disappears within minutes of the place being
+	taken down or the account deleted. A copy that a third-party site has already downloaded is outside
+	our control.
+</p>
 
 <h2>E-mail</h2>
 <p>
 	We send sign-in links, and — only if you leave them switched on — reminders to request your next
-	export, messages when something of yours would rank on a board, and a summary at the end of a
-	year. Reminders have a switch of their own on the account page. Board messages and the yearly
-	summary share another. Every message other than a sign-in link carries its own unsubscribe link,
-	which does not expire, and a <code>List-Unsubscribe</code> header. There are no tracking pixels and
-	no click tracking; the messages are plain text with a plain HTML twin. Mail is delivered through Cloudflare's
+	export, messages when something of yours would rank on a board or has won a medal, and a summary
+	at the end of a year. Reminders have a switch of their own on the account page. Board and medal
+	messages and the yearly summary share another. Every message other than a sign-in link carries its
+	own unsubscribe link, which does not expire, and a <code>List-Unsubscribe</code> header. There are no
+	tracking pixels and no click tracking; the messages are plain text with a plain HTML twin. The one exception
+	is a message about a medal, which shows the badge: your mail program loads that picture from the same
+	public address as everyone else, and we do not record who loads it. Mail is delivered through Cloudflare's
 	e-mail service.
 </p>
 

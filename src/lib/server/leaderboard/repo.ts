@@ -26,7 +26,16 @@ import {
 	type BoardKind,
 	type MonthTrip
 } from '#lib/leaderboard/boards.js';
-import { isMonthOpen, locksAt, monthOf, monthKey, monthWindow } from '#lib/leaderboard/periods.js';
+import { medalFor, type Medal, type OwnBadge } from '#lib/leaderboard/medals.js';
+import {
+	isMonthOpen,
+	isYearFinal,
+	locksAt,
+	monthOf,
+	monthKey,
+	monthWindow,
+	yearOf
+} from '#lib/leaderboard/periods.js';
 import { all, now as currentTime, one, rowId, run, type Db, type Statement } from '../db';
 
 export interface CandidateRow {
@@ -786,4 +795,142 @@ export async function yearBoards(db: Db, year: number, viewerId?: string): Promi
 			.slice(0, 10),
 		totals: { entries: rows.length, people: people.size, months: months.size }
 	};
+}
+
+/** A medal as a badge prints it: whose, for what, and in which place. */
+export interface MedalHolder {
+	/** As stored, which is how the badge spells it whatever the address said. */
+	username: string;
+	vmodel: string;
+	value: number;
+	rank: number;
+	medal: Medal;
+}
+
+/**
+ * The medal a name holds on a month's board, read live off the entries.
+ *
+ * Nothing until the month has locked: a board still moving has no podium yet.
+ * Ranked among the same rows the public board shows, so a badge never claims a
+ * place the board does not.
+ */
+export async function monthMedal(
+	db: Db,
+	month: string,
+	board: string,
+	username: string,
+	now = currentTime()
+): Promise<MedalHolder | null> {
+	if (locksAt(month) === 0 || isMonthOpen(month, now) || !boardById(board)) return null;
+
+	const row = await one<{ username: string; vmodel: string; value: number; rank: number }>(
+		db,
+		`SELECT username, vmodel, value, rank FROM (
+			SELECT u.username AS username, e.vmodel AS vmodel, e.value AS value,
+				RANK() OVER (ORDER BY e.score DESC) AS rank
+			FROM board_entries e
+			JOIN users u ON u.id = e.user_id
+			WHERE e.month = ? AND e.board = ? AND e.removed_at IS NULL AND u.username IS NOT NULL
+		) WHERE username = ? COLLATE NOCASE AND rank <= 3`,
+		month,
+		board,
+		username
+	);
+	const medal = row ? medalFor(row.rank) : null;
+	return row && medal ? { ...row, medal } : null;
+}
+
+/** The same for a year, once every month of it has locked. */
+export async function yearMedal(
+	db: Db,
+	year: number,
+	board: string,
+	username: string,
+	now = currentTime()
+): Promise<MedalHolder | null> {
+	if (!isYearFinal(year, now) || !boardById(board)) return null;
+
+	// Names are ASCII, so this folds exactly as `COLLATE NOCASE` does.
+	const wanted = username.toLowerCase();
+	const entry = (await yearBoards(db, year)).boards
+		.find((listing) => listing.board === board)
+		?.entries.find((row) => row.username.toLowerCase() === wanted);
+	const medal = entry ? medalFor(entry.rank) : null;
+	if (!entry || !medal) return null;
+	return {
+		username: entry.username,
+		vmodel: entry.vmodel,
+		value: entry.value,
+		rank: entry.rank,
+		medal
+	};
+}
+
+/** Newest first, with a year after its own December, which it outlasts. */
+function periodOrder(period: string): string {
+	return period.length === 4 ? `${period}-13` : period;
+}
+
+/**
+ * Every medal this account holds, newest period first.
+ *
+ * One query ranks every month the account has a place in; the years are folded
+ * from `yearBoards`, once per final year it entered.
+ */
+export async function listBadges(db: Db, userId: string, now = currentTime()): Promise<OwnBadge[]> {
+	const rows = await all<{ board: string; month: string; value: number; rank: number }>(
+		db,
+		`SELECT board, month, value, rank FROM (
+			SELECT e.board AS board, e.month AS month, e.value AS value, e.user_id AS user_id,
+				RANK() OVER (PARTITION BY e.board, e.month ORDER BY e.score DESC) AS rank
+			FROM board_entries e
+			JOIN users u ON u.id = e.user_id
+			WHERE e.removed_at IS NULL AND u.username IS NOT NULL AND e.month IN (
+				SELECT month FROM board_entries WHERE user_id = ? AND removed_at IS NULL
+			)
+		) WHERE user_id = ?`,
+		userId,
+		userId
+	);
+
+	const badges: OwnBadge[] = [];
+	const years = new Set<number>();
+
+	for (const row of rows) {
+		if (!boardById(row.board) || isMonthOpen(row.month, now)) continue;
+		years.add(yearOf(row.month));
+		const medal = medalFor(row.rank);
+		if (medal) {
+			badges.push({
+				period: row.month,
+				board: row.board as BoardId,
+				medal,
+				rank: row.rank,
+				value: row.value
+			});
+		}
+	}
+
+	for (const year of years) {
+		if (!isYearFinal(year, now)) continue;
+		for (const listing of (await yearBoards(db, year, userId)).boards) {
+			const entry = listing.entries.find((row) => row.mine);
+			const medal = entry ? medalFor(entry.rank) : null;
+			if (!entry || !medal) continue;
+			badges.push({
+				period: String(year),
+				board: listing.board,
+				medal,
+				rank: entry.rank,
+				value: entry.value
+			});
+		}
+	}
+
+	const boardIndex = (id: string) => BOARDS.findIndex((board) => board.id === id);
+	return badges.sort(
+		(a, b) =>
+			periodOrder(b.period).localeCompare(periodOrder(a.period)) ||
+			boardIndex(a.board) - boardIndex(b.board)
+	);
 }

@@ -106,6 +106,7 @@ describe('isNetworkOnly', () => {
 		expect(isNetworkOnly('/api/v1/me')).toBe(true);
 		expect(isNetworkOnly('/internal/cron/reminders')).toBe(true);
 		expect(isNetworkOnly('/s/abc123')).toBe(true);
+		expect(isNetworkOnly('/badge/2026-09/peak-charge/flo.png')).toBe(true);
 	});
 
 	it('leaves the app itself to the store', () => {

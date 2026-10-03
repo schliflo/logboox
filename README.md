@@ -109,8 +109,10 @@ changes when you have one. What it adds:
 - **Leaderboards.** The app tells you privately when something of yours would
   rank for a month: a fast charge, a long drive, the most distance. Nothing is
   published unless you say so, and a place shows a name you choose, the car's
-  model and the figures, never the exact time. Board and yearly-summary mail can be
-  switched off separately from the export reminders.
+  model and the figures, never the exact time. The top three of a settled board
+  get a public badge image to embed in a forum, at `/badge/{period}/{board}/{name}.png`.
+  Board, medal and yearly-summary mail can be switched off separately from the
+  export reminders.
 
 Signing in is by e-mail alone: a link, good once, for fifteen minutes. There is
 no password to lose. Deleting the account removes every byte it holds, meaning the
@@ -292,6 +294,7 @@ src/routes/    landing, the opening sequence, the dashboard, the account
 src/routes/api/v1/           the account API; docs/api.md describes it
 src/routes/s/                public share pages, rendered per request
 src/routes/leaderboard/      the public boards, also rendered per request
+src/routes/badge/            the winners' badge images (PNG)
 src/lib/seo.ts               site metadata, shared by every page
 static/                      icons, the social card, the manifest
 design/og-card.html          source for the social card; render it at 1200x630

@@ -20,6 +20,7 @@ export interface User {
 	board_notify: number;
 	board_mailed_at: number | null;
 	roundup_mailed_year: number | null;
+	award_mailed_month: string | null;
 }
 
 /** Addresses differ only by case and stray spaces far more often than by intent. */
@@ -66,7 +67,8 @@ export async function findOrCreateUser(
 		username_changed_at: null,
 		board_notify: 1,
 		board_mailed_at: null,
-		roundup_mailed_year: null
+		roundup_mailed_year: null,
+		award_mailed_month: null
 	};
 
 	await run(

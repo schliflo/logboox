@@ -370,6 +370,31 @@ describe('sending', () => {
 		expect(everySendFailed(report)).toBe(false);
 	});
 
+	it('counts award mails when judging whether anything got through', () => {
+		const quiet = {
+			considered: 0,
+			sent: 0,
+			failed: 0,
+			sweptUploads: 0,
+			prunedLinks: 0,
+			prunedSessions: 0,
+			nudged: 0,
+			nudgeFailed: 0,
+			awards: 0,
+			awardFailed: 0,
+			roundups: 0,
+			roundupFailed: 0,
+			stopped: false
+		};
+		expect(everySendFailed({ ...quiet, awardFailed: 2 })).toBe(true);
+		expect(everySendFailed({ ...quiet, awardFailed: 2, awards: 1 })).toBe(false);
+	});
+
+	it('reports award mails alongside the rest', async () => {
+		const report = await sendReminders(db, collector(), 'https://logboox.app', SECRET);
+		expect(report).toMatchObject({ awards: 0, awardFailed: 0 });
+	});
+
 	it('sweeps up an upload that was begun and abandoned', async () => {
 		const { user } = await findOrCreateUser(db, 'interrupted@example.com');
 		const endTime = now() - 3 * DAY;

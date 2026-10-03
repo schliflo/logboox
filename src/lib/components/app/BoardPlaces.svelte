@@ -18,9 +18,12 @@
 	import { account, type BoardCandidate, type BoardEntry } from '#lib/state/account.svelte.js';
 	import { boardById, formatValue } from '#lib/leaderboard/boards.js';
 	import { monthLabel } from '#lib/leaderboard/periods.js';
+	import { periodLabel, type Medal, type OwnBadge } from '#lib/leaderboard/medals.js';
+	import BadgeDialog from '#lib/components/app/BadgeDialog.svelte';
 	import { dateOnly } from '#lib/utils/format.js';
 	import TrophyIcon from '@lucide/svelte/icons/trophy';
 	import ExternalIcon from '@lucide/svelte/icons/external-link';
+	import MedalIcon from '@lucide/svelte/icons/medal';
 
 	let username = $state('');
 	let savingName = $state(false);
@@ -29,6 +32,26 @@
 
 	const pending = $derived(account.leaderboard.pending);
 	const entries = $derived(account.leaderboard.entries);
+	const badges = $derived(account.leaderboard.badges ?? []);
+
+	const MEDAL_COLORS: Record<Medal, string> = {
+		gold: '#d4a017',
+		silver: '#9aa0a6',
+		bronze: '#b0703a'
+	};
+
+	let badgeOpen = $state(false);
+	let badgeShown = $state<OwnBadge | null>(null);
+
+	function showBadge(badge: OwnBadge) {
+		badgeShown = badge;
+		badgeOpen = true;
+	}
+
+	/** A year reads as such; a month by its name. */
+	function whenOf(period: string): string {
+		return /^\d{4}$/.test(period) ? `${period} · the year` : periodLabel(period);
+	}
 
 	onMount(() => {
 		username = account.user?.username ?? '';
@@ -241,6 +264,32 @@
 			</div>
 		{/if}
 
+		{#if badges.length > 0}
+			<Separator />
+			<div class="space-y-3">
+				<h3 class="text-sm font-medium">Badges</h3>
+				<ul class="divide-y rounded-lg border">
+					{#each badges as badge (`${badge.period}/${badge.board}`)}
+						<li class="flex flex-wrap items-center gap-3 p-3">
+							<MedalIcon
+								class="size-5 shrink-0"
+								style="color: {MEDAL_COLORS[badge.medal]}"
+								aria-label="{badge.medal} medal"
+							/>
+							<div class="min-w-40 flex-1">
+								<p class="text-sm font-medium">{label(badge.board)}</p>
+								<p class="text-xs text-muted-foreground">
+									{reading(badge.board, badge.value)} · {whenOf(badge.period)}
+								</p>
+							</div>
+							<Button size="sm" variant="outline" onclick={() => showBadge(badge)}>Get badge</Button
+							>
+						</li>
+					{/each}
+				</ul>
+			</div>
+		{/if}
+
 		{#if pending.length === 0 && entries.length === 0}
 			<p class="text-sm text-muted-foreground">
 				Nothing yet. Keep an export in your account and anything of yours worth a place will turn up
@@ -256,3 +305,5 @@
 		</Button>
 	</Card.Footer>
 </Card.Root>
+
+<BadgeDialog bind:open={badgeOpen} badge={badgeShown} username={account.user?.username ?? ''} />

@@ -4,8 +4,14 @@
  * Plain text first, with a plain HTML twin: no images, no tracking pixel, no
  * link wrapping. A mail that asks to be trusted with a sign-in link should not
  * be indistinguishable from a marketing one.
+ *
+ * The one picture is a medal's badge, in the mails about winning one. It is the
+ * public badge itself, at the address a forum would load it from — which names
+ * the winner, so a client that fetches it makes a request we could in principle
+ * tell apart. Nothing reads that; the privacy page says so rather than "none".
  */
 
+import type { Medal } from '#lib/leaderboard/medals.js';
 import type { Message } from './mailer';
 
 const BRAND = 'LogbooX';
@@ -182,12 +188,104 @@ ${TEXT_FOOTER}`;
 	return { to, subject, text, html, headers: unsubscribeHeaders(facts.unsubscribeUrl) };
 }
 
+/** A medal as a mail shows it, every string ready to print. */
+export interface BadgeFacts {
+	medal: Medal;
+	/** The board's label. */
+	board: string;
+	/** The value with its unit. */
+	reading: string;
+	/** `September 2026` or `2026`. */
+	period: string;
+	/** Absolute, the `@2x` file. */
+	imageUrl: string;
+	alt: string;
+}
+
+function medalName(medal: Medal): string {
+	return medal[0].toUpperCase() + medal.slice(1);
+}
+
+function badgeLine(badge: BadgeFacts): string {
+	return `${medalName(badge.medal)} · ${badge.board} · ${badge.reading} · ${badge.period}`;
+}
+
+function badgesText(badges: BadgeFacts[]): string {
+	return badges.map((badge) => `  ${badgeLine(badge)}\n  ${badge.imageUrl}`).join('\n\n');
+}
+
+/** Drawn at 560×160 from the sharp file, so it stays crisp on any screen. */
+function badgesHtml(badges: BadgeFacts[]): string {
+	return badges
+		.map(
+			(badge) =>
+				`<p style="margin:0 0 16px"><img src="${escapeHtml(badge.imageUrl)}" width="560" height="160" alt="${escapeHtml(badge.alt)}" style="display:block;width:100%;max-width:560px;height:auto;border:0"><span style="font-size:13px;color:#6b6b66">${escapeHtml(badgeLine(badge))}</span></p>`
+		)
+		.join('\n');
+}
+
+const EMBED_LABEL = 'Copy the embed code for a forum signature';
+
+export interface AwardFacts {
+	/** `September 2026`. */
+	month: string;
+	badges: BadgeFacts[];
+	boardUrl: string;
+	/** Where the embed codes are. */
+	embedUrl: string;
+	unsubscribeUrl: string;
+}
+
+/** "You finished on the podium", once a month has locked and stopped moving. */
+export function awardMail(to: string, facts: AwardFacts): Message {
+	const first = facts.badges[0];
+	const several = facts.badges.length > 1;
+
+	const subject = several
+		? `${facts.badges.length} medals on the ${facts.month} boards`
+		: `${medalName(first.medal)} for ${first.board.toLowerCase()} — ${facts.month}`;
+
+	const opening = several
+		? `${facts.month} has closed, and you finished in the top three on ${facts.badges.length} boards.`
+		: `${facts.month} has closed, and ${first.reading} took ${first.medal} for ${first.board.toLowerCase()}.`;
+
+	const text = `${opening}
+
+${badgesText(facts.badges)}
+
+${EMBED_LABEL}:
+${facts.embedUrl}
+
+See the board:
+${facts.boardUrl}
+
+The badge follows the board: take the place down and the badge goes with it.
+
+To stop these: ${facts.unsubscribeUrl}
+
+${TEXT_FOOTER}`;
+
+	const html = layout(
+		`<p style="margin:0 0 20px">${escapeHtml(opening)}</p>
+${badgesHtml(facts.badges)}
+<p style="margin:8px 0 24px"><a href="${escapeHtml(facts.embedUrl)}" style="display:inline-block;background:#1c1c1a;color:#fff;text-decoration:none;padding:12px 20px;border-radius:8px">${EMBED_LABEL}</a></p>
+<p style="margin:0 0 20px;font-size:14px;color:#6b6b66"><a href="${escapeHtml(facts.boardUrl)}" style="color:#1c1c1a">See the board</a>. The badge follows the board: take the place down and the badge goes with it.</p>
+<p style="margin:0;font-size:13px;color:#6b6b66"><a href="${escapeHtml(facts.unsubscribeUrl)}" style="color:#6b6b66">Stop these messages</a></p>`
+	);
+
+	return { to, subject, text, html, headers: unsubscribeHeaders(facts.unsubscribeUrl) };
+}
+
 export interface RoundupFacts {
 	year: number;
 	places: number;
 	wins: number;
 	url: string;
 	unsubscribeUrl: string;
+	/** The year's own medals, if any. */
+	badges?: BadgeFacts[];
+	/** Where the embed codes are; needed with `badges`. */
+	embedUrl?: string;
 }
 
 /** The year, once its last month has closed and the numbers stopped moving. */
@@ -204,9 +302,31 @@ export function yearRoundupMail(to: string, facts: RoundupFacts): Message {
 
 	const opening = `${facts.year} is closed and the boards are final. You held ${held} across the year.${won}`;
 
+	const badges = facts.badges ?? [];
+	const medals =
+		badges.length === 0
+			? ''
+			: badges.length === 1
+				? `On the year's own table you took ${badges[0].medal} for ${badges[0].board.toLowerCase()}.`
+				: `On the year's own table you took ${badges.length} medals.`;
+	const embed = badges.length > 0 && facts.embedUrl ? facts.embedUrl : null;
+
+	const badgeText = medals
+		? `${medals}
+
+${badgesText(badges)}
+${embed ? `\n${EMBED_LABEL}:\n${embed}\n` : ''}
+`
+		: '';
+	const badgeHtml = medals
+		? `<p style="margin:0 0 20px">${escapeHtml(medals)}</p>
+${badgesHtml(badges)}
+${embed ? `<p style="margin:0 0 24px;font-size:14px"><a href="${escapeHtml(embed)}" style="color:#1c1c1a">${EMBED_LABEL}</a></p>\n` : ''}`
+		: '';
+
 	const text = `${opening}
 
-See the year:
+${badgeText}See the year:
 ${facts.url}
 
 To stop these: ${facts.unsubscribeUrl}
@@ -215,7 +335,7 @@ ${TEXT_FOOTER}`;
 
 	const html = layout(
 		`<p style="margin:0 0 24px">${escapeHtml(opening)}</p>
-<p style="margin:0 0 24px"><a href="${escapeHtml(facts.url)}" style="display:inline-block;background:#1c1c1a;color:#fff;text-decoration:none;padding:12px 20px;border-radius:8px">See the year</a></p>
+${badgeHtml}<p style="margin:0 0 24px"><a href="${escapeHtml(facts.url)}" style="display:inline-block;background:#1c1c1a;color:#fff;text-decoration:none;padding:12px 20px;border-radius:8px">See the year</a></p>
 <p style="margin:0;font-size:13px;color:#6b6b66"><a href="${escapeHtml(facts.unsubscribeUrl)}" style="color:#6b6b66">Stop these messages</a></p>`
 	);
 
