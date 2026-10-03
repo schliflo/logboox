@@ -9,6 +9,8 @@
  * sign-in link can be followed from the terminal.
  */
 
+import { LOGO_CID, LOGO_PNG_BASE64 } from './logo';
+
 export interface Message {
 	to: string;
 	subject: string;
@@ -26,11 +28,18 @@ export interface Mailer {
 interface EmailBinding {
 	send(message: {
 		to: string;
-		from: string;
+		from: { name: string; email: string };
 		subject: string;
 		text?: string;
 		html?: string;
 		headers?: Record<string, string>;
+		attachments?: Array<{
+			disposition: 'inline';
+			contentId: string;
+			filename: string;
+			type: string;
+			content: string;
+		}>;
 	}): Promise<unknown>;
 }
 
@@ -44,11 +53,32 @@ export class MailError extends Error {
 	}
 }
 
+/** Who a message says it is from, beside the address. */
+export const SENDER_NAME = 'LogbooX';
+
 export function cloudflareMailer(binding: EmailBinding, from: string): Mailer {
 	return {
 		async send(message) {
 			try {
-				await binding.send({ ...message, from });
+				await binding.send({
+					...message,
+					from: { name: SENDER_NAME, email: from },
+					// Only when the HTML asks for it: a picture nothing points at
+					// would turn up as a file attached to the message.
+					...(message.html.includes(`cid:${LOGO_CID}`)
+						? {
+								attachments: [
+									{
+										disposition: 'inline' as const,
+										contentId: LOGO_CID,
+										filename: 'logboox.png',
+										type: 'image/png',
+										content: LOGO_PNG_BASE64
+									}
+								]
+							}
+						: {})
+				});
 			} catch (error) {
 				// The likely one is E_SENDER_NOT_VERIFIED: the domain has to be
 				// verified in Email Service before anything leaves.
