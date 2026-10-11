@@ -11,6 +11,7 @@
   spent there, which is the only way to read a number off a density plot.
 -->
 <script lang="ts">
+	import { m } from '#lib/i18n/index.svelte.js';
 	import { onMount } from 'svelte';
 	import { duration, num } from '#lib/utils/format.js';
 	import ChartTooltip from './ChartTooltip.svelte';
@@ -47,8 +48,8 @@
 			share: total > 0 ? (count / total) * 100 : 0,
 			// A cell is a small square of force, so "0.02 g" would overstate the
 			// precision; the words are what the position actually means.
-			longWord: longitudinal >= 0 ? 'accelerating' : 'braking',
-			latWord: lateral >= 0 ? 'left' : 'right',
+			longWord: longitudinal >= 0 ? m.charts.gg.accelerating : m.charts.gg.braking,
+			latWord: lateral >= 0 ? m.charts.gg.left : m.charts.gg.right,
 			// Where the cell sits on the canvas, for the marker and the readout.
 			left: cell.col * cellSize,
 			top: (size - 1 - cell.row) * cellSize
@@ -108,14 +109,14 @@
 		}
 
 		context.fillStyle = muted;
-		context.font = '10px Inter Variable, system-ui, sans-serif';
+		context.font = '10px Geist Variable, system-ui, sans-serif';
 		context.textAlign = 'center';
-		context.fillText('accelerating', side / 2, 12);
-		context.fillText('braking', side / 2, side - 4);
+		context.fillText(m.charts.gg.accelerating, side / 2, 12);
+		context.fillText(m.charts.gg.braking, side / 2, side - 4);
 		context.textAlign = 'left';
-		context.fillText('right', 4, side / 2 - 6);
+		context.fillText(m.charts.gg.right, 4, side / 2 - 6);
 		context.textAlign = 'right';
-		context.fillText('left', side - 4, side / 2 - 6);
+		context.fillText(m.charts.gg.left, side - 4, side / 2 - 6);
 	}
 
 	/** Maps the pointer back onto the cell it is over. */
@@ -154,7 +155,7 @@
 			class="relative"
 			style="width: {pixels}px; height: {pixels}px"
 			role="img"
-			aria-label="Cornering force against braking and acceleration, {num(total)} seconds of driving"
+			aria-label={m.charts.gg.aria(num(total))}
 			onpointermove={track}
 			onpointerleave={() => (hovered = null)}
 		>
@@ -177,10 +178,10 @@
 						{#if reading.count > 0}
 							<span class="font-medium tabular-nums">{duration(reading.count, 'short')}</span>
 							<span class="text-muted-foreground tabular-nums">
-								{num(reading.share, 2)}% of driving
+								{m.charts.gg.ofDriving(num(reading.share, 2))}
 							</span>
 						{:else}
-							<span class="text-muted-foreground">never went here</span>
+							<span class="text-muted-foreground">{m.charts.gg.never}</span>
 						{/if}
 					</p>
 				</ChartTooltip>
@@ -188,7 +189,6 @@
 		</div>
 	</div>
 	<figcaption class="text-center text-xs text-muted-foreground">
-		{num(total)} seconds of driving. Rings mark quarter-g steps; the outer edge is
-		{num(extent, 1)} g.
+		{m.charts.gg.caption(num(total), num(extent, 1))}
 	</figcaption>
 </figure>

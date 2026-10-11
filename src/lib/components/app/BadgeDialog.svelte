@@ -5,6 +5,7 @@
   rather than leaving it to be found out.
 -->
 <script lang="ts">
+	import { m } from '#lib/i18n/index.svelte.js';
 	import { toast } from 'svelte-sonner';
 	import * as Dialog from '#lib/components/ui/dialog/index.js';
 	import { Button } from '#lib/components/ui/button/index.js';
@@ -16,10 +17,10 @@
 		badgeAlt,
 		badgeEmbeds,
 		badgePath,
-		periodLabel,
 		type OwnBadge
 	} from '#lib/leaderboard/medals.js';
-	import { boardById } from '#lib/leaderboard/boards.js';
+	import { periodLabel } from '#lib/i18n/dates.js';
+	import { boardText } from '#lib/i18n/boards.js';
 	import CopyIcon from '@lucide/svelte/icons/copy';
 
 	interface Props {
@@ -41,7 +42,7 @@
 					{ id: 'markdown', label: 'Markdown', text: embeds.markdown },
 					{ id: 'html', label: 'HTML', text: embeds.html },
 					{ id: 'bbcode', label: 'BBCode', text: embeds.bbcode },
-					{ id: 'url', label: 'Image link', text: embeds.url }
+					{ id: 'url', label: m.claims.imageLink, text: embeds.url }
 				]
 			: []
 	);
@@ -49,9 +50,9 @@
 	async function copy(label: string, text: string) {
 		try {
 			await navigator.clipboard.writeText(text);
-			toast(`${label} copied`);
+			toast(m.claims.snippetCopied(label));
 		} catch {
-			toast('Could not copy', { description: 'Select the text and copy it by hand.' });
+			toast(m.claims.copyFailed, { description: m.claims.copyByHand });
 		}
 	}
 </script>
@@ -61,11 +62,10 @@
 		{#if badge}
 			<Dialog.Header>
 				<Dialog.Title>
-					{boardById(badge.board)?.label ?? badge.board} · {periodLabel(badge.period)}
+					{boardText(badge.board).label} · {periodLabel(badge.period)}
 				</Dialog.Title>
 				<Dialog.Description>
-					This picture is public: anyone with its address can load it. Taking the place down, or
-					changing your name, takes it away.
+					{m.claims.badgePublic}
 				</Dialog.Description>
 			</Dialog.Header>
 
@@ -94,7 +94,7 @@
 								onclick={() => copy(snippet.label, snippet.text)}
 							>
 								<CopyIcon class="size-4" />
-								<span class="sr-only">Copy the {snippet.label} snippet</span>
+								<span class="sr-only">{m.claims.copySnippet(snippet.label)}</span>
 							</Button>
 						</div>
 					</div>
@@ -102,7 +102,7 @@
 			</div>
 
 			<Dialog.Footer>
-				<Button onclick={() => (open = false)}>Done</Button>
+				<Button onclick={() => (open = false)}>{m.common.done}</Button>
 			</Dialog.Footer>
 		{/if}
 	</Dialog.Content>

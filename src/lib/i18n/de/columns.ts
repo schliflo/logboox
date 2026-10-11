@@ -1,0 +1,63 @@
+import type { Messages } from '../en/index';
+
+export const columns: Messages['columns'] = {
+	labels: {
+		esp_vehspd: 'Geschwindigkeit',
+		esp_vehlongaccel: 'Längs-g',
+		esp_vehlateralaccel: 'Quer-g',
+		cdcu_totalodometer: 'Kilometerstand',
+		eps_steeringangle: 'Lenkwinkel',
+		eps_steeringanglespd: 'Lenkgeschwindigkeit',
+		ldcu_accpedalsig: 'Fahrpedal',
+		ldcu_brkpedalst: 'Bremspedal',
+		ldcu_currentgearlev: 'Fahrstufe',
+		ipuf_actrotspd: 'Drehzahl Frontmotor',
+		ipur_actrotspd: 'Drehzahl Heckmotor',
+		ipuf_acttorq: 'Drehmoment Frontmotor',
+		ipur_acttorq: 'Drehmoment Heckmotor',
+		ipuf_rotoracttemp: 'Rotortemp. vorn',
+		ipur_rotoracttemp: 'Rotortemp. hinten',
+		bms_battvolt: 'Akkuspannung',
+		bms_battcurr: 'Akkustrom',
+		ldcu_chrgpwr: 'Ladeleistung',
+		ldcu_bms_soc_disp: 'Ladestand',
+		ldcu_dstbatdisp_dynamic: 'Geschätzte Reichweite',
+		bms_batttempmax_gb: 'Akkutemp. max',
+		bms_batttempmin_gb: 'Akkutemp. min',
+		bms_celltempmaxnum_gb: 'Wärmster Sensor Nr.',
+		bms_celltempminnum_gb: 'Kältester Sensor Nr.',
+		ldcu_driverdoorajarst: 'Fahrertür',
+		rdcu_psngrdoorajarst: 'Beifahrertür',
+		ldcu_rldoorajarst: 'Tür hinten links',
+		rdcu_rrdoorajarst: 'Tür hinten rechts',
+		ldcu_flwinposstfb: 'Fenster vorn links',
+		frwinposstfb: 'Fenster vorn rechts',
+		ldcu_rlwinposstfb: 'Fenster hinten links',
+		rrwinposstfb: 'Fenster hinten rechts',
+		rdm_tropenersts: 'Heckklappenöffner',
+		ldcu_tpmsprfl: 'Reifen vorn links',
+		ldcu_tpmsprfr: 'Reifen vorn rechts',
+		ldcu_tpmsprrl: 'Reifen hinten links',
+		ldcu_tpmsprrr: 'Reifen hinten rechts'
+	},
+	descriptions: {
+		esp_vehlongaccel: 'Positiv beschleunigt, negativ bremst.',
+		ldcu_currentgearlev: 'Kodiert als 1=D, 2=N, 3=R, 4=P — nicht in der Reihenfolge am Wählhebel.',
+		ipur_acttorq: 'Negativ bedeutet Rekuperation.',
+		bms_battcurr: 'Positiv entlädt, negativ lädt.',
+		ldcu_chrgpwr: 'Nur bei eingestecktem Kabel ungleich null; Rekuperation taucht hier nie auf.',
+		bms_celltempmaxnum_gb: 'Eine Sensornummer, keine Temperatur.',
+		bms_celltempminnum_gb: 'Eine Sensornummer, keine Temperatur.'
+	},
+	unknown: 'Nicht im bekannten Signalverzeichnis — so angezeigt, wie geliefert.',
+	categories: {
+		identity: 'Sonstiges',
+		motion: 'Bewegung',
+		driver: 'Fahrereingaben',
+		battery: 'Batterie',
+		motor: 'Motoren',
+		thermal: 'Temperaturen',
+		body: 'Türen & Fenster',
+		tyres: 'Reifen'
+	}
+};

@@ -15,6 +15,7 @@ import { recognizeFiles, type FileLike, type StreamId } from '../schema/streams'
 import { parseStream } from './ingest';
 import { combineStreams } from './align';
 import { analyze } from '../analytics';
+import { factText } from '../../i18n/facts';
 
 const SAMPLES = new URL('../../../../.samples', import.meta.url).pathname;
 const hasSamples = existsSync(SAMPLES) && readdirSync(SAMPLES).some((f) => f.endsWith('.csv'));
@@ -141,7 +142,7 @@ describe.skipIf(!hasSamples)('real export', () => {
 		expect(derived.trips.length).toBeGreaterThan(30);
 
 		// Every headline fact must have found a real number to show.
-		for (const fact of derived.facts.headline) expect(fact.value).not.toBe('—');
+		for (const fact of derived.facts.headline) expect(factText(fact).value).not.toBe('—');
 
 		const heap = process.memoryUsage().heapUsed / 1024 / 1024;
 		console.info(

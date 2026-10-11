@@ -7,6 +7,7 @@
   not enough to use either.
 -->
 <script lang="ts">
+	import { m } from '#lib/i18n/index.svelte.js';
 	import { onMount } from 'svelte';
 	import { toast } from 'svelte-sonner';
 	import * as Card from '#lib/components/ui/card/index.js';
@@ -61,7 +62,7 @@
 			name = '';
 			await load();
 		} catch (failure) {
-			error = failure instanceof Error ? failure.message : 'The token could not be created.';
+			error = failure instanceof Error ? failure.message : m.tokens.createFailed;
 		} finally {
 			busy = false;
 		}
@@ -71,22 +72,22 @@
 		try {
 			await api(`/api/v1/tokens/${encodeURIComponent(row.id)}`, { method: 'DELETE' });
 		} catch (error) {
-			toast('The token could not be revoked', {
-				description: error instanceof Error ? error.message : 'It still works.',
+			toast(m.tokens.revokeFailed, {
+				description: error instanceof Error ? error.message : m.tokens.stillWorks,
 				closeButton: true
 			});
 			return;
 		}
 		await load();
-		toast('Token revoked', { description: `${row.name} stopped working immediately.` });
+		toast(m.tokens.revoked, { description: m.tokens.revokedDetail(row.name) });
 	}
 
 	async function copy(value: string) {
 		try {
 			await navigator.clipboard.writeText(value);
-			toast('Copied');
+			toast(m.tokens.copied);
 		} catch {
-			toast('Could not copy', { description: 'Select the token and copy it by hand.' });
+			toast(m.tokens.copyFailed, { description: m.tokens.copyByHand });
 		}
 	}
 
@@ -100,10 +101,9 @@
 
 <Card.Root>
 	<Card.Header>
-		<Card.Title>API access</Card.Title>
+		<Card.Title>{m.tokens.title}</Card.Title>
 		<Card.Description>
-			Read your own trips, charging sessions and the car's last known state — from Home Assistant, a
-			script, or anything else that can send a header.
+			{m.tokens.description}
 		</Card.Description>
 	</Card.Header>
 
@@ -117,34 +117,33 @@
 							<p class="text-sm font-medium">{token.name}</p>
 							<p class="text-xs text-muted-foreground">
 								<code>lbx_…{token.hint}</code>
-								· made {dateOnly(token.createdAt)}
+								· {m.tokens.made(dateOnly(token.createdAt))}
 								{#if token.lastUsedAt}
-									· last used {dateOnly(token.lastUsedAt)}
+									· {m.tokens.lastUsed(dateOnly(token.lastUsedAt))}
 								{:else}
-									· never used
+									· {m.tokens.neverUsed}
 								{/if}
 							</p>
 						</div>
 						<Badge variant="secondary">{token.scopes.join(', ')}</Badge>
 						<Button variant="ghost" size="icon" onclick={() => revoke(token)}>
 							<TrashIcon class="size-4" />
-							<span class="sr-only">Revoke {token.name}</span>
+							<span class="sr-only">{m.tokens.revoke(token.name)}</span>
 						</Button>
 					</li>
 				{/each}
 			</ul>
 		{:else}
-			<p class="text-sm text-muted-foreground">No tokens yet.</p>
+			<p class="text-sm text-muted-foreground">{m.tokens.none}</p>
 		{/if}
 
 		<Button variant="outline" size="sm" onclick={() => (creating = true)}>
 			<PlusIcon class="size-4" />
-			New token
+			{m.tokens.newToken}
 		</Button>
 
 		<p class="text-xs text-muted-foreground">
-			A token reads; it cannot change anything, and it cannot make another token. The API is
-			documented in
+			{m.tokens.readOnlyBefore}
 			<a
 				class="text-primary underline underline-offset-4"
 				href="https://github.com/schliflo/logboox/blob/main/docs/api.md"
@@ -164,9 +163,9 @@
 	<Dialog.Content class="sm:max-w-lg">
 		{#if issued}
 			<Dialog.Header>
-				<Dialog.Title>Copy it now</Dialog.Title>
+				<Dialog.Title>{m.tokens.copyNow}</Dialog.Title>
 				<Dialog.Description>
-					This is the only time it is shown. If it is lost, revoke it and make another.
+					{m.tokens.onlyOnce}
 				</Dialog.Description>
 			</Dialog.Header>
 
@@ -174,31 +173,36 @@
 				<Input readonly value={issued} class="font-mono text-xs" />
 				<Button variant="outline" size="icon" onclick={() => copy(issued!)}>
 					<CopyIcon class="size-4" />
-					<span class="sr-only">Copy the token</span>
+					<span class="sr-only">{m.tokens.copyToken}</span>
 				</Button>
 			</div>
 
 			<Dialog.Footer>
-				<Button onclick={close}>Done</Button>
+				<Button onclick={close}>{m.common.done}</Button>
 			</Dialog.Footer>
 		{:else}
 			<Dialog.Header>
-				<Dialog.Title>New API token</Dialog.Title>
+				<Dialog.Title>{m.tokens.newTitle}</Dialog.Title>
 				<Dialog.Description>
-					Name it after whatever will hold it, so a revoked one is the right one.
+					{m.tokens.newDetail}
 				</Dialog.Description>
 			</Dialog.Header>
 
 			<form class="space-y-3" onsubmit={create}>
 				<div class="space-y-2">
-					<Label for="token-name">Name</Label>
-					<Input id="token-name" placeholder="Home Assistant" required bind:value={name} />
+					<Label for="token-name">{m.tokens.name}</Label>
+					<Input
+						id="token-name"
+						placeholder={m.tokens.namePlaceholder}
+						required
+						bind:value={name}
+					/>
 				</div>
 				{#if error}
 					<p class="text-sm text-destructive">{error}</p>
 				{/if}
 				<Button type="submit" disabled={busy} class="w-full">
-					{busy ? 'Creating…' : 'Create token'}
+					{busy ? m.tokens.creating : m.tokens.create}
 				</Button>
 			</form>
 		{/if}

@@ -34,14 +34,14 @@ demonstration month first.
 Parsing ends in a full-screen sequence of the month's findings, one per screen —
 the things you would not have thought to ask for.
 
-![The overview: distance per day, and driving by weekday and hour](docs/screenshots/overview.png)
+![Home: what needs doing, the highlights, the month's figures and distance per day](docs/screenshots/overview.png)
 
-Then the dashboard. Every chart names the point under the pointer; here the
-punchcard is reporting an hour the car never once moved in.
+Then the dashboard. Home leads with what needs you — trips still missing a
+place, the export window, the boards — before what the car did.
 
-![A single trip, with speed, power and charge sharing one cursor](docs/screenshots/trip.png)
+![A single trip beside the trip list, with its logbook entry above the charts](docs/screenshots/trip.png)
 
-A trip second by second. Hovering any panel reads out that instant in all of
+A trip second by second, next to the list so the next one is a keypress away. Hovering any panel reads out that instant in all of
 them, so one moment can be read across speed, power and state of charge at once.
 
 ![Driving style: a g-g diagram beside speed and pedal histograms](docs/screenshots/driving.png)

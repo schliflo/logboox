@@ -11,6 +11,7 @@
   and the next is the gap that invalidates it.
 -->
 <script lang="ts">
+	import { m } from '#lib/i18n/index.svelte.js';
 	import * as Card from '#lib/components/ui/card/index.js';
 	import * as Select from '#lib/components/ui/select/index.js';
 	import * as Table from '#lib/components/ui/table/index.js';
@@ -66,10 +67,10 @@
 		analysis.places.find((entry) => entry.place === selectedPlace) ?? analysis.places[0] ?? null
 	);
 
-	const purposeLabels: Record<string, string> = {
+	const purposeLabels: Record<string, string> = $derived({
 		...Object.fromEntries(PURPOSES.map((p) => [p.value, p.label])),
-		unlabelled: 'Not said'
-	};
+		unlabelled: m.logbookPage.notSaid
+	});
 
 	/** Minutes since midnight as a clock reading. */
 	function clock(minutes: number): string {
@@ -80,10 +81,6 @@
 
 	function routeId(origin: string, destination: string): string {
 		return `${origin} → ${destination}`;
-	}
-
-	function plural(count: number, one: string, many = `${one}s`): string {
-		return count === 1 ? one : many;
 	}
 
 	function purposeOf(value: Purpose | ''): string {
@@ -97,17 +94,15 @@
 			<Card.Header>
 				<Card.Title class="flex items-center gap-2">
 					<BookIcon class="size-5 text-primary" />
-					Nothing written down yet
+					{m.logbookPage.emptyTitle}
 				</Card.Title>
 				<Card.Description>
-					There is no location data anywhere in an XPeng export — not one coordinate. Write where a
-					trip started and ended and this page fills in: the routes you actually drive, when you
-					usually leave, what each purpose costs, and whether the book accounts for every kilometre.
+					{m.logbookPage.emptyHint}
 				</Card.Description>
 			</Card.Header>
 			<Card.Content>
 				<Button href={nextUnlabelled !== null ? tripLink(nextUnlabelled) : '/dash/trips'}>
-					Label a trip
+					{m.logbookPage.labelTrip}
 					<ArrowRightIcon class="size-4" />
 				</Button>
 			</Card.Content>
@@ -117,11 +112,14 @@
 	<div class="mx-auto max-w-6xl space-y-6">
 		<div class="flex flex-wrap items-center justify-between gap-3">
 			<div>
-				<h1 class="text-xl font-semibold tracking-tight">Logbook (Fahrtenbuch)</h1>
+				<h1 class="text-xl font-semibold tracking-tight">{m.logbookPage.title}</h1>
 				<p class="text-sm text-muted-foreground">
-					{num(analysis.coverage.labelled)} of {num(analysis.coverage.trips)}
-					{plural(analysis.coverage.trips, 'trip')} written down, over
-					{num(analysis.coverage.km, 0)} km.
+					{m.logbookPage.summary(
+						num(analysis.coverage.labelled),
+						num(analysis.coverage.trips),
+						analysis.coverage.trips,
+						num(analysis.coverage.km, 0)
+					)}
 				</p>
 			</div>
 			<ExportMenu
@@ -142,26 +140,29 @@
 			<Card.Root>
 				<Card.Content>
 					<BigStat
-						kicker="Written down"
+						kicker={m.logbookPage.writtenDown}
 						value={percent(analysis.coverage.labelled / Math.max(1, analysis.coverage.trips))}
 						size="sm"
 						accent="--viz-1"
-						detail="{num(analysis.coverage.labelled)} of {num(analysis.coverage.trips)} {plural(
-							analysis.coverage.trips,
-							'trip'
-						)}"
+						detail={m.logbookPage.ofTrips(
+							num(analysis.coverage.labelled),
+							num(analysis.coverage.trips),
+							analysis.coverage.trips
+						)}
 					/>
 				</Card.Content>
 			</Card.Root>
 			<Card.Root>
 				<Card.Content>
 					<BigStat
-						kicker="Routes"
+						kicker={m.logbookPage.routes}
 						value={num(analysis.routes.length)}
 						size="sm"
 						accent="--viz-3"
 						detail={analysis.routes[0]
-							? `Most driven: ${routeId(analysis.routes[0].origin, analysis.routes[0].destination)}`
+							? m.logbookPage.mostDriven(
+									routeId(analysis.routes[0].origin, analysis.routes[0].destination)
+								)
 							: undefined}
 					/>
 				</Card.Content>
@@ -169,25 +170,28 @@
 			<Card.Root>
 				<Card.Content>
 					<BigStat
-						kicker="Business"
+						kicker={m.logbookPage.business}
 						value={percent(analysis.purposes.find((p) => p.purpose === 'business')?.share ?? 0)}
 						size="sm"
 						accent="--viz-4"
-						detail="of the distance recorded"
+						detail={m.logbookPage.ofDistance}
 					/>
 				</Card.Content>
 			</Card.Root>
 			<Card.Root>
 				<Card.Content>
 					<BigStat
-						kicker="Unaccounted for"
+						kicker={m.logbookPage.unaccounted}
 						value={num(analysis.coverage.unrecordedKm, 0)}
 						unit="km"
 						size="sm"
 						accent={analysis.coverage.unrecordedKm > 0 ? '--viz-8' : '--viz-6'}
 						detail={analysis.coverage.gaps.length === 0
-							? 'The book is continuous'
-							: `${num(analysis.coverage.gaps.length)} ${plural(analysis.coverage.gaps.length, 'gap')} between trips`}
+							? m.logbookPage.continuous
+							: m.logbookPage.gaps(
+									num(analysis.coverage.gaps.length),
+									analysis.coverage.gaps.length
+								)}
 					/>
 				</Card.Content>
 			</Card.Root>
@@ -196,21 +200,19 @@
 		<div class="grid gap-4 lg:grid-cols-2">
 			<Card.Root>
 				<Card.Header>
-					<Card.Title>By purpose</Card.Title>
+					<Card.Title>{m.logbookPage.byPurpose}</Card.Title>
 					<Card.Description>
-						Distance, time and what the electricity cost at {settings.formatCurrency(
-							settings.pricePerKwh
-						)} per kWh.
+						{m.logbookPage.byPurposeHint(settings.formatCurrency(settings.pricePerKwh))}
 					</Card.Description>
 				</Card.Header>
 				<Card.Content>
 					<Table.Root>
 						<Table.Header>
 							<Table.Row>
-								<Table.Head>Purpose</Table.Head>
-								<Table.Head class="text-right">Trips</Table.Head>
-								<Table.Head class="text-right">Distance</Table.Head>
-								<Table.Head class="text-right">Cost</Table.Head>
+								<Table.Head>{m.logbookPage.purpose}</Table.Head>
+								<Table.Head class="text-right">{m.logbookPage.trips}</Table.Head>
+								<Table.Head class="text-right">{m.logbookPage.distance}</Table.Head>
+								<Table.Head class="text-right">{m.logbookPage.cost}</Table.Head>
 							</Table.Row>
 						</Table.Header>
 						<Table.Body>
@@ -237,9 +239,9 @@
 			{#if place}
 				<Card.Root>
 					<Card.Header>
-						<Card.Title>When you arrive</Card.Title>
+						<Card.Title>{m.logbookPage.whenArrive}</Card.Title>
 						<Card.Description>
-							Arrivals by weekday and hour, from the trips that end there.
+							{m.logbookPage.whenArriveHint}
 						</Card.Description>
 						<Card.Action>
 							<Select.Root
@@ -259,14 +261,13 @@
 					<Card.Content>
 						<Punchcard
 							grid={place.arrivalGrid}
-							label="Arrivals at {place.place}"
-							unit="arrivals"
-							formatValue={(value) => `${num(value)} ${plural(value, 'arrival')}`}
+							label={m.logbookPage.arrivalsAt(place.place)}
+							unit={m.logbookPage.arrivalsUnit}
+							formatValue={(value) => m.logbookPage.arrivals(num(value), value)}
 						/>
 						<p class="mt-2 text-xs text-muted-foreground">
-							{num(place.arrivals)}
-							{plural(place.arrivals, 'arrival')} · {num(place.departures)}
-							{plural(place.departures, 'departure')}
+							{m.logbookPage.arrivals(num(place.arrivals), place.arrivals)} ·
+							{m.logbookPage.departures(num(place.departures), place.departures)}
 						</p>
 					</Card.Content>
 				</Card.Root>
@@ -276,34 +277,38 @@
 		{#if analysis.commute}
 			<Card.Root>
 				<Card.Header>
-					<Card.Title>The commute</Card.Title>
+					<Card.Title>{m.logbookPage.commute}</Card.Title>
 					<Card.Description>
-						The one journey you make more than any other, in both directions.
+						{m.logbookPage.commuteHint}
 					</Card.Description>
 				</Card.Header>
 				<Card.Content class="grid gap-6 sm:grid-cols-3">
 					<BigStat
-						kicker="Out"
+						kicker={m.logbookPage.out}
 						value={clock(analysis.commute.outbound.medianDeparture)}
 						size="sm"
 						accent="--viz-1"
-						detail="{duration(analysis.commute.outbound.medianSeconds, 'short')} to {analysis
-							.commute.outbound.destination}"
+						detail={m.logbookPage.outDetail(
+							duration(analysis.commute.outbound.medianSeconds, 'short'),
+							analysis.commute.outbound.destination
+						)}
 					/>
 					<BigStat
-						kicker="Back"
+						kicker={m.logbookPage.back}
 						value={clock(analysis.commute.inbound.medianDeparture)}
 						size="sm"
 						accent="--viz-3"
-						detail="{duration(analysis.commute.inbound.medianSeconds, 'short')} home"
+						detail={m.logbookPage.backDetail(
+							duration(analysis.commute.inbound.medianSeconds, 'short')
+						)}
 					/>
 					<BigStat
-						kicker="Departure wanders by"
+						kicker={m.logbookPage.wanders}
 						value={num(analysis.commute.departureSpread)}
 						unit="min"
 						size="sm"
 						accent="--viz-4"
-						detail="between the earliest and the latest"
+						detail={m.logbookPage.wandersDetail}
 					/>
 				</Card.Content>
 			</Card.Root>
@@ -311,10 +316,9 @@
 
 		<Card.Root>
 			<Card.Header>
-				<Card.Title>Routes</Card.Title>
+				<Card.Title>{m.logbookPage.routes}</Card.Title>
 				<Card.Description>
-					The usual drive rather than the average one, so a single crawl through roadworks does not
-					stand for the journey.
+					{m.logbookPage.routesHint}
 				</Card.Description>
 			</Card.Header>
 			<Card.Content>
@@ -322,11 +326,11 @@
 					<Table.Root>
 						<Table.Header>
 							<Table.Row>
-								<Table.Head>Route</Table.Head>
-								<Table.Head class="text-right">Trips</Table.Head>
-								<Table.Head class="text-right">Usually</Table.Head>
-								<Table.Head class="text-right">Leaves</Table.Head>
-								<Table.Head class="text-right">Best</Table.Head>
+								<Table.Head>{m.logbookPage.route}</Table.Head>
+								<Table.Head class="text-right">{m.logbookPage.trips}</Table.Head>
+								<Table.Head class="text-right">{m.logbookPage.usually}</Table.Head>
+								<Table.Head class="text-right">{m.logbookPage.leaves}</Table.Head>
+								<Table.Head class="text-right">{m.logbookPage.best}</Table.Head>
 								<Table.Head class="text-right">kWh/100 km</Table.Head>
 							</Table.Row>
 						</Table.Header>
@@ -367,9 +371,11 @@
 										<Table.Cell colspan={6}>
 											<div class="flex flex-wrap items-center gap-2 py-1 text-xs">
 												<span class="text-muted-foreground">
-													{num(route.km, 0)} km in all · {num(route.weekdayTrips)} on weekdays,
-													{num(route.weekendTrips)} at weekends · last driven {dateOnly(
-														route.lastDriven
+													{m.logbookPage.routeDetail(
+														num(route.km, 0),
+														num(route.weekdayTrips),
+														num(route.weekendTrips),
+														dateOnly(route.lastDriven)
 													)}
 												</span>
 												{#each route.tripIndices.slice(0, 12) as index (index)}
@@ -377,7 +383,7 @@
 														href={tripLink(startOf(index))}
 														class="rounded border px-1.5 py-0.5 hover:bg-background"
 													>
-														Trip {index + 1}
+														{m.logbookPage.trip(index + 1)}
 													</a>
 												{/each}
 											</div>
@@ -394,27 +400,23 @@
 		{#if analysis.coverage.nextUnlabelled !== null || analysis.coverage.gaps.length > 0}
 			<Card.Root>
 				<Card.Header>
-					<Card.Title>Completeness</Card.Title>
+					<Card.Title>{m.logbookPage.completeness}</Card.Title>
 					<Card.Description>
-						A logbook kept for tax has to account for every kilometre the car moved.
+						{m.logbookPage.completenessHint}
 					</Card.Description>
 				</Card.Header>
 				<Card.Content class="space-y-4">
 					{#if analysis.coverage.nextUnlabelled !== null}
 						<div class="flex flex-wrap items-center gap-3">
 							<p class="text-sm">
-								{num(analysis.coverage.trips - analysis.coverage.labelled)}
-								{unwritten === 1 ? 'trip has' : 'trips have'} nothing written against {unwritten ===
-								1
-									? 'it'
-									: 'them'}.
+								{m.logbookPage.unwritten(num(unwritten), unwritten)}
 							</p>
 							<Button
 								href={nextUnlabelled !== null ? tripLink(nextUnlabelled) : '/dash/trips'}
 								size="sm"
 								variant="outline"
 							>
-								Label the next one
+								{m.logbookPage.labelNext}
 							</Button>
 						</div>
 					{/if}
@@ -422,13 +424,10 @@
 					{#if analysis.coverage.gaps.length > 0}
 						<div class="space-y-2">
 							<p class="text-sm">
-								{num(analysis.coverage.unrecordedKm, 0)} km {Math.round(
-									analysis.coverage.unrecordedKm
-								) === 1
-									? 'sits'
-									: 'sit'} between the end of one trip and the start of the next. The car moved without
-								the export recording it — most often because it was driven while the logger was asleep,
-								or across the seam between two exports.
+								{m.logbookPage.gapExplain(
+									num(analysis.coverage.unrecordedKm, 0),
+									Math.round(analysis.coverage.unrecordedKm)
+								)}
 							</p>
 							<ul class="divide-y rounded-lg border text-xs">
 								{#each analysis.coverage.gaps.slice(0, 8) as gap (gap.after)}

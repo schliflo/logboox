@@ -7,6 +7,8 @@
  * deployment, or a browser offline — and that reads as a sentence too.
  */
 
+import { m } from '../i18n/index.svelte';
+
 export class ApiError extends Error {
 	constructor(
 		message: string,
@@ -42,7 +44,7 @@ export async function api<T>(path: string, options: ApiOptions = {}): Promise<T>
 			body: body === undefined ? undefined : JSON.stringify(body)
 		});
 	} catch {
-		throw new ApiError('LogbooX could not be reached.', 0, 'Check your connection and try again.');
+		throw new ApiError(m.errors.unreachable, 0, m.errors.checkConnection);
 	}
 
 	if (response.status === 204) return undefined as T;
@@ -57,11 +59,7 @@ export async function api<T>(path: string, options: ApiOptions = {}): Promise<T>
 
 	if (!response.ok) {
 		const detail = parsed as { error?: string; hint?: string } | null;
-		throw new ApiError(
-			detail?.error ?? 'Something went wrong on the server.',
-			response.status,
-			detail?.hint
-		);
+		throw new ApiError(detail?.error ?? m.errors.server, response.status, detail?.hint);
 	}
 
 	return parsed as T;
@@ -74,7 +72,7 @@ export async function api<T>(path: string, options: ApiOptions = {}): Promise<T>
 export async function apiBytes(path: string, signal?: AbortSignal): Promise<ArrayBuffer> {
 	const response = await fetch(path, { credentials: 'same-origin', signal });
 	if (!response.ok) {
-		throw new ApiError('That could not be fetched from your account.', response.status);
+		throw new ApiError(m.errors.fetch, response.status);
 	}
 	return response.arrayBuffer();
 }

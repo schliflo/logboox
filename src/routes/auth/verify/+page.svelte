@@ -11,6 +11,7 @@
   browser except in the request that spends it.
 -->
 <script lang="ts">
+	import { m } from '#lib/i18n/index.svelte.js';
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
@@ -40,14 +41,12 @@
 			// The address is now in the URL bar and in history; replacing it
 			// keeps a spent token out of both.
 			await goto('/account', { replaceState: true });
-			toast(result.created ? 'Welcome to LogbooX' : 'Signed in', {
-				description: result.created
-					? 'Your account is ready. Nothing has been uploaded to it yet.'
-					: 'Everything you kept in this browser is still here.'
+			toast(result.created ? m.verify.welcome : m.verify.signedIn, {
+				description: result.created ? m.verify.createdDetail : m.verify.returningDetail
 			});
 		} catch (error) {
 			failure = {
-				message: error instanceof Error ? error.message : 'That link could not be used.',
+				message: error instanceof Error ? error.message : m.verify.unusable,
 				hint: error instanceof Error && 'hint' in error ? (error.hint as string) : undefined
 			};
 		} finally {
@@ -56,19 +55,19 @@
 	}
 </script>
 
-<Seo title="Sign in" path="/auth/verify" noindex />
+<Seo title={m.verify.title} path="/auth/verify" noindex />
 
 <main class="flex min-h-svh items-center justify-center p-6">
 	<Card.Root class="w-full max-w-md">
 		<Card.Header>
-			<Card.Title>Sign in to LogbooX</Card.Title>
+			<Card.Title>{m.verify.heading}</Card.Title>
 			<Card.Description>
 				{#if !ACCOUNTS_ENABLED}
-					This address does not host accounts.
+					{m.verify.noAccounts}
 				{:else if token}
-					One click to finish. The link works once.
+					{m.verify.oneClick}
 				{:else}
-					This link is missing its token.
+					{m.verify.noToken}
 				{/if}
 			</Card.Description>
 		</Card.Header>
@@ -76,9 +75,11 @@
 		<Card.Content class="space-y-4">
 			{#if !ACCOUNTS_ENABLED}
 				<p class="text-sm text-muted-foreground">
-					Sign in at <a class="text-primary underline underline-offset-4" href="https://logboox.app"
+					{m.verify.signInAt}
+					<a class="text-primary underline underline-offset-4" href="https://logboox.app"
 						>logboox.app</a
-					> instead.
+					>
+					{m.verify.instead}
 				</p>
 			{:else if failure}
 				<div class="flex gap-3 rounded-lg border border-destructive/40 bg-destructive/10 p-4">
@@ -91,20 +92,19 @@
 					</div>
 				</div>
 				<Button variant="outline" class="w-full" onclick={() => goto('/')}>
-					Back to the start
+					{m.verify.backToStart}
 				</Button>
 			{:else if token}
 				<Button class="w-full" onclick={confirm} disabled={busy}>
 					<CheckIcon class="size-4" />
-					{busy ? 'Signing in…' : 'Sign in'}
+					{busy ? m.verify.signingIn : m.verify.signIn}
 				</Button>
 				<p class="text-xs leading-relaxed text-muted-foreground">
-					Nothing happens until you press that. Links in e-mail are often opened by software before
-					a person sees them, which is why this one waits.
+					{m.verify.waits}
 				</p>
 			{:else}
 				<Button variant="outline" class="w-full" onclick={() => goto('/')}>
-					Back to the start
+					{m.verify.backToStart}
 				</Button>
 			{/if}
 		</Card.Content>

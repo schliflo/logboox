@@ -7,7 +7,13 @@
  * escaped. Pure, so it is tested without WebAssembly.
  */
 
-import { BADGE_HEIGHT, BADGE_WIDTH, periodLabel, type Medal } from '../../leaderboard/medals';
+import {
+	BADGE_HEIGHT,
+	BADGE_WIDTH,
+	METALS,
+	periodLabel,
+	type Medal
+} from '../../leaderboard/medals';
 import { formatValue, type Board } from '../../leaderboard/boards';
 import { iconSvg } from '../../leaderboard/icons';
 import { escape, fit } from './card';
@@ -20,22 +26,6 @@ export interface Badge {
 	/** `YYYY-MM` or `YYYY`. */
 	period: string;
 }
-
-interface Metal {
-	name: string;
-	light: string;
-	dark: string;
-	/** The ring, a shade past `dark`. */
-	rim: string;
-	/** The icon, dark enough to read on this metal. */
-	ink: string;
-}
-
-const METALS: Record<Medal, Metal> = {
-	gold: { name: 'Gold', light: '#f5c84c', dark: '#b8860b', rim: '#fbe38e', ink: '#4a3200' },
-	silver: { name: 'Silver', light: '#e8e8ea', dark: '#8d9096', rim: '#f6f6f7', ink: '#2c2e33' },
-	bronze: { name: 'Bronze', light: '#e0a070', dark: '#8c5a2b', rim: '#f0c4a0', ink: '#3d2210' }
-};
 
 const SANS = 'font-family="Inter"';
 

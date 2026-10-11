@@ -6,6 +6,7 @@
   in this tab and read there.
 -->
 <script lang="ts">
+	import { m } from '#lib/i18n/index.svelte.js';
 	import { Button } from '#lib/components/ui/button/index.js';
 	import { data } from '#lib/state/dataset.svelte.js';
 	import { bytes } from '#lib/utils/format.js';
@@ -31,8 +32,10 @@
 
 <div
 	class={[
-		'relative rounded-2xl border-2 border-dashed p-8 text-center transition-colors sm:p-12',
-		dragging ? 'border-primary bg-primary/5' : 'border-border/70 bg-card/40 hover:border-primary/50'
+		'relative rounded-2xl border-2 border-dashed px-6 py-10 text-center transition-colors sm:py-12',
+		dragging
+			? 'border-[var(--viz-1)] bg-[color-mix(in_oklab,var(--viz-1)_8%,var(--card))]'
+			: 'border-border bg-card hover:border-[color-mix(in_oklab,var(--viz-1)_50%,transparent)]'
 	]}
 	ondragover={(e) => {
 		e.preventDefault();
@@ -41,7 +44,7 @@
 	ondragleave={() => (dragging = false)}
 	ondrop={onDrop}
 	role="region"
-	aria-label="Drop your export files here"
+	aria-label={m.dropZone.aria}
 >
 	<input
 		bind:this={input}
@@ -53,18 +56,21 @@
 	/>
 
 	<div class="flex flex-col items-center gap-4">
-		<div class="rounded-full bg-primary/10 p-4 text-primary">
-			<UploadIcon class="size-7" />
+		<div
+			class="grid size-14 place-items-center rounded-2xl"
+			style="color: var(--viz-1); background: color-mix(in oklab, var(--viz-1) 18%, transparent)"
+		>
+			<UploadIcon class="size-6" />
 		</div>
 
-		<div class="space-y-1">
-			<p class="text-lg font-medium">Drop your export here</p>
+		<div class="space-y-2">
+			<p class="text-xl font-semibold tracking-tight">{m.dropZone.title}</p>
 			<p class="text-sm text-muted-foreground">
-				The ZIP from XPeng, the CSV files inside it, or a backup made here
+				{m.dropZone.hint}
 			</p>
 		</div>
 
-		<Button onclick={() => input?.click()} size="lg">Choose files</Button>
+		<Button onclick={() => input?.click()} size="lg" class="h-11 px-5">{m.dropZone.choose}</Button>
 
 		{#if picked.length}
 			<ul class="mt-2 space-y-1 text-left text-xs text-muted-foreground">

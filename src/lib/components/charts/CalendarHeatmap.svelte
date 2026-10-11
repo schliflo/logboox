@@ -13,8 +13,9 @@
   along the top, because a year of squares is no longer self-evidently a month.
 -->
 <script lang="ts">
+	import { m } from '#lib/i18n/index.svelte.js';
 	import { prettyDay, num } from '#lib/utils/format.js';
-	import { WEEKDAYS } from '#lib/utils/format.js';
+	import { weekdays } from '#lib/utils/format.js';
 	import ChartTooltip from './ChartTooltip.svelte';
 
 	interface Day {
@@ -32,7 +33,8 @@
 		selected?: string | null;
 	}
 
-	let { days, unit = 'km', label = 'Distance', onSelect, selected = null }: Props = $props();
+	let { days, unit = 'km', label: ownLabel, onSelect, selected = null }: Props = $props();
+	const label = $derived(ownLabel ?? m.charts.calendar.distance);
 
 	const max = $derived(Math.max(1, ...days.map((d) => d.value)));
 	const hasGaps = $derived(days.some((day) => day.covered === false));
@@ -69,21 +71,6 @@
 		return columns;
 	});
 
-	const MONTHS = [
-		'Jan',
-		'Feb',
-		'Mar',
-		'Apr',
-		'May',
-		'Jun',
-		'Jul',
-		'Aug',
-		'Sep',
-		'Oct',
-		'Nov',
-		'Dec'
-	];
-
 	/** A label on the first column of each month, and the year when it turns. */
 	const months = $derived.by(() => {
 		let previous = '';
@@ -95,7 +82,7 @@
 			if (key === previous) return '';
 			const changedYear = previous !== '' && previous.slice(0, 4) !== year;
 			previous = key;
-			const name = MONTHS[Number(month) - 1];
+			const name = m.charts.calendar.months[Number(month) - 1];
 			return changedYear ? `${name} ${year}` : name;
 		});
 	});
@@ -134,19 +121,19 @@
 	<div
 		class="overflow-x-auto pb-1"
 		role="group"
-		aria-label="{label} per day"
+		aria-label={m.charts.calendar.perDay(label)}
 		onpointerleave={() => (hovered = null)}
 	>
 		<div class="mx-auto flex w-max flex-col gap-1">
 			<div class="flex gap-2 pl-8 text-[10px] text-muted-foreground">
-				{#each months as month, m (m)}
+				{#each months as month, index (index)}
 					<span class="w-6 shrink-0 leading-none whitespace-nowrap">{month}</span>
 				{/each}
 			</div>
 
 			<div class="flex items-end gap-2">
 				<div class="flex w-7 shrink-0 flex-col gap-[4px] text-[10px] text-muted-foreground">
-					{#each WEEKDAYS as day, i (day)}
+					{#each weekdays() as day, i (i)}
 						<span class="flex h-6 items-center leading-none">{i % 2 === 1 ? day : ''}</span>
 					{/each}
 				</div>
@@ -163,7 +150,7 @@
 									class:ring-2={selected === day.date}
 									style="background: {day.covered === false ? 'transparent' : tone(day.value)}"
 									aria-label={day.covered === false
-										? `${prettyDay(day.date)}, not recorded`
+										? m.charts.calendar.notRecordedDay(prettyDay(day.date))
 										: `${prettyDay(day.date)}, ${num(day.value, 1)} ${unit}`}
 									onpointerenter={(event) => enter(day, event.currentTarget)}
 									onfocus={(event) => enter(day, event.currentTarget)}
@@ -186,7 +173,7 @@
 			<p class="mt-0.5 flex items-center gap-2">
 				{#if hovered.covered === false}
 					<span class="size-2 shrink-0 rounded-full border border-dashed border-border"></span>
-					<span class="text-muted-foreground">no export covers this day</span>
+					<span class="text-muted-foreground">{m.charts.calendar.noExport}</span>
 				{:else}
 					<span class="size-2 shrink-0 rounded-full" style="background: {tone(hovered.value)}"
 					></span>
@@ -194,11 +181,13 @@
 						<span class="font-medium tabular-nums">{num(hovered.value, 1)} {unit}</span>
 						{#if rank}
 							<span class="text-muted-foreground">
-								{rank.place === 1 ? 'the busiest day' : `${rank.place} of ${rank.of} days driven`}
+								{rank.place === 1
+									? m.charts.calendar.busiest
+									: m.charts.calendar.rank(rank.place, rank.of)}
 							</span>
 						{/if}
 					{:else}
-						<span class="text-muted-foreground">the car did not move</span>
+						<span class="text-muted-foreground">{m.charts.calendar.didNotMove}</span>
 					{/if}
 				{/if}
 			</p>
@@ -210,7 +199,7 @@
 		{#if hasGaps}
 			<span class="flex items-center gap-1">
 				<span class="h-3 w-3 rounded-[2px] border border-dashed border-border"></span>
-				not recorded
+				{m.charts.calendar.notRecorded}
 			</span>
 		{/if}
 		<span class="ml-auto flex items-center gap-1">

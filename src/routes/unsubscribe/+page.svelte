@@ -6,6 +6,7 @@
   preference silently changed by a scanner is a preference nobody chose.
 -->
 <script lang="ts">
+	import { m } from '#lib/i18n/index.svelte.js';
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
@@ -38,7 +39,7 @@
 			done = result.email;
 		} catch (error) {
 			failure = {
-				message: error instanceof Error ? error.message : 'That did not work.',
+				message: error instanceof Error ? error.message : m.unsubscribe.failed,
 				hint: error instanceof Error && 'hint' in error ? (error.hint as string) : undefined
 			};
 		} finally {
@@ -47,34 +48,31 @@
 	}
 </script>
 
-<Seo title="Stop e-mails" path="/unsubscribe" noindex />
+<Seo title={m.unsubscribe.title} path="/unsubscribe" noindex />
 
 <main class="flex min-h-svh items-center justify-center p-6">
 	<Card.Root class="w-full max-w-md">
 		<Card.Header>
 			<Card.Title>
 				{#if done}
-					{kind === 'leaderboard' ? 'Leaderboard messages are off' : 'Reminders are off'}
+					{kind === 'leaderboard' ? m.unsubscribe.boardOff : m.unsubscribe.remindersOff}
 				{:else if kind === 'leaderboard'}
-					Stop messages about places on a board?
+					{m.unsubscribe.stopBoard}
 				{:else}
-					Stop reminders about new exports?
+					{m.unsubscribe.stopReminders}
 				{/if}
 			</Card.Title>
 			<Card.Description>
 				{#if done}
 					{#if kind === 'leaderboard'}
-						{done} will no longer get messages about places on a board, or the summary of the year, unless
-						you turn them back on in your account.
+						{m.unsubscribe.boardDone(done)}
 					{:else}
-						{done} will no longer get reminders about new exports, unless you turn them back on in your
-						account.
+						{m.unsubscribe.remindersDone(done)}
 					{/if}
 				{:else if kind === 'leaderboard'}
-					Your places stay exactly as they are. This only stops the messages telling you when
-					something of yours would rank, and the summary of the year.
+					{m.unsubscribe.boardExplain}
 				{:else}
-					You will still be able to import exports whenever you like. This only stops the messages.
+					{m.unsubscribe.remindersExplain}
 				{/if}
 			</Card.Description>
 		</Card.Header>
@@ -82,12 +80,11 @@
 			{#if done}
 				{#if kind === 'reminders'}
 					<p class="text-sm text-muted-foreground">
-						XPeng only keeps a rolling thirty days, so without a reminder it is worth putting a note
-						in your own calendar.
+						{m.unsubscribe.calendar}
 					</p>
 				{/if}
 				<Button variant="outline" class="w-full" onclick={() => goto('/account')}>
-					Back to your account
+					{m.unsubscribe.backToAccount}
 				</Button>
 			{:else if failure}
 				<p class="text-sm font-medium text-destructive">{failure.message}</p>
@@ -95,20 +92,20 @@
 					<p class="text-sm text-muted-foreground">{failure.hint}</p>
 				{/if}
 				<Button variant="outline" class="w-full" onclick={() => goto('/account')}>
-					Open your account
+					{m.unsubscribe.openAccount}
 				</Button>
 			{:else if token}
 				<Button class="w-full" onclick={confirm} disabled={busy}>
 					{#if busy}
-						Turning them off…
+						{m.unsubscribe.turningOff}
 					{:else if kind === 'leaderboard'}
-						Stop these messages
+						{m.unsubscribe.stopThese}
 					{:else}
-						Stop the reminders
+						{m.unsubscribe.stopTheReminders}
 					{/if}
 				</Button>
 			{:else}
-				<p class="text-sm text-muted-foreground">This link is missing its token.</p>
+				<p class="text-sm text-muted-foreground">{m.unsubscribe.noToken}</p>
 			{/if}
 		</Card.Content>
 	</Card.Root>

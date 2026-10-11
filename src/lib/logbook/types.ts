@@ -7,13 +7,23 @@
  * note on a phone would simply be undone by the laptop that still has it.
  */
 
+import { m } from '../i18n/index.svelte';
+
 /** The categories a German Fahrtenbuch is kept in for tax purposes. */
 export type Purpose = 'business' | 'commute' | 'private';
 
-export const PURPOSES: Array<{ value: Purpose; label: string }> = [
-	{ value: 'business', label: 'Business' },
-	{ value: 'commute', label: 'Commute' },
-	{ value: 'private', label: 'Private' }
+const option = (value: Purpose) => ({
+	value,
+	/** In the chosen language. */
+	get label(): string {
+		return m.purpose[value];
+	}
+});
+
+export const PURPOSES: Array<{ value: Purpose; readonly label: string }> = [
+	option('business'),
+	option('commute'),
+	option('private')
 ];
 
 export interface Annotation {

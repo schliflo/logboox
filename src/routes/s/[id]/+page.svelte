@@ -11,6 +11,7 @@
   that travels is exactly the wrong place for it.
 -->
 <script lang="ts">
+	import { intlLocale, m } from '#lib/i18n/index.svelte.js';
 	import { onMount } from 'svelte';
 	import * as Card from '#lib/components/ui/card/index.js';
 	import { Badge } from '#lib/components/ui/badge/index.js';
@@ -51,7 +52,7 @@
 	const range = $derived(slice ? { from: 0, to: slice.time.length - 1 } : null);
 
 	const when = $derived(
-		new Intl.DateTimeFormat('en-GB', {
+		new Intl.DateTimeFormat(intlLocale(), {
 			weekday: 'long',
 			day: 'numeric',
 			month: 'long',
@@ -71,7 +72,16 @@
 		meta: share.meta
 	});
 
+	// The preview card keeps the server's English; the page reads in the chosen language.
 	const heading = $derived(shareHeading(described));
+	const shownHeading = $derived.by(() => {
+		if (share.title) return share.title;
+		if (share.kind === 'trip')
+			return m.sharedPage.tripHeading(num(Number(meta.distanceKm ?? NaN), 1));
+		if (share.kind === 'charging')
+			return m.sharedPage.chargeHeading(num(Number(meta.kwhDelivered ?? NaN), 1));
+		return m.sharedPage.monthHeading;
+	});
 	const card = $derived(shareSummary(described));
 
 	// A month has no one curve to draw, so it keeps the site's card.
@@ -105,7 +115,7 @@
 			);
 			slice = decodeSlice(manifest, share.model, blobs);
 		} catch (error) {
-			failure = error instanceof Error ? error.message : 'The samples could not be read.';
+			failure = error instanceof Error ? error.message : m.sharedPage.unreadable;
 		}
 	});
 </script>
@@ -124,10 +134,10 @@
 <main class="mx-auto min-h-svh max-w-4xl space-y-6 px-6 py-12">
 	<header class="space-y-3">
 		<div class="flex flex-wrap items-center gap-2">
-			<Badge variant="secondary">Shared from LogbooX</Badge>
+			<Badge variant="secondary">{m.sharedPage.from}</Badge>
 			<Badge variant="outline">XPeng {share.model}</Badge>
 		</div>
-		<h1 class="text-3xl font-semibold tracking-tight text-balance">{heading}</h1>
+		<h1 class="text-3xl font-semibold tracking-tight text-balance">{shownHeading}</h1>
 		<p class="text-sm text-muted-foreground">{when}</p>
 		{#if share.description}
 			<p class="text-pretty">{share.description}</p>
@@ -139,7 +149,7 @@
 			<Card.Root>
 				<Card.Content>
 					<BigStat
-						kicker="Distance"
+						kicker={m.sharedPage.distance}
 						value={num(Number(meta.distanceKm ?? NaN), 1)}
 						unit="km"
 						size="sm"
@@ -150,7 +160,7 @@
 			<Card.Root>
 				<Card.Content>
 					<BigStat
-						kicker="Duration"
+						kicker={m.sharedPage.duration}
 						value={duration(Number(meta.duration ?? 0), 'short')}
 						size="sm"
 						accent="--viz-3"
@@ -160,7 +170,7 @@
 			<Card.Root>
 				<Card.Content>
 					<BigStat
-						kicker="Top speed"
+						kicker={m.sharedPage.topSpeed}
 						value={num(Number(meta.maxSpeed ?? NaN))}
 						unit="km/h"
 						size="sm"
@@ -171,13 +181,13 @@
 			<Card.Root>
 				<Card.Content>
 					<BigStat
-						kicker="Energy used"
+						kicker={m.sharedPage.energyUsed}
 						value={num(Number(meta.energyKwh ?? NaN), 1)}
 						unit="kWh"
 						size="sm"
 						accent="--viz-4"
 						detail={Number.isFinite(Number(meta.regenShare))
-							? `${percent(Number(meta.regenShare))} came back through regeneration`
+							? m.sharedPage.regen(percent(Number(meta.regenShare)))
 							: undefined}
 					/>
 				</Card.Content>
@@ -188,7 +198,7 @@
 			<Card.Root>
 				<Card.Content>
 					<BigStat
-						kicker="Energy delivered"
+						kicker={m.sharedPage.delivered}
 						value={num(Number(meta.kwhDelivered ?? NaN), 1)}
 						unit="kWh"
 						size="sm"
@@ -199,7 +209,7 @@
 			<Card.Root>
 				<Card.Content>
 					<BigStat
-						kicker="Duration"
+						kicker={m.sharedPage.duration}
 						value={duration(Number(meta.duration ?? 0), 'short')}
 						size="sm"
 						accent="--viz-1"
@@ -209,19 +219,19 @@
 			<Card.Root>
 				<Card.Content>
 					<BigStat
-						kicker="Peak power"
+						kicker={m.sharedPage.peakPower}
 						value={num(Number(meta.maxKw ?? NaN), 1)}
 						unit="kW"
 						size="sm"
 						accent="--viz-2"
-						detail={meta.isDc ? 'Rapid DC charging' : 'Through the onboard AC charger'}
+						detail={meta.isDc ? m.sharedPage.rapidDc : m.sharedPage.onboardAc}
 					/>
 				</Card.Content>
 			</Card.Root>
 			<Card.Root>
 				<Card.Content>
 					<BigStat
-						kicker="Charge added"
+						kicker={m.sharedPage.chargeAdded}
 						value="{num(Number(meta.socStart ?? NaN))} → {num(Number(meta.socEnd ?? NaN))}"
 						unit="%"
 						size="sm"
@@ -235,10 +245,9 @@
 	{#if share.kind !== 'export'}
 		<Card.Root>
 			<Card.Header>
-				<Card.Title>Second by second</Card.Title>
+				<Card.Title>{m.sharedPage.secondBySecond}</Card.Title>
 				<Card.Description>
-					One sample a second, as the car recorded it. Hovering any panel reads out that instant in
-					all of them.
+					{m.sharedPage.secondBySecondHint}
 				</Card.Description>
 			</Card.Header>
 			<Card.Content>
@@ -251,17 +260,16 @@
 						<SessionDetail source={slice} from={range.from} to={range.to} syncKey="shared" />
 					{/if}
 				{:else}
-					<p class="text-sm text-muted-foreground">Reading the samples…</p>
+					<p class="text-sm text-muted-foreground">{m.sharedPage.reading}</p>
 				{/if}
 			</Card.Content>
 		</Card.Root>
 	{:else}
 		<Card.Root>
 			<Card.Header>
-				<Card.Title>A whole month</Card.Title>
+				<Card.Title>{m.sharedPage.wholeMonth}</Card.Title>
 				<Card.Description>
-					This link carries an entire export. Opening it reads the whole thing into your browser,
-					which takes a moment and a few hundred megabytes of memory.
+					{m.sharedPage.wholeMonthHint}
 				</Card.Description>
 			</Card.Header>
 			<Card.Content>
@@ -269,7 +277,7 @@
 					disabled={dataset.status === 'loading'}
 					onclick={() => dataset.openSharedExport(share.id)}
 				>
-					{dataset.status === 'loading' ? 'Reading…' : 'Open the dashboard'}
+					{dataset.status === 'loading' ? m.sharedPage.readingExport : m.sharedPage.openDashboard}
 					<ArrowRightIcon class="size-4" />
 				</Button>
 			</Card.Content>
@@ -280,16 +288,15 @@
 		<Card.Header>
 			<Card.Title class="flex items-center gap-2">
 				<ShieldIcon class="size-5 text-primary" />
-				Your car records this too
+				{m.sharedPage.yoursToo}
 			</Card.Title>
 			<Card.Description>
-				Under the EU Data Act you can ask XPeng for the data your own vehicle keeps. LogbooX reads
-				it in your browser — there is nothing to upload, and nothing to sign up for.
+				{m.sharedPage.yoursTooHint}
 			</Card.Description>
 		</Card.Header>
 		<Card.Content>
 			<Button href="/">
-				Read your own export
+				{m.sharedPage.readOwn}
 				<ArrowRightIcon class="size-4" />
 			</Button>
 		</Card.Content>

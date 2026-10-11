@@ -9,6 +9,7 @@
   through a public link draws exactly as one in the dashboard does.
 -->
 <script lang="ts">
+	import { m } from '#lib/i18n/index.svelte.js';
 	import UPlotChart, { type ChartSeries } from '#lib/components/charts/UPlotChart.svelte';
 	import { decodeRange } from '#lib/data/store/columnar.js';
 	import type { SampleSource } from './TripDetail.svelte';
@@ -34,20 +35,20 @@
 		return { label, color, unit, fill: true, values: decodeRange(column, from, to + 1) };
 	}
 
-	const power = $derived(series('ldcu_chrgpwr', 'Charging power', '--viz-charge', 'kW'));
-	const soc = $derived(series('ldcu_bms_soc_disp', 'State of charge', '--viz-soc', '%'));
+	const power = $derived(series('ldcu_chrgpwr', m.detail.chargingPower, '--viz-charge', 'kW'));
+	const soc = $derived(series('ldcu_bms_soc_disp', m.detail.stateOfCharge, '--viz-soc', '%'));
 </script>
 
 <div class="space-y-4">
 	{#if power}
 		<figure class="space-y-1">
-			<figcaption class="text-xs text-muted-foreground">Power at the plug</figcaption>
+			<figcaption class="text-xs text-muted-foreground">{m.detail.powerAtPlug}</figcaption>
 			<UPlotChart {x} series={[power]} height={170} {syncKey} />
 		</figure>
 	{/if}
 	{#if soc}
 		<figure class="space-y-1">
-			<figcaption class="text-xs text-muted-foreground">State of charge</figcaption>
+			<figcaption class="text-xs text-muted-foreground">{m.detail.stateOfCharge}</figcaption>
 			<UPlotChart {x} series={[soc]} height={140} {syncKey} />
 		</figure>
 	{/if}

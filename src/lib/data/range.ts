@@ -40,6 +40,9 @@ const LAST_DAYS = [7, 30, 90];
  */
 export const MONTH_EXPORT_DAYS = 29;
 
+/** XPeng keeps a rolling thirty days; whatever is older than that is gone for good. */
+export const EXPORT_WINDOW_DAYS = 30;
+
 type Extent = Pick<DerivedData, 'startTime' | 'endTime' | 'days'>;
 
 /** Calendar arithmetic on `YYYY-MM-DD`, which has no time zone to get wrong. */

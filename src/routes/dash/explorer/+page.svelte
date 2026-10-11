@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '#lib/i18n/index.svelte.js';
 	import * as Card from '#lib/components/ui/card/index.js';
 	import { Button } from '#lib/components/ui/button/index.js';
 	import { Switch } from '#lib/components/ui/switch/index.js';
@@ -8,7 +9,8 @@
 	import { settings } from '#lib/state/settings.svelte.js';
 	import { breakAtGaps, selectSeries } from '#lib/data/store/decimate.js';
 	import { AWAKE_GAP_SECONDS } from '#lib/data/analytics/sessions.js';
-	import { CATEGORY_LABELS, type ColumnCategory } from '#lib/data/schema/columns.js';
+	import type { ColumnCategory } from '#lib/data/schema/columns.js';
+	import { categoryLabel, columnDescription, columnLabel } from '#lib/i18n/columns.js';
 	import { valueAt } from '#lib/data/store/columnar.js';
 	import { dateTime, num } from '#lib/utils/format.js';
 	import { downloadBlob } from '#lib/utils/download.js';
@@ -44,13 +46,13 @@
 			const empty = column.nonNull === 0;
 			if (empty && !settings.showEmptySignals) continue;
 			const list = byCategory.get(column.spec.category) ?? [];
-			list.push({ key: column.spec.key, label: column.spec.label, empty });
+			list.push({ key: column.spec.key, label: columnLabel(column.spec.key), empty });
 			byCategory.set(column.spec.category, list);
 		}
 		return [...byCategory.entries()]
 			.map(([category, items]) => ({
 				category,
-				label: CATEGORY_LABELS[category],
+				label: categoryLabel(category),
 				items: items.sort((a, b) => a.label.localeCompare(b.label))
 			}))
 			.sort((a, b) => a.label.localeCompare(b.label));
@@ -71,7 +73,7 @@
 			if (!x) x = broken.x;
 			if (broken.x.length !== x.length) return;
 			built.push({
-				label: column.spec.label,
+				label: columnLabel(column.spec.key),
 				color: `--viz-${(index % 8) + 1}`,
 				unit: column.spec.unit,
 				step: column.spec.step,
@@ -122,12 +124,12 @@
 <div class="mx-auto grid max-w-7xl gap-6 lg:grid-cols-[280px_1fr]">
 	<Card.Root class="h-fit">
 		<Card.Header>
-			<Card.Title class="text-base">Signals</Card.Title>
-			<Card.Description>Pick any combination to plot together.</Card.Description>
+			<Card.Title class="text-base">{m.explorer.signals}</Card.Title>
+			<Card.Description>{m.explorer.signalsHint}</Card.Description>
 		</Card.Header>
 		<Card.Content class="space-y-4">
 			<div class="flex items-center justify-between">
-				<Label for="empty" class="text-xs font-normal">Show never-reported</Label>
+				<Label for="empty" class="text-xs font-normal">{m.explorer.showEmpty}</Label>
 				<Switch id="empty" bind:checked={settings.showEmptySignals} />
 			</div>
 
@@ -153,7 +155,7 @@
 								></span>
 								<span class="truncate" class:opacity-40={item.empty}>{item.label}</span>
 								{#if item.empty}
-									<span class="ml-auto text-[10px] text-muted-foreground">empty</span>
+									<span class="ml-auto text-[10px] text-muted-foreground">{m.explorer.empty}</span>
 								{/if}
 							</button>
 						{/each}
@@ -168,19 +170,19 @@
 			<Card.Header class="flex-row items-start justify-between gap-4 space-y-0">
 				<div>
 					<Card.Title>
-						{picked.length === 0 ? 'Choose a signal' : 'Raw signals'}
+						{picked.length === 0 ? m.explorer.choose : m.explorer.raw}
 					</Card.Title>
 					<Card.Description>
-						{dateTime(window.from)} – {dateTime(window.to)} · drag to zoom
+						{m.explorer.window(dateTime(window.from), dateTime(window.to))}
 					</Card.Description>
 				</div>
 				<div class="flex shrink-0 gap-2">
 					{#if from !== null}
-						<Button variant="outline" size="sm" onclick={resetZoom}>Reset zoom</Button>
+						<Button variant="outline" size="sm" onclick={resetZoom}>{m.explorer.resetZoom}</Button>
 					{/if}
 					<Button variant="outline" size="sm" onclick={exportWindow} disabled={!picked.length}>
 						<DownloadIcon class="size-4" />
-						Save as CSV
+						{m.explorer.saveCsv}
 					</Button>
 				</div>
 			</Card.Header>
@@ -207,7 +209,7 @@
 					</div>
 				{:else}
 					<p class="py-16 text-center text-sm text-muted-foreground">
-						Select one or more signals from the list.
+						{m.explorer.selectHint}
 					</p>
 				{/if}
 			</Card.Content>
@@ -216,7 +218,7 @@
 		{#if picked.length}
 			<Card.Root>
 				<Card.Header>
-					<Card.Title class="text-base">What these signals contain</Card.Title>
+					<Card.Title class="text-base">{m.explorer.contain}</Card.Title>
 				</Card.Header>
 				<Card.Content>
 					<div class="grid gap-4 sm:grid-cols-2">
@@ -224,26 +226,26 @@
 							{@const column = dataset.columns.get(key)}
 							{#if column}
 								<div class="space-y-1 rounded-lg border p-3">
-									<p class="font-medium">{column.spec.label}</p>
+									<p class="font-medium">{columnLabel(column.spec.key)}</p>
 									<p class="font-mono text-xs text-muted-foreground">{column.spec.key}</p>
 									<dl class="mt-2 space-y-0.5 text-xs text-muted-foreground">
 										<div>
-											<dt class="inline">Range</dt>
+											<dt class="inline">{m.explorer.range}</dt>
 											<dd class="inline text-foreground tabular-nums">
 												{num(column.min, 2)} – {num(column.max, 2)}
 												{column.spec.unit}
 											</dd>
 										</div>
 										<div>
-											<dt class="inline">Reported in</dt>
+											<dt class="inline">{m.explorer.reportedIn}</dt>
 											<dd class="inline text-foreground tabular-nums">
-												{num((column.nonNull / dataset.time.length) * 100, 1)}% of samples
+												{m.explorer.ofSamples(num((column.nonNull / dataset.time.length) * 100, 1))}
 											</dd>
 										</div>
 									</dl>
-									{#if column.spec.description}
+									{#if columnDescription(column.spec)}
 										<p class="mt-2 text-xs leading-relaxed text-muted-foreground">
-											{column.spec.description}
+											{columnDescription(column.spec)}
 										</p>
 									{/if}
 								</div>

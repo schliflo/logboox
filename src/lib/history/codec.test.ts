@@ -4,6 +4,7 @@ import { packDataset, unpackDataset } from '../data/worker/protocol';
 import { valueAt, type Dataset } from '../data/store/columnar';
 import { mergeSources } from '../data/parse/merge';
 import { generateDemoDataset } from '../demo/generator';
+import { factText } from '../i18n/facts';
 import {
 	RECORD_VERSION,
 	StoredFormatError,
@@ -83,8 +84,8 @@ describe('decodeExport', () => {
 		expect(after.trips.length).toBe(before.trips.length);
 		expect(after.charging.totalKwh).toBeCloseTo(before.charging.totalKwh, 6);
 		expect(after.recordedDays).toBe(before.recordedDays);
-		expect(after.facts.headline.map((fact) => fact.value)).toEqual(
-			before.facts.headline.map((fact) => fact.value)
+		expect(after.facts.headline.map((fact) => factText(fact).value)).toEqual(
+			before.facts.headline.map((fact) => factText(fact).value)
 		);
 	});
 

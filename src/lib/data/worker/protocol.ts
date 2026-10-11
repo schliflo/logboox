@@ -64,7 +64,8 @@ export type WorkerResponse =
 			stream?: StreamId;
 			loaded: number;
 			total: number;
-			detail?: string;
+			/** Which export of several, counted from one. */
+			part?: { index: number; count: number };
 	  }
 	| { type: 'ready'; dataset: PackedDataset; derived: DerivedData; kept: KeptOutcome | null }
 	| { type: 'restored'; ids: string[]; skipped: string[] }
@@ -94,21 +95,6 @@ export type ParsePhase =
 	| 'restoring'
 	| 'uploading'
 	| 'downloading';
-
-export const PHASE_LABELS: Record<ParsePhase, string> = {
-	reading: 'Reading files',
-	parsing: 'Parsing signals',
-	joining: 'Lining up the timeline',
-	analyzing: 'Finding patterns',
-	generating: 'Building demo data',
-	storing: 'Keeping a copy in this browser',
-	loading: 'Reading the kept export',
-	merging: 'Joining the timelines',
-	packing: 'Packing the backup',
-	restoring: 'Restoring from the backup',
-	uploading: 'Copying to your account',
-	downloading: 'Fetching from your account'
-};
 
 /** Detaches a dataset's buffers for transfer to the main thread. */
 export function packDataset(dataset: Dataset): { packed: PackedDataset; transfer: ArrayBuffer[] } {

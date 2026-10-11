@@ -11,6 +11,7 @@
   than hiding the difference.
 -->
 <script lang="ts">
+	import { m } from '#lib/i18n/index.svelte.js';
 	import { onMount } from 'svelte';
 	import { toast } from 'svelte-sonner';
 	import * as Card from '#lib/components/ui/card/index.js';
@@ -36,11 +37,8 @@
 	import TrashIcon from '@lucide/svelte/icons/trash-2';
 
 	/** Above this, a merged timeline is worth warning about before it is built. */
-	const HEAVY = 500 * 1024 * 1024;
 	const VERY_HEAVY = 1024 * 1024 * 1024;
 
-	let selected = $state<string[]>([]);
-	let selectedVin = $state<string | null>(null);
 	let confirmingClear = $state(false);
 
 	onMount(() => {
@@ -56,22 +54,7 @@
 		if (account.signedIn) history.refreshRemote();
 	});
 
-	const estimate = $derived(history.estimate(selected));
 	const notInAccount = $derived(history.notInAccount);
-
-	function toggle(entry: LibraryEntry) {
-		// Exports only merge within one vehicle, so picking another vehicle
-		// starts a fresh selection rather than offering an impossible combination.
-		if (selectedVin !== entry.vin) {
-			selectedVin = entry.vin;
-			selected = [entry.id];
-			return;
-		}
-		selected = selected.includes(entry.id)
-			? selected.filter((id) => id !== entry.id)
-			: [...selected, entry.id];
-		if (selected.length === 0) selectedVin = null;
-	}
 
 	/** Everything one vehicle's exports cover end to end, holes included. */
 	function span(group: VehicleGroup): string {
@@ -81,7 +64,7 @@
 	}
 
 	function label(group: VehicleGroup): string {
-		if (group.isDemo) return 'Demonstration data';
+		if (group.isDemo) return m.library.demonstration;
 		const vin = settings.revealVin ? group.vin : maskVin(group.vin);
 		return group.vmodel ? `${group.vmodel} · ${vin}` : vin;
 	}
@@ -90,8 +73,8 @@
 		try {
 			await history.backup(ids);
 		} catch (error) {
-			toast('The backup could not be written', {
-				description: error instanceof Error ? error.message : 'Something went wrong.',
+			toast(m.library.backupFailed, {
+				description: error instanceof Error ? error.message : m.library.somethingWrong,
 				closeButton: true
 			});
 		}
@@ -99,15 +82,11 @@
 
 	async function remove(ids: string[]) {
 		await history.remove(ids);
-		selected = selected.filter((id) => !ids.includes(id));
-		if (selected.length === 0) selectedVin = null;
 	}
 
 	async function clearEverything() {
 		confirmingClear = false;
 		await history.removeAll();
-		selected = [];
-		selectedVin = null;
 	}
 
 	/** Copies up to the account, and says plainly what would not go. */
@@ -116,26 +95,21 @@
 		try {
 			result = await history.sync(ids);
 		} catch (error) {
-			toast('Nothing was copied to your account', {
-				description: error instanceof Error ? error.message : 'Something went wrong.',
+			toast(m.library.nothingCopied, {
+				description: error instanceof Error ? error.message : m.library.somethingWrong,
 				closeButton: true
 			});
 			return;
 		}
 		if (result.failed.length > 0) {
-			toast(
-				result.failed.length === 1
-					? 'One export was not copied'
-					: `${result.failed.length} exports were not copied`,
-				{ description: result.failed[0].reason, closeButton: true }
-			);
+			toast(m.library.notCopied(result.failed.length), {
+				description: result.failed[0].reason,
+				closeButton: true
+			});
 		} else {
-			toast(
-				ids.length === 1 ? 'Kept in your account' : `${ids.length} exports kept in your account`,
-				{
-					description: 'They will still be here if this browser forgets everything.'
-				}
-			);
+			toast(m.library.keptInAccount(ids.length), {
+				description: m.library.keptInAccountDetail
+			});
 		}
 	}
 
@@ -159,12 +133,12 @@
 				}
 			});
 			await navigator.clipboard.writeText(created.url).catch(() => {});
-			toast('Link copied', {
-				description: 'Anyone with it can read this export. Revoke it from your account.',
+			toast(m.library.linkCopied, {
+				description: m.library.linkCopiedDetail,
 				duration: 8000
 			});
 		} catch (error) {
-			toast('The link could not be made', {
+			toast(m.library.linkFailed, {
 				description: error instanceof Error ? error.message : undefined,
 				closeButton: true
 			});
@@ -175,14 +149,14 @@
 		try {
 			await history.forget(ids);
 		} catch (error) {
-			toast('It could not be removed from your account', {
-				description: error instanceof Error ? error.message : 'Something went wrong.',
+			toast(m.library.removeFailed, {
+				description: error instanceof Error ? error.message : m.library.somethingWrong,
 				closeButton: true
 			});
 			return;
 		}
-		toast('Removed from your account', {
-			description: 'Links to the whole export are revoked. The copy in this browser is untouched.'
+		toast(m.library.removed, {
+			description: m.library.removedDetail
 		});
 	}
 
@@ -209,17 +183,17 @@
 		try {
 			result = await history.pull(ids);
 		} catch (error) {
-			toast('The fetch did not finish', {
-				description: error instanceof Error ? error.message : 'Something went wrong.',
+			toast(m.library.fetchUnfinished, {
+				description: error instanceof Error ? error.message : m.library.somethingWrong,
 				closeButton: true
 			});
 			return false;
 		}
 		if (result.failed.length > 0) {
-			toast(
-				ids.length === 1 ? 'That export could not be fetched' : 'Some exports could not be fetched',
-				{ description: result.failed[0].reason, closeButton: true }
-			);
+			toast(m.library.fetchFailed(ids.length), {
+				description: result.failed[0].reason,
+				closeButton: true
+			});
 			return false;
 		}
 		return true;
@@ -237,18 +211,12 @@
 </script>
 
 {#if history.count > 0}
-	<section class="mt-10 space-y-4">
+	<section class="mt-4 space-y-4">
 		<div class="flex flex-wrap items-end justify-between gap-2">
 			<div>
-				<h2 class="text-lg font-medium">Your exports</h2>
+				<h2 class="text-base font-medium">{m.library.title}</h2>
 				<p class="text-sm text-muted-foreground">
-					{#if account.signedIn}
-						Kept in this browser, in your account, or both. Open one, or every export from the same
-						car as a single timeline.
-					{:else}
-						Stored on this device only. Open one, or every export from the same car as a single
-						timeline.
-					{/if}
+					{m.library.intro(account.signedIn)}
 				</p>
 			</div>
 			<div class="flex items-center gap-2">
@@ -260,7 +228,7 @@
 						onclick={() => keepInAccount(notInAccount.map((entry) => entry.id))}
 					>
 						<CloudUploadIcon class="size-4" />
-						Keep {notInAccount.length === 1 ? 'it' : `all ${notInAccount.length}`} in my account
+						{m.library.keepAll(notInAccount.length)}
 					</Button>
 				{/if}
 				<Button
@@ -270,11 +238,11 @@
 					onclick={() => backup(history.entries.map((entry) => entry.id))}
 				>
 					<DownloadIcon class="size-4" />
-					Back up everything
+					{m.library.backUpAll}
 				</Button>
 				<Button variant="ghost" size="sm" onclick={() => (confirmingClear = true)}>
 					<TrashIcon class="size-4" />
-					Remove everything
+					{m.library.removeAll}
 				</Button>
 			</div>
 		</div>
@@ -290,15 +258,14 @@
 								<CarIcon class="size-4 text-primary" />
 								<span class="font-mono text-sm font-normal">{label(group)}</span>
 								{#if group.isDemo}
-									<Badge variant="secondary">Demo</Badge>
+									<Badge variant="secondary">{m.library.demo}</Badge>
 								{/if}
 							</Card.Title>
 							{#if group.entries.length > 1}
 								<p class="text-xs text-muted-foreground">
-									{span(group)} across {group.entries.length} exports, up to {bytes(whole.bytes)} of memory
-									at once.
+									{m.library.groupSpan(span(group), group.entries.length, bytes(whole.bytes))}
 									{#if whole.bytes > VERY_HEAVY}
-										That is a great deal for one tab to hold.
+										{m.library.heavy}
 									{/if}
 								</p>
 							{/if}
@@ -306,12 +273,13 @@
 
 						{#if group.entries.length > 1}
 							<Button
+								variant="outline"
 								size="sm"
 								disabled={data.status === 'loading' || history.busy}
 								onclick={() => openTogether(ids)}
 							>
 								<LayersIcon class="size-4" />
-								Open all {group.entries.length}
+								{m.library.openTogether}
 							</Button>
 						{/if}
 					</div>
@@ -319,150 +287,112 @@
 
 				<Card.Content class="space-y-1">
 					{#each group.entries as entry (entry.id)}
-						{@const checked = selected.includes(entry.id)}
 						<div
 							class="flex flex-wrap items-center gap-3 rounded-lg px-2 py-2 transition-colors hover:bg-muted/50"
-							class:bg-muted={checked}
 						>
-							<input
-								type="checkbox"
-								class="size-4 shrink-0 accent-primary"
-								{checked}
-								onchange={() => toggle(entry)}
-								aria-label="Select the export from {dateOnly(entry.startTime)}"
-							/>
-
 							<div class="min-w-40 flex-1">
 								<p class="flex items-center gap-2 text-sm font-medium">
 									{dateOnly(entry.startTime)} – {dateOnly(entry.endTime)}
 									{#if account.signedIn}
 										{#if entry.remote && entry.local}
-											<CloudIcon
-												class="size-3.5 text-primary"
-												aria-label="Kept here and in your account"
-											/>
+											<CloudIcon class="size-3.5 text-primary" aria-label={m.library.both} />
 										{:else if entry.remote}
 											<Badge variant="secondary" class="gap-1">
 												<CloudIcon class="size-3" />
-												In your account
+												{m.library.inAccount}
 											</Badge>
 										{:else}
 											<CloudOffIcon
 												class="size-3.5 text-muted-foreground"
-												aria-label="Only in this browser"
+												aria-label={m.library.onlyHere}
 											/>
 										{/if}
 									{/if}
 								</p>
 								<p class="text-xs text-muted-foreground tabular-nums">
-									{entry.days} days · {num(entry.distanceKm)} km · {entry.trips} trips · {bytes(
-										entry.storedBytes
+									{m.library.entry(
+										entry.days,
+										num(entry.distanceKm),
+										entry.trips,
+										bytes(entry.storedBytes)
 									)}
 								</p>
 							</div>
 
-							{#if entry.local}
-								<Button variant="secondary" size="sm" onclick={() => data.open([entry.id])}>
-									Open
-								</Button>
-							{:else}
-								<Button
-									variant="secondary"
-									size="sm"
-									disabled={history.busy}
-									onclick={() => fetchAndOpen(entry)}
-								>
-									<CloudDownloadIcon class="size-4" />
-									Fetch and open
-								</Button>
-							{/if}
-
 							<DropdownMenu.Root>
 								<DropdownMenu.Trigger class={buttonVariants({ variant: 'ghost', size: 'icon' })}>
 									<EllipsisIcon class="size-4" />
-									<span class="sr-only">More for this export</span>
+									<span class="sr-only">{m.library.more}</span>
 								</DropdownMenu.Trigger>
 								<DropdownMenu.Content align="end">
 									{#if entry.local}
+										<DropdownMenu.Item onclick={() => data.open([entry.id])}>
+											<LayersIcon class="size-4" />
+											{m.library.openAlone}
+										</DropdownMenu.Item>
+									{:else}
+										<DropdownMenu.Item disabled={history.busy} onclick={() => fetchAndOpen(entry)}>
+											<CloudDownloadIcon class="size-4" />
+											{m.library.fetchOpen}
+										</DropdownMenu.Item>
+									{/if}
+									{#if entry.local}
 										<DropdownMenu.Item onclick={() => backup([entry.id])}>
 											<DownloadIcon class="size-4" />
-											Back up
+											{m.library.backUp}
 										</DropdownMenu.Item>
 									{/if}
 									{#if account.signedIn && entry.local && !entry.remote}
 										<DropdownMenu.Item onclick={() => keepInAccount([entry.id])}>
 											<CloudUploadIcon class="size-4" />
-											Keep in my account
+											{m.library.keepInAccount}
 										</DropdownMenu.Item>
 									{/if}
 									{#if account.signedIn && entry.remote && !entry.local}
 										<DropdownMenu.Item onclick={() => pull([entry.id])}>
 											<CloudDownloadIcon class="size-4" />
-											Fetch to this browser
+											{m.library.fetchHere}
 										</DropdownMenu.Item>
 									{/if}
 									{#if account.signedIn && entry.remote && !entry.isDemo}
 										<DropdownMenu.Item onclick={() => shareExport(entry)}>
 											<ShareIcon class="size-4" />
-											Share this export
+											{m.library.shareExport}
 										</DropdownMenu.Item>
 									{/if}
 									{#if account.signedIn && entry.remote}
 										<DropdownMenu.Item onclick={() => removeFromAccount([entry.id])}>
 											<CloudOffIcon class="size-4" />
-											Remove from my account
+											{m.library.removeAccount}
 										</DropdownMenu.Item>
 									{/if}
 									{#if entry.local}
 										<DropdownMenu.Item onclick={() => remove([entry.id])}>
 											<TrashIcon class="size-4" />
-											Remove from this browser
+											{m.library.removeHere}
 										</DropdownMenu.Item>
 									{/if}
 								</DropdownMenu.Content>
 							</DropdownMenu.Root>
 						</div>
 					{/each}
-
-					{#if selectedVin === group.vin && selected.length > 1}
-						<div class="mt-3 flex flex-wrap items-center gap-3 rounded-lg border bg-background p-3">
-							<Button
-								size="sm"
-								disabled={data.status === 'loading' || history.busy}
-								onclick={() => openTogether(selected)}
-							>
-								<LayersIcon class="size-4" />
-								Open {selected.length} together
-							</Button>
-							<p class="text-xs text-muted-foreground">
-								One timeline from {selected.length} exports, using up to {bytes(estimate.bytes)} of memory.
-								{#if estimate.bytes > VERY_HEAVY}
-									That is a great deal to hold at once, and a browser tab may not manage it.
-								{:else if estimate.bytes > HEAVY}
-									Where they overlap it will be less, but expect it to take a moment.
-								{/if}
-							</p>
-						</div>
-					{/if}
 				</Card.Content>
 			</Card.Root>
 		{/each}
 
 		<p class="text-xs text-muted-foreground">
 			{#if history.entries.length > 0}
-				{history.entries.length}
-				{history.entries.length === 1 ? 'export' : 'exports'} taking {bytes(history.totalBytes)}
+				{m.library.usage(history.entries.length, bytes(history.totalBytes))}
 				{#if history.usage && history.usage.quota > 0}
-					of roughly {bytes(history.usage.quota)} this site may use.
+					{m.library.quota(bytes(history.usage.quota))}
 				{:else}
-					on this device.
+					{m.library.onDevice}
 				{/if}
-				A browser can clear its own storage — Safari does so after a week away — so keep a backup of anything
-				you want to hold on to{account.signedIn ? ', or a copy in your account' : ''}.
+				{m.library.evictionWarning(account.signedIn)}
 			{:else}
 				<!-- Nothing here, everything in the account: the sentence about this
 				     browser's storage would be about nothing at all. -->
-				Nothing is stored in this browser. Fetch an export to read it, and it is kept here as well.
+				{m.library.nothingHere}
 			{/if}
 		</p>
 	</section>
@@ -471,16 +401,16 @@
 <Dialog.Root bind:open={confirmingClear}>
 	<Dialog.Content>
 		<Dialog.Header>
-			<Dialog.Title>Remove every kept export?</Dialog.Title>
+			<Dialog.Title>{m.library.confirmTitle}</Dialog.Title>
 			<Dialog.Description>
-				All {history.entries.length} of them, {bytes(history.totalBytes)}, deleted from this
-				browser. The original files XPeng sent you are untouched, but anything not backed up would
-				have to be dropped in again.
+				{m.library.confirmDetail(history.entries.length, bytes(history.totalBytes))}
 			</Dialog.Description>
 		</Dialog.Header>
 		<Dialog.Footer>
-			<Button variant="outline" onclick={() => (confirmingClear = false)}>Keep them</Button>
-			<Button variant="destructive" onclick={clearEverything}>Remove everything</Button>
+			<Button variant="outline" onclick={() => (confirmingClear = false)}
+				>{m.library.keepThem}</Button
+			>
+			<Button variant="destructive" onclick={clearEverything}>{m.library.removeAll}</Button>
 		</Dialog.Footer>
 	</Dialog.Content>
 </Dialog.Root>

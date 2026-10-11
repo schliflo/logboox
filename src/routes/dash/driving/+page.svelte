@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { m } from '#lib/i18n/index.svelte.js';
+	import PageFindings from '#lib/components/app/PageFindings.svelte';
 	import { goto } from '$app/navigation';
 	import * as Card from '#lib/components/ui/card/index.js';
 	import * as Table from '#lib/components/ui/table/index.js';
@@ -19,19 +21,19 @@
 
 	const events = $derived([
 		{
-			title: 'Hardest braking',
+			title: m.drivingPage.hardestBraking,
 			accent: '--viz-brake',
 			unit: 'g',
 			rows: stats.hardestBrakes.map((e) => ({ ...e, value: Math.abs(e.value) }))
 		},
 		{
-			title: 'Hardest acceleration',
+			title: m.drivingPage.hardestAcceleration,
 			accent: '--viz-3',
 			unit: 'g',
 			rows: stats.hardestAccels
 		},
 		{
-			title: 'Fastest moments',
+			title: m.drivingPage.fastest,
 			accent: '--viz-speed',
 			unit: 'km/h',
 			rows: stats.fastestMoments
@@ -40,11 +42,12 @@
 </script>
 
 <div class="mx-auto max-w-6xl space-y-6">
+	<PageFindings />
 	<div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
 		<Card.Root>
 			<Card.Content>
 				<BigStat
-					kicker="Top speed"
+					kicker={m.drivingPage.topSpeed}
 					value={num(stats.speed.maxSpeed)}
 					unit="km/h"
 					size="sm"
@@ -56,41 +59,43 @@
 		<Card.Root>
 			<Card.Content>
 				<BigStat
-					kicker="Hardest stop"
+					kicker={m.drivingPage.hardestStop}
 					value={num(Math.abs(stats.hardestBrakes[0]?.value ?? NaN), 2)}
 					unit="g"
 					size="sm"
 					accent="--viz-brake"
-					detail="Beyond 0.6 g is an emergency stop"
+					detail={m.drivingPage.emergency}
 				/>
 			</Card.Content>
 		</Card.Root>
 		<Card.Root>
 			<Card.Content>
 				<BigStat
-					kicker="Hardest launch"
+					kicker={m.drivingPage.hardestLaunch}
 					value={num(stats.hardestAccels[0]?.value ?? NaN, 2)}
 					unit="g"
 					size="sm"
 					accent="--viz-3"
-					detail="Pulling away at full throttle"
+					detail={m.drivingPage.fullThrottle}
 				/>
 			</Card.Content>
 		</Card.Root>
 		<Card.Root>
 			<Card.Content>
 				<BigStat
-					kicker="Time above 100"
+					kicker={m.drivingPage.above100}
 					value={duration(
 						stats.speed.secondsAbove.find((s) => s.speed === 100)?.seconds ?? 0,
 						'short'
 					)}
 					size="sm"
 					accent="--viz-2"
-					detail="Of {duration(
-						stats.trips.reduce((sum, t) => sum + t.movingSeconds, 0),
-						'short'
-					)} moving"
+					detail={m.drivingPage.ofMoving(
+						duration(
+							stats.trips.reduce((sum, t) => sum + t.movingSeconds, 0),
+							'short'
+						)
+					)}
 				/>
 			</Card.Content>
 		</Card.Root>
@@ -99,11 +104,9 @@
 	<div class="grid gap-6 lg:grid-cols-2">
 		<Card.Root>
 			<Card.Header>
-				<Card.Title>How much grip you used</Card.Title>
+				<Card.Title>{m.drivingPage.grip}</Card.Title>
 				<Card.Description>
-					Every second of driving placed by the forces acting on the car: braking and accelerating
-					up and down, cornering left and right. Careful driving fills a narrow cross, committed
-					driving fills a circle.
+					{m.drivingPage.gripHint}
 				</Card.Description>
 			</Card.Header>
 			<Card.Content>
@@ -120,8 +123,8 @@
 		<div class="space-y-6">
 			<Card.Root>
 				<Card.Header>
-					<Card.Title>Speeds you actually drive</Card.Title>
-					<Card.Description>Time spent at each speed, excluding standing still.</Card.Description>
+					<Card.Title>{m.drivingPage.speeds}</Card.Title>
+					<Card.Description>{m.drivingPage.speedsHint}</Card.Description>
 				</Card.Header>
 				<Card.Content>
 					<Histogram
@@ -131,15 +134,15 @@
 						accent="--viz-speed"
 						height={140}
 						countsAreSeconds
-						label="Speed while moving"
+						label={m.drivingPage.speedMoving}
 					/>
 				</Card.Content>
 			</Card.Root>
 
 			<Card.Root>
 				<Card.Header>
-					<Card.Title>How far you press the pedal</Card.Title>
-					<Card.Description>Accelerator position whenever it was pressed at all.</Card.Description>
+					<Card.Title>{m.drivingPage.pedal}</Card.Title>
+					<Card.Description>{m.drivingPage.pedalHint}</Card.Description>
 				</Card.Header>
 				<Card.Content>
 					<Histogram
@@ -149,7 +152,7 @@
 						accent="--viz-accel"
 						height={140}
 						countsAreSeconds
-						label="Accelerator position"
+						label={m.drivingPage.pedalLabel}
 					/>
 				</Card.Content>
 			</Card.Root>
@@ -157,7 +160,7 @@
 	</div>
 
 	<div class="grid gap-6 lg:grid-cols-3">
-		{#each events as group (group.title)}
+		{#each events as group (group.accent)}
 			<Card.Root>
 				<Card.Header>
 					<Card.Title class="text-base">{group.title}</Card.Title>
@@ -180,7 +183,7 @@
 									<Table.Cell class="py-2 text-right text-xs text-muted-foreground">
 										{dateTime(event.time)}
 										{#if group.unit === 'g' && Number.isFinite(event.speed)}
-											<span class="block">at {num(event.speed)} km/h</span>
+											<span class="block">{m.drivingPage.atSpeed(num(event.speed))}</span>
 										{/if}
 									</Table.Cell>
 								</Table.Row>

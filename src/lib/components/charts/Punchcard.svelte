@@ -7,7 +7,8 @@
   Hovering a cell names the hour it stands for and what happened in it.
 -->
 <script lang="ts">
-	import { num, WEEKDAYS } from '#lib/utils/format.js';
+	import { m } from '#lib/i18n/index.svelte.js';
+	import { num, weekdays } from '#lib/utils/format.js';
 	import ChartTooltip from './ChartTooltip.svelte';
 
 	interface Props {
@@ -21,11 +22,12 @@
 
 	let {
 		grid,
-		label = 'Driving activity',
+		label: ownLabel,
 		unit = '',
 		formatValue = (value: number) => `${num(value)}${unit ? ` ${unit}` : ''}`
 	}: Props = $props();
 
+	const label = $derived(ownLabel ?? m.charts.punchcard.activity);
 	const max = $derived(Math.max(1, ...grid.flat()));
 
 	let frame = $state<HTMLElement>();
@@ -72,7 +74,7 @@
 	<div
 		class="overflow-x-auto"
 		role="img"
-		aria-label="{label}, by weekday and hour"
+		aria-label={m.charts.punchcard.aria(label)}
 		onpointermove={track}
 		onpointerleave={() => (hovered = null)}
 	>
@@ -87,7 +89,7 @@
 
 			{#each grid as row, day (day)}
 				<div class="mt-[3px] flex items-center gap-[3px]">
-					<span class="w-9 shrink-0 text-[10px] text-muted-foreground">{WEEKDAYS[day]}</span>
+					<span class="w-9 shrink-0 text-[10px] text-muted-foreground">{weekdays()[day]}</span>
 					{#each row as value, hour (hour)}
 						<span
 							data-day={day}
@@ -104,7 +106,7 @@
 	{#if hovered}
 		<ChartTooltip x={anchor.x} y={anchor.y} bounds={frameWidth}>
 			<p class="font-medium tabular-nums">
-				{WEEKDAYS[hovered.day]}
+				{weekdays()[hovered.day]}
 				{hovered.hour.toString().padStart(2, '0')}:00–{((hovered.hour + 1) % 24)
 					.toString()
 					.padStart(2, '0')}:00
@@ -114,19 +116,21 @@
 				{#if hovered.value > 0}
 					<span class="font-medium tabular-nums">{formatValue(hovered.value)}</span>
 					{#if share !== null}
-						<span class="text-muted-foreground tabular-nums">{num(share, 1)}% of the week</span>
+						<span class="text-muted-foreground tabular-nums"
+							>{m.charts.punchcard.ofWeek(num(share, 1))}</span
+						>
 					{/if}
 				{:else}
-					<span class="text-muted-foreground">never</span>
+					<span class="text-muted-foreground">{m.charts.punchcard.never}</span>
 				{/if}
 			</p>
 		</ChartTooltip>
 	{/if}
 
 	<figcaption class="flex items-center gap-2 text-xs text-muted-foreground">
-		<span>{label}, by hour of the day</span>
+		<span>{m.charts.punchcard.caption(label)}</span>
 		<span class="ml-auto flex items-center gap-1">
-			<span>less</span>
+			<span>{m.charts.punchcard.less}</span>
 			{#each [0, 0.35, 0.6, 0.8, 1] as step (step)}
 				<span
 					class="h-3 w-3 rounded-[2px]"
@@ -136,7 +140,7 @@
 					)}%, var(--viz-grid))"
 				></span>
 			{/each}
-			<span>more</span>
+			<span>{m.charts.punchcard.more}</span>
 		</span>
 	</figcaption>
 </figure>

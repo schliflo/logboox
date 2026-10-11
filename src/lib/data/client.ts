@@ -23,12 +23,14 @@ import {
 import type { DerivedData } from './analytics';
 import type { Dataset } from './store/columnar';
 import type { BoardCandidate } from './worker/transfer';
+import type { StreamId } from './schema/streams';
 
 export interface LoadProgress {
 	phase: ParsePhase;
 	loaded: number;
 	total: number;
-	detail?: string;
+	stream?: StreamId;
+	part?: { index: number; count: number };
 }
 
 export interface DatasetResult {
@@ -93,7 +95,8 @@ function run(
 						phase: message.phase,
 						loaded: message.loaded,
 						total: message.total,
-						detail: message.detail
+						stream: message.stream,
+						part: message.part
 					});
 					break;
 				case 'ready':

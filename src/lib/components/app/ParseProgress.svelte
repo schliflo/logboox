@@ -5,9 +5,9 @@
   seconds and needs to say what it is doing rather than spin silently.
 -->
 <script lang="ts">
+	import { m } from '#lib/i18n/index.svelte.js';
 	import { Progress } from '#lib/components/ui/progress/index.js';
 	import { data } from '#lib/state/dataset.svelte.js';
-	import { PHASE_LABELS } from '#lib/data/worker/protocol.js';
 	import { bytes } from '#lib/utils/format.js';
 
 	const progress = $derived(data.progress);
@@ -19,10 +19,14 @@
 <div class="mx-auto w-full max-w-md space-y-4 text-center">
 	<div class="space-y-1">
 		<p class="text-lg font-medium">
-			{progress ? PHASE_LABELS[progress.phase] : 'Getting started'}
+			{progress ? m.progress.phases[progress.phase] : m.progress.gettingStarted}
 		</p>
-		{#if progress?.detail}
-			<p class="text-sm text-muted-foreground">{progress.detail}</p>
+		{#if progress?.part}
+			<p class="text-sm text-muted-foreground">
+				{m.progress.part(progress.part.index, progress.part.count)}
+			</p>
+		{:else if progress?.stream}
+			<p class="text-sm text-muted-foreground">{m.progress.streams[progress.stream]}</p>
 		{/if}
 	</div>
 
@@ -30,11 +34,11 @@
 
 	{#if progress && progress.phase === 'parsing' && progress.total > 0}
 		<p class="text-xs text-muted-foreground tabular-nums">
-			{bytes(progress.loaded)} of {bytes(progress.total)}
+			{m.progress.bytesOf(bytes(progress.loaded), bytes(progress.total))}
 		</p>
 	{/if}
 
 	<p class="text-xs text-muted-foreground">
-		Everything is happening in this browser tab. Nothing is being uploaded.
+		{m.progress.local}
 	</p>
 </div>

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '#lib/i18n/index.svelte.js';
 	import * as Card from '#lib/components/ui/card/index.js';
 	import { Button } from '#lib/components/ui/button/index.js';
 	import { Badge } from '#lib/components/ui/badge/index.js';
@@ -9,6 +10,7 @@
 	import ShieldIcon from '@lucide/svelte/icons/shield-check';
 	import EyeIcon from '@lucide/svelte/icons/eye';
 	import EyeOffIcon from '@lucide/svelte/icons/eye-off';
+	import { factText } from '#lib/i18n/facts.js';
 
 	const stats = $derived(data.derived!);
 	const dataset = $derived(data.dataset!);
@@ -23,20 +25,21 @@
 			style="background: linear-gradient(90deg, var(--viz-8), var(--viz-5), var(--viz-2))"
 		></div>
 		<Card.Header>
-			<Card.Title class="text-2xl">What this file knows about you</Card.Title>
+			<Card.Title class="text-2xl">{m.privacyPage.knows}</Card.Title>
 			<Card.Description class="text-base">
-				None of the findings below required a single map coordinate.
+				{m.privacyPage.noCoordinate}
 			</Card.Description>
 		</Card.Header>
 		<Card.Content class="grid gap-8 sm:grid-cols-2">
 			{#each stats.facts.privacy as fact, index (fact.id)}
+				{@const text = factText(fact)}
 				<BigStat
-					kicker={fact.kicker}
-					value={fact.value}
-					unit={fact.unit}
+					kicker={text.kicker}
+					value={text.value}
+					unit={text.unit}
 					size="sm"
 					accent={accents[index % accents.length]}
-					detail={fact.detail}
+					detail={text.detail}
 				/>
 			{/each}
 		</Card.Content>
@@ -44,9 +47,9 @@
 
 	<Card.Root>
 		<Card.Header>
-			<Card.Title>Your identifier</Card.Title>
+			<Card.Title>{m.privacyPage.identifier}</Card.Title>
 			<Card.Description>
-				The vehicle identification number appears on every row of every file.
+				{m.privacyPage.identifierHint}
 			</Card.Description>
 		</Card.Header>
 		<Card.Content class="space-y-4">
@@ -61,57 +64,55 @@
 				>
 					{#if settings.revealVin}
 						<EyeOffIcon class="size-4" />
-						Hide it
+						{m.privacyPage.hide}
 					{:else}
 						<EyeIcon class="size-4" />
-						Show it
+						{m.privacyPage.show}
 					{/if}
 				</Button>
-				<Badge variant="secondary">Model {dataset.vmodel}</Badge>
+				<Badge variant="secondary">{m.privacyPage.model(dataset.vmodel)}</Badge>
 			</div>
 			<p class="text-sm leading-relaxed text-muted-foreground">
-				Repeated {num(dataset.rowsParsed)} times across your export, it accounts for roughly
-				{bytes(dataset.rowsParsed * 18)} of the file on its own. It identifies the car, and through a
-				registration record, its owner. If you share a screenshot of your data, this is the field to remove
-				— which is why it is masked here by default.
+				{m.privacyPage.vinDetail(num(dataset.rowsParsed), bytes(dataset.rowsParsed * 18))}
 			</p>
 		</Card.Content>
 	</Card.Root>
 
 	<Card.Root>
 		<Card.Header>
-			<Card.Title>Curiosities in the file itself</Card.Title>
-			<Card.Description>What the export reveals about how it was put together.</Card.Description>
+			<Card.Title>{m.privacyPage.curiosities}</Card.Title>
+			<Card.Description>{m.privacyPage.curiositiesHint}</Card.Description>
 		</Card.Header>
 		<Card.Content class="grid gap-8 sm:grid-cols-2">
 			{#each stats.facts.quirk as fact, index (fact.id)}
+				{@const text = factText(fact)}
 				<BigStat
-					kicker={fact.kicker}
-					value={fact.value}
-					unit={fact.unit}
+					kicker={text.kicker}
+					value={text.value}
+					unit={text.unit}
 					size="sm"
 					accent={accents[(index + 3) % accents.length]}
-					detail={fact.detail}
+					detail={text.detail}
 				/>
 			{/each}
 
 			{#if dataset.unsortedStreams.length > 0}
 				<BigStat
-					kicker="Files out of order"
+					kicker={m.privacyPage.unsorted}
 					value={`${dataset.unsortedStreams.length}`}
 					size="sm"
 					accent="--viz-2"
-					detail="One block of an earlier day was written after a later one. The rows are sorted here before anything is measured; read in file order, a day would appear twice."
+					detail={m.privacyPage.unsortedDetail}
 				/>
 			{/if}
 
 			{#if !dataset.aligned}
 				<BigStat
-					kicker="Timelines"
-					value="Merged"
+					kicker={m.privacyPage.timelines}
+					value={m.privacyPage.merged}
 					size="sm"
 					accent="--viz-5"
-					detail="The three files did not share the same timestamps, so they were joined on time rather than assumed to line up row for row."
+					detail={m.privacyPage.mergedDetail}
 				/>
 			{/if}
 		</Card.Content>
@@ -121,35 +122,26 @@
 		<Card.Header>
 			<Card.Title class="flex items-center gap-2">
 				<ShieldIcon class="size-5 text-primary" />
-				How this app handles it
+				{m.privacyPage.handling}
 			</Card.Title>
 		</Card.Header>
 		<Card.Content class="space-y-3 text-sm leading-relaxed text-muted-foreground">
 			<p>
-				Your files were read by a worker inside this browser tab. There is no server to receive
-				them: the app is a set of static files, and after they load, nothing is sent anywhere. You
-				can confirm it — open your browser's network panel and reload with the data loaded, or
-				disconnect from the network entirely and keep using the page.
+				{m.privacyPage.handlingOne}
 			</p>
 			<p>
 				{#if stats.sources > 1}
-					Each of the exports behind these {num(dataset.time.length)} samples is kept in this browser's
-					own storage, so they can be opened again without the files.
+					{m.privacyPage.keptMany(num(dataset.time.length))}
 				{:else}
-					A copy of the {num(dataset.time.length)} samples in front of you is kept in this browser's own
-					storage, so the export can be opened again without the files.
+					{m.privacyPage.keptOne(num(dataset.time.length))}
 				{/if}
-				It stays on this device — there is nowhere else for it to go. The start page lists everything
-				kept and removes any of it in a click, and your browser's own site-data controls clear the lot.
+				{m.privacyPage.staysHere}
 			</p>
 			<p>
 				{#if stats.sources > 1}
-					These {stats.sources} exports cover {stats.recordedDays} days between them. Each one XPeng sends
-					covers a rolling thirty days, so keeping them is the only way to hold a record longer than that.
+					{m.privacyPage.windowMany(stats.sources, stats.recordedDays)}
 				{:else}
-					The export covers a rolling {stats.windowDays} days. Request the next one before this window
-					ages out, then open them together: kept side by side they become one continuous record, which
-					is more than you were ever given at once.
+					{m.privacyPage.windowOne(stats.windowDays)}
 				{/if}
 			</p>
 		</Card.Content>

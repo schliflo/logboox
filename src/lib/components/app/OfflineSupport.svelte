@@ -7,6 +7,7 @@
   held in memory, and a page that restarted on its own would clear it mid-read.
 -->
 <script lang="ts">
+	import { m } from '#lib/i18n/index.svelte.js';
 	import { onMount } from 'svelte';
 	import { dev } from '$app/env';
 	import { toast } from 'svelte-sonner';
@@ -19,13 +20,12 @@
 		let registration: ServiceWorkerRegistration | undefined;
 
 		const offerUpdate = (waiting: ServiceWorker) => {
-			toast('A newer version is available', {
-				description:
-					'Reload to use it. Anything open now can be opened again from the start page afterwards.',
+			toast(m.offline.update, {
+				description: m.offline.updateDetail,
 				duration: Number.POSITIVE_INFINITY,
 				closeButton: true,
 				action: {
-					label: 'Reload',
+					label: m.offline.reload,
 					onClick: () => {
 						reloadRequested = true;
 						waiting.postMessage({ type: 'SKIP_WAITING' });
@@ -58,9 +58,8 @@
 
 			registration = await container.ready;
 			if (firstInstall) {
-				toast('Ready to work offline', {
-					description:
-						'The app is now stored in this browser and opens without a connection. The exports you keep are here too.'
+				toast(m.offline.ready, {
+					description: m.offline.readyDetail
 				});
 			}
 			if (registration.waiting) offerUpdate(registration.waiting);

@@ -10,6 +10,7 @@
   has to own it. Signed out, this says so rather than disappearing.
 -->
 <script lang="ts">
+	import { m } from '#lib/i18n/index.svelte.js';
 	import { toast } from 'svelte-sonner';
 	import * as Dialog from '#lib/components/ui/dialog/index.js';
 	import { Button, buttonVariants } from '#lib/components/ui/button/index.js';
@@ -34,13 +35,9 @@
 
 	let { kind, startTime, endTime, meta }: Props = $props();
 
-	const noun = $derived(kind === 'trip' ? 'trip' : 'charging session');
+	const noun = $derived(kind === 'trip' ? m.share.trip : m.share.session);
 	/** What the slice carries; keep in step with `SHARED_COLUMNS`. */
-	const signals = $derived(
-		kind === 'trip'
-			? 'speed, battery power and charge, pedals and steering'
-			: 'charging power and charge'
-	);
+	const signals = $derived(kind === 'trip' ? m.share.tripSignals : m.share.sessionSignals);
 
 	let open = $state(false);
 	let title = $state('');
@@ -58,7 +55,7 @@
 			// The whole export, not the range on screen: a trip at the edge of a
 			// narrowed view would otherwise lose the seconds either side of it.
 			const dataset = data.full?.dataset ?? data.dataset;
-			if (!dataset) throw new Error('Open an export first.');
+			if (!dataset) throw new Error(m.share.openFirst);
 			const slice = sliceDataset(dataset, kind, startTime, endTime);
 			const blobs = await encodeSlice(slice);
 
@@ -86,11 +83,11 @@
 
 			url = created.url;
 		} catch (failure) {
-			error = failure instanceof Error ? failure.message : 'The link could not be made.';
+			error = failure instanceof Error ? failure.message : m.share.failed;
 			// A link that shows nothing is worse than none, and a retry would make
 			// a second one beside it.
 			if (createdId && !(await revoke(createdId))) {
-				error += ' A half-made link may be listed under your shared links; revoke it there.';
+				error += m.share.halfMade;
 			}
 		} finally {
 			busy = false;
@@ -116,16 +113,16 @@
 				body: bytes
 			}
 		);
-		if (!response.ok) throw new Error('Part of the share could not be uploaded.');
+		if (!response.ok) throw new Error(m.share.uploadFailed);
 	}
 
 	async function copy() {
 		if (!url) return;
 		try {
 			await navigator.clipboard.writeText(url);
-			toast('Link copied');
+			toast(m.share.copied);
 		} catch {
-			toast('Could not copy', { description: 'Select the link and copy it by hand.' });
+			toast(m.share.copyFailed, { description: m.share.copyByHand });
 		}
 	}
 
@@ -145,49 +142,47 @@
 >
 	<Dialog.Trigger class={buttonVariants({ variant: 'outline', size: 'sm' })}>
 		<ShareIcon class="size-4" />
-		Share
+		{m.share.share}
 	</Dialog.Trigger>
 	<Dialog.Content class="sm:max-w-md">
 		{#if !account.signedIn}
 			<Dialog.Header>
-				<Dialog.Title>Sign in to share</Dialog.Title>
+				<Dialog.Title>{m.share.signInTitle}</Dialog.Title>
 				<Dialog.Description>
-					A link has to belong to an account, so that you can take it down again.
+					{m.share.signInDetail}
 				</Dialog.Description>
 			</Dialog.Header>
 			<Dialog.Footer>
-				<Button onclick={reset}>Close</Button>
+				<Button onclick={reset}>{m.common.close}</Button>
 			</Dialog.Footer>
 		{:else if url}
 			<Dialog.Header>
-				<Dialog.Title>Anyone with this link can see it</Dialog.Title>
+				<Dialog.Title>{m.share.liveTitle}</Dialog.Title>
 				<Dialog.Description>
-					It shows when the {noun} happened, its totals and the model of the car, with {signals} second
-					by second. Not the vehicle identification number, the odometer, or the rest of your export.
-					Revoke it any time from your account; it stops working within a few minutes.
+					{m.share.liveDetail(noun, signals)}
 				</Dialog.Description>
 			</Dialog.Header>
 			<div class="flex gap-2">
 				<Input readonly value={url} class="text-xs" />
 				<Button variant="outline" size="icon" onclick={copy}>
 					<CopyIcon class="size-4" />
-					<span class="sr-only">Copy the link</span>
+					<span class="sr-only">{m.share.copyLink}</span>
 				</Button>
 			</div>
 			<Dialog.Footer>
-				<Button onclick={reset}>Done</Button>
+				<Button onclick={reset}>{m.common.done}</Button>
 			</Dialog.Footer>
 		{:else}
 			<Dialog.Header>
-				<Dialog.Title>Share this {kind === 'trip' ? 'trip' : 'charging session'}</Dialog.Title>
+				<Dialog.Title>{m.share.shareThis(noun)}</Dialog.Title>
 				<Dialog.Description>
-					A copy of these seconds is published at a link nobody can guess.
+					{m.share.unguessable}
 				</Dialog.Description>
 			</Dialog.Header>
 
 			<div class="space-y-2">
-				<Label for="share-title">Title, if you like</Label>
-				<Input id="share-title" placeholder="The long way home" bind:value={title} />
+				<Label for="share-title">{m.share.titleLabel}</Label>
+				<Input id="share-title" placeholder={m.share.titlePlaceholder} bind:value={title} />
 			</div>
 
 			{#if error}
@@ -195,9 +190,9 @@
 			{/if}
 
 			<Dialog.Footer>
-				<Button variant="outline" onclick={reset}>Cancel</Button>
+				<Button variant="outline" onclick={reset}>{m.common.cancel}</Button>
 				<Button onclick={publish} disabled={busy}>
-					{busy ? 'Publishing…' : 'Make a link'}
+					{busy ? m.share.publishing : m.share.make}
 				</Button>
 			</Dialog.Footer>
 		{/if}

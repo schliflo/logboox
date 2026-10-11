@@ -37,6 +37,8 @@ import { PyramidCache } from '../data/store/decimate';
 import { account } from './account.svelte';
 import { history } from './history.svelte';
 import { settings } from './settings.svelte';
+import { m } from '../i18n/index.svelte';
+import { rangeLabel } from '../i18n/dates';
 
 type Status = 'empty' | 'loading' | 'ready' | 'error';
 
@@ -48,6 +50,66 @@ export interface DataSource {
 	/** The exports behind it: one, or several once merged. */
 	ids: string[];
 	demo: boolean;
+}
+
+/**
+ * What was on screen, so a reload or a bookmark into the dashboard can open it
+ * again instead of starting over: which kept exports, and which range. Only
+ * ids and dates — the data itself is in IndexedDB, and only there.
+ */
+const LAST_KEY = 'logboox.last';
+
+interface Last {
+	ids: string[];
+	/** The range on screen; null for everything, absent when never chosen. */
+	range?: TimeRange | null;
+}
+
+function recall(): Last | null {
+	try {
+		const raw = localStorage.getItem(LAST_KEY);
+		return raw ? (JSON.parse(raw) as Last) : null;
+	} catch {
+		return null;
+	}
+}
+
+function remember(patch: Partial<Last>): void {
+	try {
+		const next = { ...(recall() ?? { ids: [] }), ...patch };
+		localStorage.setItem(LAST_KEY, JSON.stringify(next));
+	} catch {
+		// Private windows and full storage: a reload will start from the beginning.
+	}
+}
+
+/** Whether a dashboard opened cold here has something to reopen. */
+export function hasRecord(): boolean {
+	return (recall()?.ids.length ?? 0) > 0;
+}
+
+/** The most a whole record opened in one go may ask of a tab. */
+const RECORD_BUDGET = 1024 * 1024 * 1024;
+
+/**
+ * The exports that make up a car's record as it is opened in one go: the
+ * newest first, stopping before the tab would have to hold more than it
+ * sensibly can. Without a VIN, the newest car's — a real one over the
+ * demonstration month whenever there is one.
+ */
+export function recordIds(vin?: string): string[] {
+	const real = history.entries.filter((entry) => !entry.isDemo);
+	const candidates = real.length > 0 ? real : history.entries;
+	const car = vin ?? [...candidates].sort((a, b) => b.endTime - a.endTime)[0]?.vin;
+	if (!car) return [];
+	const ids: string[] = [];
+	for (const entry of candidates
+		.filter((other) => other.vin === car)
+		.sort((a, b) => b.endTime - a.endTime)) {
+		if (ids.length > 0 && history.estimate([...ids, entry.id]).bytes > RECORD_BUDGET) break;
+		ids.push(entry.id);
+	}
+	return ids;
 }
 
 class DatasetStore {
@@ -93,6 +155,8 @@ class DatasetStore {
 	}
 
 	private settle(dataset: Dataset, derived: DerivedData, source: DataSource) {
+		// Someone else's export is never kept here, so there is nothing to reopen.
+		if (source.kind !== 'shared') remember({ ids: source.ids, range: undefined });
 		this.full = { dataset, derived };
 		this.show(dataset, derived);
 		this.source = source;
@@ -132,6 +196,8 @@ class DatasetStore {
 		const { time } = full.dataset;
 		if (range && range.from <= time[0] && range.to > time[time.length - 1]) range = null;
 
+		if (!quiet) remember({ range });
+
 		if (!range) {
 			this.generation++;
 			this.refining = false;
@@ -157,8 +223,8 @@ class DatasetStore {
 			const slice = restrictDataset(full.dataset, edges.from, edges.to);
 			if (slice.time.length < 2) {
 				if (!quiet) {
-					toast('Nothing was recorded then', {
-						description: `${range.label} holds too little data to show on its own.`
+					toast(m.notices.nothingRecorded, {
+						description: m.notices.tooLittle(rangeLabel(range, settings.timeZone))
 					});
 				}
 				return;
@@ -170,7 +236,7 @@ class DatasetStore {
 			this.range = range;
 		} catch (error) {
 			if (ticket !== this.generation || quiet) return;
-			toast('That range could not be shown', {
+			toast(m.notices.rangeFailed, {
 				description: error instanceof Error ? error.message : undefined,
 				closeButton: true
 			});
@@ -206,7 +272,7 @@ class DatasetStore {
 
 	private fail(error: unknown) {
 		this.error = {
-			message: error instanceof Error ? error.message : 'Something went wrong.',
+			message: error instanceof Error ? error.message : m.notices.somethingWrong,
 			hint: error instanceof Error && 'hint' in error ? (error.hint as string) : undefined
 		};
 		this.status = 'error';
@@ -222,22 +288,23 @@ class DatasetStore {
 		if (!kept) return;
 
 		if (!kept.ok) {
-			toast('This export was not kept', {
-				description: `${kept.reason} You can still read it now, but it will be gone when the tab closes.`,
+			toast(m.notices.notKept, {
+				description: m.notices.notKeptDetail(kept.reason),
 				duration: 8000,
 				closeButton: true
 			});
 			return;
 		}
 
+		// What reopens after a reload is the kept copy, under the id it was kept as.
+		if (this.source.kind === 'fresh') remember({ ids: [kept.id] });
 		const first = history.entries.length === 0;
 		await history.requestPersistence();
 		await history.refresh();
 
 		if (first) {
-			toast('Kept in this browser', {
-				description:
-					'This export is now stored on your device, so you can reopen it without dropping the files in again. Remove it whenever you like from the start page.',
+			toast(m.notices.kept, {
+				description: m.notices.keptDetail,
 				duration: 8000,
 				closeButton: true
 			});
@@ -263,7 +330,7 @@ class DatasetStore {
 		try {
 			const result = await history.sync([id]);
 			if (result.failed.length > 0) {
-				toast('This export was not copied to your account', {
+				toast(m.notices.notCopied, {
 					description: result.failed[0].reason,
 					closeButton: true
 				});
@@ -286,10 +353,10 @@ class DatasetStore {
 				this.progress = null;
 				await history.refresh();
 				const count = result.ids.length;
-				toast(count === 1 ? 'Restored one export' : `Restored ${count} exports`, {
+				toast(m.notices.restored(count), {
 					description: result.skipped.length
-						? `${result.skipped.length} could not be read by this version of the app.`
-						: 'They are listed below, ready to open.'
+						? m.notices.restoredSkipped(result.skipped.length)
+						: m.notices.restoredListed
 				});
 				return;
 			}
@@ -305,6 +372,59 @@ class DatasetStore {
 		} catch (error) {
 			this.fail(error);
 		}
+	}
+
+	/**
+	 * Adds newly dropped files to the record on screen rather than replacing it.
+	 *
+	 * The files are read and kept like any other, and then every export of the
+	 * same car this browser holds is opened as one timeline. Nobody should have
+	 * to know which files a month came in; they see one continuous record that
+	 * got longer. When nothing else of that car is kept here — or the new copy
+	 * could not be kept — what was dropped is shown on its own.
+	 */
+	async extend(files: File[]) {
+		await goto('/');
+		this.begin();
+		try {
+			const result = await loadFiles(files, settings.timeZone, (progress) => {
+				this.progress = progress;
+			});
+
+			if (result.kind === 'restored') {
+				this.status = 'empty';
+				this.progress = null;
+				await history.refresh();
+				toast(m.notices.restored(result.ids.length));
+				return;
+			}
+
+			await this.afterKeep(result.kept);
+			const record = recordIds(result.dataset.vin);
+
+			if (result.kept?.ok && record.length > 1 && record.includes(result.kept.id)) {
+				await this.open(record);
+				return;
+			}
+
+			this.settle(result.dataset, result.derived, {
+				kind: 'fresh',
+				ids: [result.dataset.exportId],
+				demo: false
+			});
+			await this.applyDefaultRange();
+			await goto('/dash/overview');
+		} catch (error) {
+			this.fail(error);
+		}
+	}
+
+	/**
+	 * Opens the newest car's whole record: every export of it kept in this
+	 * browser, as one timeline. What "pick up where you left off" means.
+	 */
+	async openRecord() {
+		await this.open(recordIds());
 	}
 
 	async loadDemoData() {
@@ -331,7 +451,21 @@ class DatasetStore {
 	 * timeline, which is the only way to see more than the thirty days any
 	 * single export covers.
 	 */
-	async open(ids: string[]) {
+	/**
+	 * Opens what was on screen last time, landing on `to`, for a dashboard
+	 * address opened cold. False when there is nothing kept to go back to.
+	 */
+	async restore(to: string): Promise<boolean> {
+		const last = recall();
+		if (!last || last.ids.length === 0) return false;
+		await history.refresh();
+		if (!history.openable(last.ids)) return false;
+		await this.open(last.ids, to);
+		if (this.status === 'ready' && last.range !== undefined) await this.setRange(last.range);
+		return this.status === 'ready';
+	}
+
+	async open(ids: string[], to = '/dash/overview') {
 		if (ids.length === 0) return;
 		this.begin();
 		try {
@@ -347,7 +481,7 @@ class DatasetStore {
 			await this.applyDefaultRange();
 			// Straight to the dashboard: the opening sequence is for the moment
 			// an export is first read, not for every time it is picked up again.
-			await goto('/dash/overview');
+			await goto(to);
 		} catch (error) {
 			this.fail(error);
 		}

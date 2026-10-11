@@ -14,6 +14,7 @@
   account or shared is always the whole export.
 -->
 <script lang="ts">
+	import { m } from '#lib/i18n/index.svelte.js';
 	import * as Popover from '#lib/components/ui/popover/index.js';
 	import { Button, buttonVariants } from '#lib/components/ui/button/index.js';
 	import { Input } from '#lib/components/ui/input/index.js';
@@ -22,15 +23,25 @@
 	import { settings } from '#lib/state/settings.svelte.js';
 	import {
 		customRange,
-		EVERYTHING,
 		rangeDays,
 		rangePresets,
 		recordedSpan,
 		type TimeRange
 	} from '#lib/data/range.js';
+	import { rangeLabel } from '#lib/i18n/dates.js';
 	import CalendarIcon from '@lucide/svelte/icons/calendar-range';
 	import LoaderIcon from '@lucide/svelte/icons/loader-circle';
 	import CheckIcon from '@lucide/svelte/icons/check';
+
+	interface Props {
+		/**
+		 * Presets already offered as buttons beside this one. When one of them
+		 * is on, the trigger stays a plain "More" rather than repeating it.
+		 */
+		quick?: string[];
+	}
+
+	let { quick = [] }: Props = $props();
 
 	let open = $state(false);
 	let fromDay = $state('');
@@ -39,15 +50,31 @@
 	const loaded = $derived(data.full?.derived ?? null);
 	const presets = $derived(loaded ? rangePresets(loaded, settings.timeZone) : []);
 	const span = $derived(loaded ? recordedSpan(loaded, settings.timeZone) : null);
-	const label = $derived(data.range?.label ?? EVERYTHING);
+	const label = $derived(
+		data.range ? rangeLabel(data.range, settings.timeZone) : m.range.everything
+	);
 	const active = $derived(data.range?.preset ?? null);
+	/** True when what is on screen was picked here rather than from a quick button. */
+	const elsewhere = $derived(data.range !== null && !quick.includes(data.range.preset));
 	const custom = $derived(loaded ? customRange(loaded, fromDay, toDay, settings.timeZone) : null);
 
 	const groups = $derived(
 		[
-			{ title: 'Recent', items: presets.filter((p) => p.preset.startsWith('last-')) },
-			{ title: 'Months', items: presets.filter((p) => p.preset.startsWith('month-')) },
-			{ title: 'Years', items: presets.filter((p) => p.preset.startsWith('year-')) }
+			{
+				id: 'recent',
+				title: m.range.recent,
+				items: presets.filter((p) => p.preset.startsWith('last-'))
+			},
+			{
+				id: 'months',
+				title: m.range.months,
+				items: presets.filter((p) => p.preset.startsWith('month-'))
+			},
+			{
+				id: 'years',
+				title: m.range.years,
+				items: presets.filter((p) => p.preset.startsWith('year-'))
+			}
 		].filter((group) => group.items.length > 0)
 	);
 
@@ -90,8 +117,8 @@
 	}}
 >
 	<Popover.Trigger
-		class={buttonVariants({ variant: data.range ? 'secondary' : 'ghost', size: 'sm' })}
-		aria-label="Time range: {label}"
+		class={buttonVariants({ variant: elsewhere ? 'secondary' : 'ghost', size: 'sm' })}
+		aria-label={quick.length && !elsewhere ? m.range.moreRanges : m.range.timeRangeIs(label)}
 		aria-busy={data.refining}
 	>
 		{#if data.refining}
@@ -99,36 +126,42 @@
 		{:else}
 			<CalendarIcon class="size-4" />
 		{/if}
-		<span
-			class={[
-				'truncate',
-				data.range ? 'max-w-[11ch] sm:max-w-[18ch]' : 'hidden max-w-[18ch] sm:inline'
-			]}
-		>
-			{label}
-		</span>
+		{#if quick.length && !elsewhere}
+			<span class="hidden sm:inline">{m.range.more}</span>
+		{:else}
+			<span
+				class={[
+					'truncate',
+					data.range ? 'max-w-[11ch] sm:max-w-[18ch]' : 'hidden max-w-[18ch] sm:inline'
+				]}
+			>
+				{label}
+			</span>
+		{/if}
 	</Popover.Trigger>
 	<Popover.Content class="w-72 gap-3" align="end">
 		{#if data.range}
 			<div class="space-y-2">
 				<p class="text-xs text-muted-foreground">
-					Showing {data.range.label} only. Totals and charts cover this range, not the whole export.
+					{m.range.showingOnly(label)}
 				</p>
 				<Button variant="outline" size="sm" class="w-full" onclick={() => pick(null)}>
-					Show everything
+					{m.range.showEverything}
 				</Button>
 			</div>
 		{/if}
 
-		<div class="max-h-64 space-y-2 overflow-y-auto" role="group" aria-label="Time range">
-			{@render choice(EVERYTHING, active === null, () => pick(null))}
-			{#each groups as group (group.title)}
-				<div role="group" aria-labelledby="range-{group.title}">
-					<p id="range-{group.title}" class="px-2 pt-1 text-xs font-medium text-muted-foreground">
+		<div class="max-h-64 space-y-2 overflow-y-auto" role="group" aria-label={m.range.timeRange}>
+			{@render choice(m.range.everything, active === null, () => pick(null))}
+			{#each groups as group (group.id)}
+				<div role="group" aria-labelledby="range-{group.id}">
+					<p id="range-{group.id}" class="px-2 pt-1 text-xs font-medium text-muted-foreground">
 						{group.title}
 					</p>
 					{#each group.items as preset (preset.preset)}
-						{@render choice(preset.label, active === preset.preset, () => pick(preset))}
+						{@render choice(rangeLabel(preset, settings.timeZone), active === preset.preset, () =>
+							pick(preset)
+						)}
 					{/each}
 				</div>
 			{/each}
@@ -137,7 +170,7 @@
 		<form class="space-y-2 border-t pt-3" onsubmit={apply}>
 			<div class="grid grid-cols-2 gap-2">
 				<div class="space-y-1">
-					<Label for="range-from" class="text-xs">From</Label>
+					<Label for="range-from" class="text-xs">{m.range.from}</Label>
 					<Input
 						id="range-from"
 						type="date"
@@ -147,11 +180,11 @@
 					/>
 				</div>
 				<div class="space-y-1">
-					<Label for="range-to" class="text-xs">To</Label>
+					<Label for="range-to" class="text-xs">{m.range.to}</Label>
 					<Input id="range-to" type="date" min={span?.first} max={span?.last} bind:value={toDay} />
 				</div>
 			</div>
-			<Button type="submit" size="sm" class="w-full" disabled={!custom}>Apply</Button>
+			<Button type="submit" size="sm" class="w-full" disabled={!custom}>{m.range.apply}</Button>
 		</form>
 	</Popover.Content>
 </Popover.Root>

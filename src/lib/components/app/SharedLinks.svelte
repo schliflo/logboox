@@ -6,6 +6,7 @@
   what it shows and how often it has been opened.
 -->
 <script lang="ts">
+	import { m } from '#lib/i18n/index.svelte.js';
 	import { onMount } from 'svelte';
 	import { toast } from 'svelte-sonner';
 	import * as Card from '#lib/components/ui/card/index.js';
@@ -27,11 +28,7 @@
 		createdAt: number;
 	}
 
-	const KIND_LABELS: Record<ShareRow['kind'], string> = {
-		trip: 'Trip',
-		charging: 'Charging',
-		export: 'Whole export'
-	};
+	const KIND_LABELS = $derived(m.shares.kinds);
 
 	let shares = $state<ShareRow[]>([]);
 
@@ -49,33 +46,32 @@
 		try {
 			await api(`/api/v1/shares/${encodeURIComponent(row.id)}`, { method: 'DELETE' });
 		} catch (error) {
-			toast('The link could not be revoked', {
-				description: error instanceof Error ? error.message : 'It is still live.',
+			toast(m.shares.revokeFailed, {
+				description: error instanceof Error ? error.message : m.shares.stillLive,
 				closeButton: true
 			});
 			return;
 		}
 		await load();
-		toast('Link revoked', { description: 'It stops working for everyone within a few minutes.' });
+		toast(m.shares.revoked, { description: m.shares.revokedDetail });
 	}
 
 	async function copy(row: ShareRow) {
 		try {
 			await navigator.clipboard.writeText(row.url);
-			toast('Link copied');
+			toast(m.shares.copied);
 		} catch {
-			toast('Could not copy');
+			toast(m.shares.copyFailed);
 		}
 	}
 </script>
 
 {#if shares.length > 0}
-	<Card.Root>
+	<Card.Root id="links">
 		<Card.Header>
-			<Card.Title>Shared links</Card.Title>
+			<Card.Title>{m.shares.title}</Card.Title>
 			<Card.Description>
-				Anyone with one of these can see what it shows. None of them carries your vehicle
-				identification number.
+				{m.shares.description}
 			</Card.Description>
 		</Card.Header>
 		<Card.Content>
@@ -85,21 +81,21 @@
 						<LinkIcon class="size-4 shrink-0 text-muted-foreground" />
 						<div class="min-w-32 flex-1">
 							<p class="text-sm font-medium">
-								{share.title || `${KIND_LABELS[share.kind]} on ${dateOnly(share.startTime)}`}
+								{share.title || m.shares.kindOn(KIND_LABELS[share.kind], dateOnly(share.startTime))}
 							</p>
 							<p class="text-xs text-muted-foreground">
-								Made {dateOnly(share.createdAt)} ·
-								{share.views === 1 ? 'opened once' : `opened ${share.views} times`}
+								{m.shares.made(dateOnly(share.createdAt))} ·
+								{m.shares.views(share.views)}
 							</p>
 						</div>
 						<Badge variant="secondary">{KIND_LABELS[share.kind]}</Badge>
 						<Button variant="ghost" size="icon" onclick={() => copy(share)}>
 							<CopyIcon class="size-4" />
-							<span class="sr-only">Copy this link</span>
+							<span class="sr-only">{m.shares.copy}</span>
 						</Button>
 						<Button variant="ghost" size="icon" onclick={() => revoke(share)}>
 							<TrashIcon class="size-4" />
-							<span class="sr-only">Revoke this link</span>
+							<span class="sr-only">{m.shares.revoke}</span>
 						</Button>
 					</li>
 				{/each}
