@@ -6,6 +6,7 @@
   something you would never have thought to ask.
 -->
 <script lang="ts">
+	import { m } from '#lib/i18n/index.svelte.js';
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { Button } from '#lib/components/ui/button/index.js';
@@ -14,6 +15,7 @@
 	import LogoMark from '#lib/components/app/LogoMark.svelte';
 	import { data } from '#lib/state/dataset.svelte.js';
 	import type { Fact } from '#lib/data/analytics/facts.js';
+	import { factText } from '#lib/i18n/facts.js';
 	import ArrowRightIcon from '@lucide/svelte/icons/arrow-right';
 	import ArrowDownIcon from '@lucide/svelte/icons/arrow-down';
 
@@ -70,16 +72,12 @@
 	}
 </script>
 
-<Seo
-	title="Your month in data"
-	path="/wrapped"
-	description="The highlights of a month of driving, read straight out of your own XPeng export."
-	noindex
-/>
+<Seo title={m.wrapped.title} path="/wrapped" description={m.wrapped.description} noindex />
 
 {#if stats}
 	<div bind:this={container} class="h-svh snap-y snap-mandatory overflow-y-auto scroll-smooth">
 		{#each cards as fact, index (fact.id)}
+			{@const text = factText(fact)}
 			<section
 				data-index={index}
 				class="relative flex h-svh snap-start items-center justify-center px-6"
@@ -94,7 +92,7 @@
 
 				<div class="relative mx-auto max-w-2xl text-center">
 					<p class="text-sm font-semibold tracking-[0.18em] text-muted-foreground uppercase">
-						{fact.kicker}
+						{text.kicker}
 					</p>
 
 					<p class="mt-6 flex flex-wrap items-baseline justify-center gap-3">
@@ -102,27 +100,27 @@
 							class="text-8xl font-extrabold tracking-tighter tabular-nums sm:text-[11rem] sm:leading-none"
 							style="color: var({accents[index % accents.length]})"
 						>
-							{fact.value}
+							{text.value}
 						</span>
-						{#if fact.unit}
+						{#if text.unit}
 							<span class="text-2xl font-medium text-muted-foreground sm:text-3xl">
-								{fact.unit}
+								{text.unit}
 							</span>
 						{/if}
 					</p>
 
 					<p class="mx-auto mt-8 max-w-xl text-lg leading-relaxed text-pretty text-foreground/80">
-						{fact.detail}
+						{text.detail}
 					</p>
 
 					{#if index === cards.length - 1}
 						<div class="mt-12 flex flex-col items-center gap-3">
 							<Button size="lg" onclick={() => goto('/dash/overview')}>
-								Explore all of it
+								{m.wrapped.exploreAll}
 								<ArrowRightIcon class="size-4" />
 							</Button>
 							<p class="text-xs text-muted-foreground">
-								Trips, charging, battery, driving style and the raw signals
+								{m.wrapped.exploreHint}
 							</p>
 						</div>
 					{:else}
@@ -132,7 +130,7 @@
 							onclick={() => scrollTo(index + 1)}
 						>
 							<ArrowDownIcon class="size-4 animate-bounce" />
-							Keep going
+							{m.wrapped.keepGoing}
 						</button>
 					{/if}
 				</div>
@@ -143,19 +141,19 @@
 	<a
 		href="/dash/overview"
 		class="fixed top-6 left-6 z-10 flex items-center gap-2.5 font-semibold tracking-tight"
-		aria-label="LogbooX — to the dashboard"
+		aria-label={m.wrapped.toDashboard}
 	>
 		<LogoMark size={28} />
-		<span class="hidden sm:inline">Your highlights</span>
+		<span class="hidden sm:inline">{m.wrapped.yourHighlights}</span>
 	</a>
 
 	<!-- Progress rail, and an escape hatch for anyone who wants the data now. -->
 	<div class="fixed top-6 right-6 z-10 flex items-center gap-3">
 		{#if data.isDemo}
-			<Badge variant="secondary">Demonstration data</Badge>
+			<Badge variant="secondary">{m.wrapped.demonstration}</Badge>
 		{/if}
 		<Button variant="ghost" size="sm" onclick={() => goto('/dash/overview')}
-			>Skip to dashboard</Button
+			>{m.wrapped.skip}</Button
 		>
 	</div>
 
@@ -171,7 +169,7 @@
 				style="background: {index === active
 					? `var(${accents[index % accents.length]})`
 					: 'var(--viz-grid)'}"
-				aria-label="Go to {fact.kicker}"
+				aria-label={m.wrapped.goTo(factText(fact).kicker)}
 				onclick={() => scrollTo(index)}
 			></button>
 		{/each}

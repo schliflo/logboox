@@ -9,6 +9,7 @@
   out.
 -->
 <script lang="ts">
+	import { m } from '#lib/i18n/index.svelte.js';
 	import { duration, num } from '#lib/utils/format.js';
 	import ChartTooltip from './ChartTooltip.svelte';
 
@@ -52,8 +53,8 @@
 	 * "3 h 12 m" is more use than "11,520" when the bar height is time spent.
 	 */
 	const peakLabel = $derived.by(() => {
-		if (!countsAreSeconds) return `peak ${num(max)}`;
-		return `peak ${duration(max, 'short')}`;
+		if (!countsAreSeconds) return m.charts.histogram.peak(num(max));
+		return m.charts.histogram.peak(duration(max, 'short'));
 	});
 
 	function binRange(index: number): string {
@@ -65,7 +66,7 @@
 	function binAmount(index: number): string {
 		return countsAreSeconds
 			? duration(counts[index], 'short')
-			: `${num(counts[index])} ${counts[index] === 1 ? 'sample' : 'samples'}`;
+			: m.charts.histogram.samples(num(counts[index]), counts[index] === 1);
 	}
 
 	const share = $derived(hovered === null || sum <= 0 ? 0 : (counts[hovered] / sum) * 100);
@@ -95,7 +96,7 @@
 		class="relative flex items-end gap-[2px]"
 		style="height: {height}px"
 		role="img"
-		aria-label="{label || 'Distribution'}, {counts.length} bins"
+		aria-label={m.charts.histogram.aria(label || m.charts.histogram.distribution, counts.length)}
 		onpointermove={track}
 		onpointerleave={() => (hovered = null)}
 	>

@@ -7,6 +7,7 @@
   and dropped in there. Everywhere else it renders nothing.
 -->
 <script lang="ts">
+	import { m } from '#lib/i18n/index.svelte.js';
 	import { toast } from 'svelte-sonner';
 	import { Button } from '#lib/components/ui/button/index.js';
 	import { history } from '#lib/state/history.svelte.js';
@@ -24,8 +25,8 @@
 		try {
 			await history.backup(history.entries.map((entry) => entry.id));
 		} catch (error) {
-			toast('The backup could not be written', {
-				description: error instanceof Error ? error.message : 'Something went wrong.',
+			toast(m.moved.backupFailed, {
+				description: error instanceof Error ? error.message : m.moved.somethingWrong,
 				closeButton: true
 			});
 		}
@@ -40,15 +41,12 @@
 		<SignpostIcon class="mt-0.5 size-5 shrink-0 text-primary" />
 		<div class="min-w-0 flex-1 space-y-3">
 			<div class="space-y-1 text-sm">
-				<p class="font-medium">{SITE_NAME} has moved to {host}</p>
+				<p class="font-medium">{m.moved.title(SITE_NAME, host)}</p>
 				<p class="text-muted-foreground">
 					{#if kept}
-						This address will not be updated again. The exports kept in this browser stay here, so
-						back them up first, then drop the file onto the start page at the new address to carry
-						them over.
+						{m.moved.kept}
 					{:else}
-						This address will not be updated again; everything from here on happens at the new
-						address.
+						{m.moved.notKept}
 					{/if}
 				</p>
 			</div>
@@ -56,11 +54,11 @@
 				{#if kept}
 					<Button variant="secondary" size="sm" disabled={history.busy} onclick={backup}>
 						<DownloadIcon class="size-4" />
-						Back up everything
+						{m.moved.backUp}
 					</Button>
 				{/if}
 				<Button size="sm" href={MOVED_TO}>
-					Open {host}
+					{m.moved.open(host)}
 					<ArrowRightIcon class="size-4" />
 				</Button>
 			</div>

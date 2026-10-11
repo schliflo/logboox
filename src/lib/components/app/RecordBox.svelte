@@ -6,6 +6,7 @@
   it up is the data page's business.
 -->
 <script lang="ts">
+	import { m } from '#lib/i18n/index.svelte.js';
 	import { data } from '#lib/state/dataset.svelte.js';
 	import { dateOnly } from '#lib/utils/format.js';
 	import PlusIcon from '@lucide/svelte/icons/plus';
@@ -14,9 +15,9 @@
 	const shared = $derived(data.source.kind === 'shared');
 
 	const label = $derived.by(() => {
-		if (shared) return 'Shared with you';
-		if (data.isDemo) return 'Demo car';
-		return data.dataset?.vmodel || 'Your car';
+		if (shared) return m.common.sharedWithYou;
+		if (data.isDemo) return m.shell.demoCar;
+		return data.dataset?.vmodel || m.shell.yourCar;
 	});
 </script>
 
@@ -26,16 +27,16 @@
 	>
 		<div class="flex min-w-0 flex-1 flex-col">
 			<span class="truncate text-xs text-muted-foreground">
-				{label} · since {dateOnly(loaded.startTime)}
+				{m.shell.since(label, dateOnly(loaded.startTime))}
 			</span>
-			<span class="truncate text-sm font-semibold">Up to {dateOnly(loaded.endTime)}</span>
+			<span class="truncate text-sm font-semibold">{m.shell.upTo(dateOnly(loaded.endTime))}</span>
 		</div>
 		{#if !shared}
 			<a
 				href="/dash/data"
 				class="grid size-9 shrink-0 place-items-center rounded-lg text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
-				aria-label="Add newer data"
-				title="Add newer data"
+				aria-label={m.shell.addNewer}
+				title={m.shell.addNewer}
 			>
 				<PlusIcon class="size-4" />
 			</a>

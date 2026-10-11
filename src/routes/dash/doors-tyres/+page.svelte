@@ -1,23 +1,19 @@
 <script lang="ts">
+	import { m } from '#lib/i18n/index.svelte.js';
 	import PageFindings from '#lib/components/app/PageFindings.svelte';
 	import * as Card from '#lib/components/ui/card/index.js';
 	import BigStat from '#lib/components/charts/BigStat.svelte';
 	import Punchcard from '#lib/components/charts/Punchcard.svelte';
 	import UPlotChart from '#lib/components/charts/UPlotChart.svelte';
 	import { data } from '#lib/state/dataset.svelte.js';
-	import { COLUMNS } from '#lib/data/schema/columns.js';
+	import { columnLabel } from '#lib/i18n/columns.js';
 	import { duration, hourLabel, num } from '#lib/utils/format.js';
 
 	const stats = $derived(data.derived!);
 	const doors = $derived(stats.doors);
 	const tyres = $derived(stats.tyres);
 
-	const doorLabels: Record<string, string> = {
-		ldcu_driverdoorajarst: 'Driver',
-		rdcu_psngrdoorajarst: 'Passenger',
-		ldcu_rldoorajarst: 'Rear left',
-		rdcu_rrdoorajarst: 'Rear right'
-	};
+	const doorLabels = $derived(m.doorsPage.doors);
 
 	/** Daily median pressure per wheel, plotted as four lines over the month. */
 	const tyreChart = $derived.by(() => {
@@ -32,7 +28,7 @@
 		return {
 			x,
 			series: tyres.labels.map((label, wheel) => ({
-				label,
+				label: m.doorsPage.wheels[wheel] ?? label,
 				color: `--viz-${wheel + 1}`,
 				unit: 'kPa',
 				values: Float64Array.from(days.map((day) => day.pressures[wheel]))
@@ -51,49 +47,50 @@
 	<PageFindings />
 	<Card.Root>
 		<Card.Header>
-			<Card.Title>Your car knows your schedule</Card.Title>
+			<Card.Title>{m.doorsPage.schedule}</Card.Title>
 			<Card.Description>
-				Every door opening, by weekday and hour. No location data is needed to see the shape of a
-				week: this is only which door opened, and when.
+				{m.doorsPage.scheduleHint}
 			</Card.Description>
 		</Card.Header>
 		<Card.Content class="space-y-6">
 			<Punchcard
 				grid={doors.grid}
-				label="Door openings"
-				formatValue={(value) => `${num(value)} openings`}
+				label={m.doorsPage.openings}
+				formatValue={(value) => m.doorsPage.openingsCount(num(value))}
 			/>
 
 			<div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
 				<BigStat
-					kicker="Openings recorded"
+					kicker={m.doorsPage.recorded}
 					value={num(doors.events.length)}
 					size="sm"
 					accent="--viz-1"
 				/>
 				<BigStat
-					kicker="Busiest hour"
+					kicker={m.doorsPage.busiestHour}
 					value={hourLabel(doors.busiestHour)}
 					size="sm"
 					accent="--viz-3"
-					detail="{num(doors.busiestHourCount)} openings"
+					detail={m.doorsPage.openingsCount(num(doors.busiestHourCount))}
 				/>
 				{#if doors.quietStretch && doors.quietStretch.hours >= 3}
 					<BigStat
-						kicker="Never once between"
+						kicker={m.doorsPage.neverBetween}
 						value="{hourLabel(doors.quietStretch.from)}–{hourLabel(doors.quietStretch.to)}"
 						size="sm"
 						accent="--viz-7"
-						detail="{doors.quietStretch.hours} hours of complete quiet, every day"
+						detail={m.doorsPage.quietDetail(doors.quietStretch.hours)}
 					/>
 				{/if}
 				{#if doors.longestOpen}
 					<BigStat
-						kicker="Longest left open"
+						kicker={m.doorsPage.longestOpen}
 						value={duration(doors.longestOpen.openSeconds, 'short')}
 						size="sm"
 						accent="--viz-5"
-						detail="{doorLabels[doors.longestOpen.door] ?? 'A door'} door"
+						detail={doorLabels[doors.longestOpen.door]
+							? m.doorsPage.doorName(doorLabels[doors.longestOpen.door])
+							: m.doorsPage.aDoor}
 					/>
 				{/if}
 			</div>
@@ -108,9 +105,7 @@
 			</div>
 
 			<p class="border-l-2 pl-4 text-sm leading-relaxed text-muted-foreground">
-				Rear doors opening means someone else was in the car. Taken together with the times, this is
-				a month of a household's comings and goings, recorded to the second — from a signal that
-				exists to warn you a door is ajar.
+				{m.doorsPage.rearNote}
 			</p>
 		</Card.Content>
 	</Card.Root>
@@ -118,10 +113,9 @@
 	{#if tyreChart}
 		<Card.Root>
 			<Card.Header>
-				<Card.Title>Tyre pressure, and the weather</Card.Title>
+				<Card.Title>{m.doorsPage.tyres}</Card.Title>
 				<Card.Description>
-					Daily median for each wheel. Pressure follows air temperature, so this doubles as a record
-					of how warm the month was.
+					{m.doorsPage.tyresHint}
 				</Card.Description>
 			</Card.Header>
 			<Card.Content>
@@ -138,28 +132,30 @@
 
 				<div class="mt-6 grid gap-6 sm:grid-cols-3">
 					<BigStat
-						kicker="Pressure range"
+						kicker={m.doorsPage.pressureRange}
 						value="{num(tyres.minPressure)}–{num(tyres.maxPressure)}"
 						unit="kPa"
 						size="sm"
 						accent="--viz-1"
-						detail="Reported in steps of 2.75 kPa, which is why the lines look like stairs"
+						detail={m.doorsPage.pressureSteps}
 					/>
 					<BigStat
-						kicker="Change over the month"
+						kicker={m.doorsPage.change}
 						value="{rearHigher.front >= 0 ? '+' : ''}{num(rearHigher.front, 1)}"
-						unit="kPa front"
+						unit={m.doorsPage.front}
 						size="sm"
 						accent="--viz-2"
-						detail="Rear {rearHigher.rear >= 0 ? '+' : ''}{num(rearHigher.rear, 1)} kPa"
+						detail={m.doorsPage.rear(
+							`${rearHigher.rear >= 0 ? '+' : ''}${num(rearHigher.rear, 1)}`
+						)}
 					/>
 					{#if Number.isFinite(tyres.temperatureCorrelation)}
 						<BigStat
-							kicker="Tracks temperature"
-							value={tyres.temperatureCorrelation.toFixed(2)}
+							kicker={m.doorsPage.tracks}
+							value={num(tyres.temperatureCorrelation, 2)}
 							size="sm"
 							accent="--viz-temp"
-							detail="Correlation with battery temperature, which follows the outside air"
+							detail={m.doorsPage.tracksDetail}
 						/>
 					{/if}
 				</div>
@@ -170,23 +166,21 @@
 	{#if data.dataset && data.dataset.emptyColumns.length > 0}
 		<Card.Root>
 			<Card.Header>
-				<Card.Title>Signals your car never filled in</Card.Title>
+				<Card.Title>{m.doorsPage.empty}</Card.Title>
 				<Card.Description>
-					These columns exist in every row of the export and are empty in all of them.
+					{m.doorsPage.emptyHint}
 				</Card.Description>
 			</Card.Header>
 			<Card.Content>
 				<div class="flex flex-wrap gap-2">
 					{#each data.dataset.emptyColumns as key (key)}
 						<span class="rounded-md bg-muted px-2 py-1 text-xs text-muted-foreground">
-							{COLUMNS.get(key)?.label ?? key}
+							{columnLabel(key)}
 						</span>
 					{/each}
 				</div>
 				<p class="mt-4 text-sm leading-relaxed text-muted-foreground">
-					The export uses one schema for every model XPeng sells, so a car reports blanks wherever
-					it has no such hardware. Window positions and the tailgate opener are in the file for
-					vehicles that report them; yours does not.
+					{m.doorsPage.emptyNote}
 				</p>
 			</Card.Content>
 		</Card.Root>

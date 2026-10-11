@@ -7,6 +7,7 @@
   uploaded deserves an explanation before an address is typed into it.
 -->
 <script lang="ts">
+	import { m } from '#lib/i18n/index.svelte.js';
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { toast } from 'svelte-sonner';
@@ -34,12 +35,7 @@
 	let open = $state(false);
 	let email = $state('');
 
-	const benefits = [
-		'Keep your exports for good, not just until this browser forgets them',
-		'A reminder when the next export is due, before the window rolls past',
-		'Read your own data over an API, for Home Assistant and anything else',
-		'Share a single trip or charging session with a link'
-	];
+	const benefits = $derived(m.accountMenu.benefits);
 
 	onMount(() => {
 		account.refresh();
@@ -65,8 +61,8 @@
 
 	async function signOut() {
 		await account.signOut();
-		toast('Signed out', {
-			description: 'Everything kept in this browser is still here.'
+		toast(m.accountMenu.signedOut, {
+			description: m.accountMenu.signedOutDetail
 		});
 	}
 </script>
@@ -78,9 +74,7 @@
 				<UserIcon class="size-4" />
 				<span class="hidden max-w-[16ch] truncate sm:inline">{account.user.email}</span>
 				{#if waiting > 0}
-					<span
-						class="size-2 rounded-full bg-primary"
-						title="{waiting} place{waiting === 1 ? '' : 's'} waiting on you"
+					<span class="size-2 rounded-full bg-primary" title={m.accountMenu.placesWaiting(waiting)}
 					></span>
 				{/if}
 			</DropdownMenu.Trigger>
@@ -91,11 +85,11 @@
 				<DropdownMenu.Separator />
 				<DropdownMenu.Item onSelect={() => goto('/account')}>
 					<SettingsIcon class="size-4" />
-					Account
+					{m.accountMenu.account}
 				</DropdownMenu.Item>
 				<DropdownMenu.Item onSelect={() => goto('/leaderboard')}>
 					<TrophyIcon class="size-4" />
-					Leaderboard
+					{m.accountMenu.leaderboard}
 					{#if waiting > 0}
 						<Badge variant="secondary" class="ml-auto tabular-nums">{waiting}</Badge>
 					{/if}
@@ -103,7 +97,7 @@
 				<DropdownMenu.Separator />
 				<DropdownMenu.Item onSelect={signOut}>
 					<LogOutIcon class="size-4" />
-					Sign out
+					{m.accountMenu.signOut}
 				</DropdownMenu.Item>
 			</DropdownMenu.Content>
 		</DropdownMenu.Root>
@@ -116,26 +110,25 @@
 		>
 			<Dialog.Trigger class={buttonVariants({ variant, size: 'sm' })}>
 				<CloudIcon class="size-4" />
-				Sign in
+				{m.accountMenu.signIn}
 			</Dialog.Trigger>
 			<Dialog.Content class="sm:max-w-md">
 				{#if account.linkSentTo}
 					<Dialog.Header>
-						<Dialog.Title>Check your inbox</Dialog.Title>
+						<Dialog.Title>{m.accountMenu.checkInbox}</Dialog.Title>
 						<Dialog.Description>
-							If {account.linkSentTo} can have an account, a sign-in link is on its way. It works once
-							and expires in fifteen minutes.
+							{m.accountMenu.linkSent(account.linkSentTo)}
 						</Dialog.Description>
 					</Dialog.Header>
 					<Dialog.Footer>
-						<Button variant="outline" onclick={reset}>Use a different address</Button>
-						<Button onclick={() => (open = false)}>Done</Button>
+						<Button variant="outline" onclick={reset}>{m.accountMenu.differentAddress}</Button>
+						<Button onclick={() => (open = false)}>{m.common.done}</Button>
 					</Dialog.Footer>
 				{:else}
 					<Dialog.Header>
-						<Dialog.Title>Sign in to LogbooX</Dialog.Title>
+						<Dialog.Title>{m.accountMenu.title}</Dialog.Title>
 						<Dialog.Description>
-							There is no password. Enter your address and we will send a link.
+							{m.accountMenu.noPassword}
 						</Dialog.Description>
 					</Dialog.Header>
 
@@ -150,13 +143,13 @@
 
 					<form class="space-y-3" onsubmit={submit}>
 						<div class="space-y-2">
-							<Label for="account-email">E-mail address</Label>
+							<Label for="account-email">{m.accountMenu.email}</Label>
 							<Input
 								id="account-email"
 								type="email"
 								autocomplete="email"
 								required
-								placeholder="you@example.com"
+								placeholder={m.accountMenu.emailPlaceholder}
 								bind:value={email}
 							/>
 						</div>
@@ -167,20 +160,19 @@
 
 						<Button type="submit" class="w-full" disabled={account.busy}>
 							<MailIcon class="size-4" />
-							{account.busy ? 'Sending…' : 'Send me a link'}
+							{account.busy ? m.accountMenu.sending : m.accountMenu.sendLink}
 						</Button>
 					</form>
 
 					<p class="text-xs leading-relaxed text-muted-foreground">
-						An account changes nothing about how your export is read: it is still parsed in this
-						tab. Nothing is copied to it unless you ask for that, or switch automatic copying on.
-						Signing in means accepting the <a
-							href="/legal/terms"
-							class="underline underline-offset-4 hover:text-foreground">terms</a
-						>; the
+						{m.accountMenu.smallPrintBefore}
+						<a href="/legal/terms" class="underline underline-offset-4 hover:text-foreground"
+							>{m.accountMenu.smallPrintTerms}</a
+						>{m.accountMenu.smallPrintMiddle}
 						<a href="/legal/privacy" class="underline underline-offset-4 hover:text-foreground"
-							>privacy notice</a
-						> says what an account stores.
+							>{m.accountMenu.smallPrintPrivacy}</a
+						>
+						{m.accountMenu.smallPrintAfter}
 					</p>
 				{/if}
 			</Dialog.Content>

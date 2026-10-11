@@ -11,6 +11,7 @@
 import { browser } from '$app/env';
 import { ApiError, api } from '../api/client';
 import { ACCOUNTS_ENABLED } from '../features';
+import { m } from '../i18n/index.svelte';
 import { boardById } from '../leaderboard/boards';
 import type { OwnBadge } from '../leaderboard/medals';
 
@@ -158,7 +159,7 @@ class AccountStore {
 			await api('/api/v1/auth/request', { method: 'POST', body: { email } });
 			this.linkSentTo = email.trim();
 		} catch (error) {
-			this.error = error instanceof Error ? error.message : 'The link could not be requested.';
+			this.error = error instanceof Error ? error.message : m.errors.linkRequest;
 			throw error;
 		} finally {
 			this.busy = false;
@@ -297,7 +298,7 @@ class AccountStore {
 			await api('/api/v1/me', { method: 'PATCH', body: patch });
 		} catch (error) {
 			this.user = previous;
-			this.error = error instanceof Error ? error.message : 'That could not be saved.';
+			this.error = error instanceof Error ? error.message : m.errors.saveFailed;
 			throw error;
 		}
 	}

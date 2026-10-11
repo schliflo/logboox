@@ -8,10 +8,11 @@
  */
 
 import { settings } from '../state/settings.svelte';
+import { intlLocale, m } from '../i18n/index.svelte';
 
 export function num(value: number, digits = 0): string {
 	if (!Number.isFinite(value)) return '—';
-	return value.toLocaleString('en-GB', {
+	return value.toLocaleString(intlLocale(), {
 		minimumFractionDigits: digits,
 		maximumFractionDigits: digits
 	});
@@ -42,16 +43,17 @@ export function longDuration(seconds: number): string {
 	const days = Math.floor(seconds / 86400);
 	if (days < 1) return duration(seconds);
 	const hours = Math.round((seconds % 86400) / 3600);
-	return `${days} d ${hours} h`;
+	return m.format.daysHours(days, hours);
 }
 
 const cache = new Map<string, Intl.DateTimeFormat>();
 
 function formatter(options: Intl.DateTimeFormatOptions): Intl.DateTimeFormat {
-	const key = `${settings.timeZone}|${JSON.stringify(options)}`;
+	const locale = intlLocale();
+	const key = `${locale}|${settings.timeZone}|${JSON.stringify(options)}`;
 	let found = cache.get(key);
 	if (!found) {
-		found = new Intl.DateTimeFormat('en-GB', { ...options, timeZone: settings.timeZone });
+		found = new Intl.DateTimeFormat(locale, { ...options, timeZone: settings.timeZone });
 		cache.set(key, found);
 	}
 	return found;
@@ -107,7 +109,7 @@ export function dateOnly(epochSeconds: number): string {
 /** `YYYY-MM-DD` rendered for reading. */
 export function prettyDay(dayKey: string): string {
 	const [year, month, day] = dayKey.split('-').map(Number);
-	return new Intl.DateTimeFormat('en-GB', {
+	return new Intl.DateTimeFormat(intlLocale(), {
 		weekday: 'short',
 		day: 'numeric',
 		month: 'short'
@@ -118,7 +120,10 @@ export function hourLabel(hour: number): string {
 	return `${hour.toString().padStart(2, '0')}:00`;
 }
 
-export const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+/** Short weekday names, Sunday first, in the current language. */
+export function weekdays(): string[] {
+	return m.format.weekdays;
+}
 
 /** Shows enough of the VIN to recognise it without publishing it. */
 export function maskVin(vin: string): string {

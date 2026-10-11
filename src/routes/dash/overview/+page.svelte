@@ -8,6 +8,7 @@
   everything, each a way into its own page.
 -->
 <script lang="ts">
+	import { m } from '#lib/i18n/index.svelte.js';
 	import * as Card from '#lib/components/ui/card/index.js';
 	import { buttonVariants } from '#lib/components/ui/button/index.js';
 	import BigStat from '#lib/components/charts/BigStat.svelte';
@@ -27,9 +28,9 @@
 		shortDay,
 		timeOnly
 	} from '#lib/utils/format.js';
-	import ArrowRightIcon from '@lucide/svelte/icons/arrow-right';
 	import ArrowUpRightIcon from '@lucide/svelte/icons/arrow-up-right';
 	import PlayIcon from '@lucide/svelte/icons/play';
+	import { factText } from '#lib/i18n/facts.js';
 
 	const stats = $derived(data.derived!);
 	const dataset = $derived(data.dataset!);
@@ -72,8 +73,9 @@
 
 	// The highlights, about the whole record whatever the range.
 	const highlight = $derived(
-		whole.facts.headline.find((fact) => /longest/i.test(fact.kicker)) ?? whole.facts.headline[0]
+		whole.facts.headline.find((fact) => fact.id === 'longest-trip') ?? whole.facts.headline[0]
 	);
+	const highlightText = $derived(highlight ? factText(highlight) : null);
 	const moments = $derived(
 		whole.facts.headline.length + whole.facts.habit.length + Math.min(3, whole.facts.quirk.length)
 	);
@@ -84,6 +86,44 @@
 	const latestCharges = $derived(
 		[...stats.charging.sessions].sort((a, b) => b.startTime - a.startTime).slice(0, 4)
 	);
+
+	const glance = $derived([
+		{
+			kicker: m.overview.distance,
+			value: num(totalKm),
+			unit: 'km',
+			accent: '--viz-1',
+			detail: m.overview.tripsOver(num(stats.trips.length), stats.recordedDays)
+		},
+		{
+			kicker: m.overview.timeDriving,
+			value: duration(drivingSeconds, 'short'),
+			unit: '',
+			accent: '--viz-3',
+			detail: m.overview.ofRecorded(percent(drivingSeconds / stats.recordedSeconds, 1))
+		},
+		{
+			kicker: m.overview.energyCharged,
+			value: num(stats.charging.totalKwh),
+			unit: 'kWh',
+			accent: '--viz-4',
+			detail: m.overview.sessions(stats.charging.sessions.length)
+		},
+		{
+			kicker: m.overview.chargingCost,
+			value: settings.formatCurrency(cost),
+			unit: '',
+			accent: '--viz-5',
+			detail: m.overview.atPrice(settings.formatCurrency(settings.pricePerKwh))
+		},
+		{
+			kicker: m.overview.consumption,
+			value: Number.isFinite(consumption) ? num(consumption, 1) : '—',
+			unit: 'kWh/100 km',
+			accent: '--viz-7',
+			detail: m.overview.odometerNow(num(stats.odometerEnd))
+		}
+	]);
 
 	function route(startTime: number): string {
 		const note = notes.get(startTime);
@@ -100,7 +140,7 @@
 <div class="mx-auto max-w-6xl space-y-10">
 	{#if unlabelled > 0 || !shared}
 		<section aria-labelledby="attention" class="space-y-3">
-			<h2 id="attention" class="eyebrow">Worth your attention</h2>
+			<h2 id="attention" class="eyebrow">{m.overview.attention}</h2>
 			<div class="grid gap-4 md:grid-cols-[repeat(auto-fit,minmax(18rem,1fr))]">
 				{#if unlabelled > 0}
 					<Card.Root
@@ -109,21 +149,21 @@
 					>
 						<Card.Content class="flex h-full flex-col gap-2.5">
 							<p class="chip" style="--chip: var(--viz-2)">
-								Logbook {percent(
-									(logbook.record.trips - unlabelled) / Math.max(1, logbook.record.trips)
-								)} complete
+								{m.overview.logbookComplete(
+									percent((logbook.record.trips - unlabelled) / Math.max(1, logbook.record.trips))
+								)}
 							</p>
 							<p class="text-lg font-semibold">
-								{unlabelled === 1 ? 'One trip has' : `${num(unlabelled)} trips have`} no place yet
+								{m.overview.noPlaceYet(unlabelled, num(unlabelled))}
 							</p>
 							<p class="text-sm text-muted-foreground max-sm:hidden">
-								Suggestions come from the trips you have already filled in.
+								{m.overview.suggestionsFrom}
 							</p>
 							<a
 								href="/dash/trips/label"
 								class="{buttonVariants({ size: 'lg' })} mt-auto self-start"
 							>
-								Label trips
+								{m.overview.labelTrips}
 							</a>
 						</Card.Content>
 					</Card.Root>
@@ -131,14 +171,14 @@
 				{#if !shared && !data.isDemo}
 					<Card.Root>
 						<Card.Content class="flex h-full flex-col gap-2.5">
-							<p class="chip" style="--chip: var(--muted-foreground)">Keep it unbroken</p>
+							<p class="chip" style="--chip: var(--muted-foreground)">{m.overview.keepUnbroken}</p>
 							<p class="text-lg font-semibold">
 								{lapsed
-									? `Your record stops on ${dateOnly(whole.endTime)}`
-									: `Request the next export by ${dateOnly(requestBy)}`}
+									? m.overview.recordStops(dateOnly(whole.endTime))
+									: m.overview.requestBy(dateOnly(requestBy))}
 							</p>
 							<p class="text-sm text-muted-foreground max-sm:hidden">
-								XPeng keeps only thirty days. Drop the new files in and they join on.
+								{m.overview.thirtyDays}
 							</p>
 							<div class="mt-auto flex flex-wrap gap-2">
 								<a
@@ -147,11 +187,11 @@
 									rel="noreferrer noopener"
 									class={buttonVariants({ variant: 'outline', size: 'lg' })}
 								>
-									Request at XPeng
+									{m.overview.requestAtXpeng}
 									<ArrowUpRightIcon class="size-4" />
 								</a>
 								<a href="/dash/data" class={buttonVariants({ variant: 'ghost', size: 'lg' })}
-									>Add data</a
+									>{m.overview.addData}</a
 								>
 							</div>
 						</Card.Content>
@@ -160,18 +200,18 @@
 				{#if !shared && longest}
 					<Card.Root>
 						<Card.Content class="flex h-full flex-col gap-2.5">
-							<p class="chip" style="--chip: var(--viz-4)">Monthly leaderboard</p>
+							<p class="chip" style="--chip: var(--viz-4)">{m.overview.monthly}</p>
 							<p class="text-lg font-semibold">
-								Your longest drive: {num(longest.distanceKm)} km
+								{m.overview.longestDrive(num(longest.distanceKm))}
 							</p>
 							<p class="text-sm text-muted-foreground max-sm:hidden">
-								See how it stands. Nothing is listed unless you put your name to it.
+								{m.overview.seeStands}
 							</p>
 							<a
 								href="/leaderboard"
 								class="{buttonVariants({ variant: 'outline', size: 'lg' })} mt-auto self-start"
 							>
-								See the boards
+								{m.overview.seeBoards}
 							</a>
 						</Card.Content>
 					</Card.Root>
@@ -180,42 +220,42 @@
 		</section>
 	{/if}
 
-	{#if highlight}
+	{#if highlight && highlightText}
 		<a
 			href="/wrapped"
 			class="group flex flex-wrap items-center gap-6 rounded-2xl border p-6 transition-colors hover:border-foreground/20 sm:p-8"
 			style="background: radial-gradient(90% 160% at 85% 50%, color-mix(in oklab, var(--viz-4) 18%, transparent), transparent 60%), var(--card)"
 		>
 			<span class="min-w-64 flex-1 space-y-1.5">
-				<span class="block eyebrow">The highlights, in {moments} moments</span>
+				<span class="block eyebrow">{m.overview.highlightsIn(moments)}</span>
 				<span class="block text-2xl font-bold tracking-tight">
-					The things you would not have thought to ask
+					{m.overview.wouldNotAsk}
 				</span>
 				<span class="block text-sm text-muted-foreground"
-					>{highlight.kicker}: {highlight.detail}</span
+					>{highlightText.kicker}: {highlightText.detail}</span
 				>
 			</span>
 			<span class="flex items-baseline gap-2">
 				<span
 					class="text-6xl font-bold tracking-tighter tabular-nums sm:text-7xl"
-					style="color: var(--viz-4)">{highlight.value}</span
+					style="color: var(--viz-4)">{highlightText.value}</span
 				>
-				{#if highlight.unit}
-					<span class="text-xl font-semibold text-muted-foreground">{highlight.unit}</span>
+				{#if highlightText.unit}
+					<span class="text-xl font-semibold text-muted-foreground">{highlightText.unit}</span>
 				{/if}
 			</span>
 			<span class={buttonVariants({ size: 'lg' })}>
 				<PlayIcon class="size-4" />
-				Play
+				{m.overview.play}
 			</span>
 		</a>
 	{/if}
 
 	<section
-		aria-label="At a glance"
+		aria-label={m.overview.atAGlance}
 		class="grid grid-cols-2 gap-px overflow-hidden rounded-2xl border bg-border lg:grid-cols-5"
 	>
-		{#each [{ kicker: 'Distance', value: num(totalKm), unit: 'km', accent: '--viz-1', detail: `${num(stats.trips.length)} trips over ${stats.recordedDays} days` }, { kicker: 'Time driving', value: duration(drivingSeconds, 'short'), unit: '', accent: '--viz-3', detail: `${percent(drivingSeconds / stats.recordedSeconds, 1)} of the time recorded` }, { kicker: 'Energy charged', value: num(stats.charging.totalKwh), unit: 'kWh', accent: '--viz-4', detail: `${stats.charging.sessions.length} sessions` }, { kicker: 'Charging cost', value: settings.formatCurrency(cost), unit: '', accent: '--viz-5', detail: `At ${settings.formatCurrency(settings.pricePerKwh)} per kWh, set under Data` }, { kicker: 'Consumption', value: Number.isFinite(consumption) ? num(consumption, 1) : '—', unit: 'kWh/100 km', accent: '--viz-7', detail: `Odometer now ${num(stats.odometerEnd)} km` }] as stat (stat.kicker)}
+		{#each glance as stat (stat.accent)}
 			<div class="bg-card p-5 last:col-span-2 sm:p-6 lg:last:col-span-1">
 				<BigStat
 					kicker={stat.kicker}
@@ -232,14 +272,15 @@
 	<Card.Root>
 		<Card.Header class="flex flex-wrap items-start justify-between gap-x-6 gap-y-1">
 			<div class="space-y-1.5">
-				<Card.Title class="text-lg">Distance per day</Card.Title>
+				<Card.Title class="text-lg">{m.overview.perDay}</Card.Title>
 				<Card.Description>
-					Select a day to see what happened. Dashed line: your daily average.
+					{m.overview.perDayHint}
 				</Card.Description>
 			</div>
 			{#if busiest && busiest.distanceKm > 0}
 				<p class="text-sm text-muted-foreground tabular-nums">
-					Busiest: <span class="font-medium text-foreground"
+					{m.overview.busiest}
+					<span class="font-medium text-foreground"
 						>{prettyDay(busiest.date)}, {num(busiest.distanceKm)} km</span
 					>
 				</p>
@@ -259,23 +300,23 @@
 						class="mt-2 grid grid-cols-2 gap-x-6 gap-y-1 text-sm text-muted-foreground sm:grid-cols-4"
 					>
 						<div>
-							<dt class="inline">Distance</dt>
+							<dt class="inline">{m.overview.distance}</dt>
 							<dd class="inline text-foreground tabular-nums">
 								{num(dayDetail.distanceKm, 1)} km
 							</dd>
 						</div>
 						<div>
-							<dt class="inline">Trips</dt>
+							<dt class="inline">{m.overview.trips}</dt>
 							<dd class="inline text-foreground tabular-nums">{dayDetail.trips}</dd>
 						</div>
 						<div>
-							<dt class="inline">Driving</dt>
+							<dt class="inline">{m.overview.driving}</dt>
 							<dd class="inline text-foreground tabular-nums">
 								{duration(dayDetail.drivingSeconds, 'short')}
 							</dd>
 						</div>
 						<div>
-							<dt class="inline">Charged</dt>
+							<dt class="inline">{m.overview.charged}</dt>
 							<dd class="inline text-foreground tabular-nums">
 								{num(dayDetail.chargedKwh, 1)} kWh
 							</dd>
@@ -289,9 +330,9 @@
 	<div class="grid gap-6 lg:grid-cols-[3fr_2fr]">
 		<Card.Root class="gap-0 py-0">
 			<div class="flex items-center justify-between px-6 py-5">
-				<h2 class="text-lg font-semibold">Latest trips</h2>
+				<h2 class="text-lg font-semibold">{m.overview.latestTrips}</h2>
 				<a href="/dash/trips" class="text-sm text-primary-link">
-					All {num(stats.trips.length)} trips
+					{m.overview.allTrips(num(stats.trips.length))}
 				</a>
 			</div>
 			<ul>
@@ -311,7 +352,7 @@
 									? ''
 									: 'text-muted-foreground'}"
 							>
-								{route(trip.startTime) || 'No place yet'}
+								{route(trip.startTime) || m.overview.noPlace}
 							</span>
 							<span class="text-sm tabular-nums">{num(trip.distanceKm, 1)} km</span>
 							<span class="hidden w-24 justify-end sm:flex">
@@ -327,9 +368,9 @@
 
 		<Card.Root class="gap-0 py-0">
 			<div class="flex items-center justify-between px-6 py-5">
-				<h2 class="text-lg font-semibold">Latest charging</h2>
+				<h2 class="text-lg font-semibold">{m.overview.latestCharging}</h2>
 				<a href="/dash/charging" class="text-sm text-primary-link">
-					All {num(stats.charging.sessions.length)} sessions
+					{m.overview.allSessions(num(stats.charging.sessions.length))}
 				</a>
 			</div>
 			<ul>
@@ -344,7 +385,10 @@
 									>{shortDay(session.startTime)}, {timeOnly(session.startTime)}</span
 								>
 								<span class="text-xs text-muted-foreground">
-									{session.isDc ? 'DC fast' : 'AC'} · {duration(session.duration, 'short')}
+									{session.isDc ? m.overview.dcFast : m.overview.ac} · {duration(
+										session.duration,
+										'short'
+									)}
 								</span>
 							</span>
 							<span class="flex flex-col items-end">
@@ -357,7 +401,7 @@
 					</li>
 				{:else}
 					<li class="border-t px-6 py-5 text-sm text-muted-foreground">
-						No charging in this range.
+						{m.overview.noCharging}
 					</li>
 				{/each}
 			</ul>
@@ -366,35 +410,35 @@
 
 	<Card.Root>
 		<Card.Header>
-			<Card.Title class="text-lg">What the recording covers</Card.Title>
+			<Card.Title class="text-lg">{m.overview.coverage}</Card.Title>
 			<Card.Description>
-				The car logs once a second, but only while it is awake.
+				{m.overview.coverageHint}
 				{#if stats.sources > 1}
-					These {stats.sources} exports cover {stats.recordedDays} days between them.
+					{m.overview.coverageSources(stats.sources, stats.recordedDays)}
 				{/if}
 			</Card.Description>
 		</Card.Header>
 		<Card.Content class="grid gap-6 sm:grid-cols-3">
 			<BigStat
-				kicker="Samples recorded"
+				kicker={m.overview.samples}
 				value={num(dataset.time.length)}
 				size="sm"
 				accent="--viz-3"
-				detail="{percent(coverage)} of every second the exports cover"
+				detail={m.overview.samplesDetail(percent(coverage))}
 			/>
 			<BigStat
-				kicker="Longest silence"
+				kicker={m.overview.silence}
 				value={duration(stats.drain.longestSleepHours * 3600, 'short')}
 				size="sm"
 				accent="--viz-5"
-				detail="The longest the car went without writing anything"
+				detail={m.overview.silenceDetail}
 			/>
 			<BigStat
-				kicker="Signals reported"
+				kicker={m.overview.signals}
 				value={num([...dataset.columns.values()].filter((column) => column.nonNull > 0).length)}
 				size="sm"
 				accent="--viz-7"
-				detail="{dataset.emptyColumns.length} more exist in the file but were never filled"
+				detail={m.overview.signalsDetail(dataset.emptyColumns.length)}
 			/>
 		</Card.Content>
 	</Card.Root>

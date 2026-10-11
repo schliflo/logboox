@@ -6,6 +6,7 @@
   what it did with it and let it be taken back without an exchange of letters.
 -->
 <script lang="ts">
+	import { m } from '#lib/i18n/index.svelte.js';
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { toast } from 'svelte-sonner';
@@ -43,7 +44,7 @@
 		try {
 			await account.updateSettings({ autoSync: next });
 		} catch {
-			toast('That could not be saved', { description: account.error ?? undefined });
+			toast(m.accountPage.saveFailed, { description: account.error ?? undefined });
 		}
 	}
 
@@ -51,7 +52,7 @@
 		try {
 			await account.updateSettings({ reminderEnabled: next });
 		} catch {
-			toast('That could not be saved', { description: account.error ?? undefined });
+			toast(m.accountPage.saveFailed, { description: account.error ?? undefined });
 		}
 	}
 
@@ -60,7 +61,7 @@
 		try {
 			await account.updateSettings({ reminderAfterDays: value });
 		} catch {
-			toast('That could not be saved', { description: account.error ?? undefined });
+			toast(m.accountPage.saveFailed, { description: account.error ?? undefined });
 		}
 	}
 
@@ -69,12 +70,11 @@
 			await account.deleteAccount();
 			confirmingDelete = false;
 			await goto('/');
-			toast('Account deleted', {
-				description:
-					'Everything kept in the account is gone. What is stored in this browser is untouched.'
+			toast(m.accountPage.deleted, {
+				description: m.accountPage.deletedDetail
 			});
 		} catch (error) {
-			toast('The account could not be deleted', {
+			toast(m.accountPage.deleteFailed, {
 				description: error instanceof Error ? error.message : undefined
 			});
 		}
@@ -86,45 +86,46 @@
 	}
 </script>
 
-<Seo title="Account" path="/account" noindex />
+<Seo title={m.accountPage.title} path="/account" noindex />
 
 <main class="mx-auto min-h-svh max-w-2xl space-y-6 px-6 py-12">
 	<div class="flex items-center gap-3">
 		<Button variant="ghost" size="sm" onclick={() => goto('/')}>
 			<ArrowLeftIcon class="size-4" />
-			Back to the start
+			{m.accountPage.backToStart}
 		</Button>
 	</div>
 
 	{#if !ACCOUNTS_ENABLED}
 		<Card.Root>
 			<Card.Header>
-				<Card.Title>Accounts live at logboox.app</Card.Title>
+				<Card.Title>{m.accountPage.elsewhere}</Card.Title>
 				<Card.Description>
-					This address serves an older deployment with no account database.
+					{m.accountPage.elsewhereDetail}
 				</Card.Description>
 			</Card.Header>
 		</Card.Root>
 	{:else if account.signedIn && account.user}
 		<Card.Root>
 			<Card.Header>
-				<Card.Title>Your account</Card.Title>
+				<Card.Title>{m.accountPage.yours}</Card.Title>
 				<Card.Description>
-					Signed in as {account.user.email} since {dateOnly(account.user.createdAt)}.
+					{m.accountPage.signedInAs(account.user.email, dateOnly(account.user.createdAt))}
 				</Card.Description>
 			</Card.Header>
 			<Card.Content class="space-y-4">
 				<div class="space-y-2">
 					<div class="flex items-baseline justify-between text-sm">
 						<span class="text-muted-foreground">
-							{account.storage?.exports ?? 0}
-							{(account.storage?.exports ?? 0) === 1 ? 'export kept' : 'exports kept'}
+							{m.accountPage.exportsKept(account.storage?.exports ?? 0)}
 						</span>
 						<span class="tabular-nums">
 							<!-- `bytes` reads zero as "no figure to give", which is right
 							     where a size is unknown and wrong here: an empty account
 							     is a fact worth stating. -->
-							{used > 0 ? `${bytes(used)} of ${bytes(quota)}` : `nothing yet, of ${bytes(quota)}`}
+							{used > 0
+								? m.accountPage.usedOf(bytes(used), bytes(quota))
+								: m.accountPage.nothingYet(bytes(quota))}
 						</span>
 					</div>
 					<div class="h-2 overflow-hidden rounded-full bg-muted">
@@ -135,30 +136,29 @@
 					</div>
 					{#if fraction > 0.8}
 						<p class="text-xs text-muted-foreground">
-							{percent(fraction)} used. Remove an export you no longer need to make room.
+							{m.accountPage.nearlyFull(percent(fraction))}
 						</p>
 					{/if}
 				</div>
 
 				<Button variant="outline" size="sm" onclick={signOut}>
 					<LogOutIcon class="size-4" />
-					Sign out
+					{m.accountPage.signOut}
 				</Button>
 			</Card.Content>
 		</Card.Root>
 
 		<Card.Root>
 			<Card.Header>
-				<Card.Title>Keeping exports</Card.Title>
+				<Card.Title>{m.accountPage.keeping}</Card.Title>
 				<Card.Description>
-					A copy in the account outlives this browser. Exports are still read here, and still kept
-					here. Nothing is copied unless you ask for it or switch this on.
+					{m.accountPage.keepingDetail}
 				</Card.Description>
 			</Card.Header>
 			<Card.Content>
 				<div class="flex items-center justify-between gap-4">
 					<Label for="auto-sync" class="font-normal">
-						Copy new imports to my account automatically
+						{m.accountPage.autoSync}
 					</Label>
 					<Switch id="auto-sync" checked={account.user.autoSync} onCheckedChange={setAutoSync} />
 				</div>
@@ -173,15 +173,14 @@
 
 		<Card.Root>
 			<Card.Header>
-				<Card.Title>Reminders</Card.Title>
+				<Card.Title>{m.accountPage.reminders}</Card.Title>
 				<Card.Description>
-					XPeng only ever holds a rolling thirty days. A month nobody asked for cannot be recovered
-					later.
+					{m.accountPage.remindersDetail}
 				</Card.Description>
 			</Card.Header>
 			<Card.Content class="space-y-4">
 				<div class="flex items-center justify-between gap-4">
-					<Label for="reminder" class="font-normal">E-mail me when a new export is due</Label>
+					<Label for="reminder" class="font-normal">{m.accountPage.reminderSwitch}</Label>
 					<Switch
 						id="reminder"
 						checked={account.user.reminderEnabled}
@@ -192,7 +191,7 @@
 				{#if account.user.reminderEnabled}
 					<Separator />
 					<div class="space-y-2">
-						<Label for="reminder-days">Remind me after this many days</Label>
+						<Label for="reminder-days">{m.accountPage.reminderDays}</Label>
 						<Input
 							id="reminder-days"
 							type="number"
@@ -203,7 +202,7 @@
 							onchange={(event) => setReminderDays(Number(event.currentTarget.value))}
 						/>
 						<p class="text-xs text-muted-foreground">
-							Counted from where your newest export stops, not from when you imported it.
+							{m.accountPage.reminderHint}
 						</p>
 					</div>
 				{/if}
@@ -212,15 +211,14 @@
 
 		<Card.Root class="border-destructive/40">
 			<Card.Header>
-				<Card.Title>Delete this account</Card.Title>
+				<Card.Title>{m.accountPage.deleteTitle}</Card.Title>
 				<Card.Description>
-					Removes the account, every export kept in it and every shared link, with the files behind
-					them. What is stored in this browser stays where it is.
+					{m.accountPage.deleteDetail}
 				</Card.Description>
 			</Card.Header>
 			<Card.Content>
 				<Button variant="outline" size="sm" onclick={() => (confirmingDelete = true)}>
-					Delete account
+					{m.accountPage.deleteButton}
 				</Button>
 			</Card.Content>
 		</Card.Root>
@@ -228,24 +226,28 @@
 		<Dialog.Root bind:open={confirmingDelete}>
 			<Dialog.Content class="sm:max-w-md">
 				<Dialog.Header>
-					<Dialog.Title>Delete {account.user.email}?</Dialog.Title>
+					<Dialog.Title>{m.accountPage.deleteConfirmTitle(account.user.email)}</Dialog.Title>
 					<Dialog.Description>
-						This cannot be undone. Back up anything you want to keep first — the copies in this
-						browser are not affected.
+						{m.accountPage.deleteConfirmDetail}
 					</Dialog.Description>
 				</Dialog.Header>
 				<div class="space-y-2">
-					<Label for="confirm-delete">Type <strong>delete</strong> to confirm</Label>
+					<Label for="confirm-delete"
+						>{m.accountPage.typeBefore} <strong>{m.accountPage.confirmWord}</strong>
+						{m.accountPage.typeAfter}</Label
+					>
 					<Input id="confirm-delete" bind:value={deleteConfirmation} autocomplete="off" />
 				</div>
 				<Dialog.Footer>
-					<Button variant="outline" onclick={() => (confirmingDelete = false)}>Keep it</Button>
+					<Button variant="outline" onclick={() => (confirmingDelete = false)}
+						>{m.accountPage.keepIt}</Button
+					>
 					<Button
 						variant="destructive"
-						disabled={deleteConfirmation.trim().toLowerCase() !== 'delete'}
+						disabled={deleteConfirmation.trim().toLowerCase() !== m.accountPage.confirmWord}
 						onclick={remove}
 					>
-						Delete everything
+						{m.accountPage.deleteEverything}
 					</Button>
 				</Dialog.Footer>
 			</Dialog.Content>
@@ -253,8 +255,8 @@
 	{:else}
 		<Card.Root>
 			<Card.Header>
-				<Card.Title>Not signed in</Card.Title>
-				<Card.Description>Taking you back to the start.</Card.Description>
+				<Card.Title>{m.accountPage.notSignedIn}</Card.Title>
+				<Card.Description>{m.accountPage.takingBack}</Card.Description>
 			</Card.Header>
 		</Card.Root>
 	{/if}

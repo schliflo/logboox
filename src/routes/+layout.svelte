@@ -4,9 +4,14 @@
 	import { ModeWatcher } from 'mode-watcher';
 	import { Toaster } from '#lib/components/ui/sonner/index.js';
 	import OfflineSupport from '#lib/components/app/OfflineSupport.svelte';
+	import { onMount } from 'svelte';
+	import { restoreLocale } from '#lib/i18n/index.svelte.js';
 	import { AUTHOR, AUTHOR_URL, SITE_DESCRIPTION, SITE_NAME, SITE_URL, absolute } from '#lib/seo.js';
 
 	let { children } = $props();
+
+	// After hydration, so the prerendered English and the first client render agree.
+	onMount(restoreLocale);
 
 	// Describes the app to search engines as what it is: a free, install-free
 	// tool that runs in the browser. Serialised here because Svelte will not

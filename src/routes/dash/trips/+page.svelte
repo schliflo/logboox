@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '#lib/i18n/index.svelte.js';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
 	import * as Card from '#lib/components/ui/card/index.js';
@@ -19,6 +20,7 @@
 	import { logbookDocument } from '#lib/logbook/document.js';
 	import { confidentFills } from '#lib/logbook/bulk.js';
 	import { PURPOSES } from '#lib/logbook/types.js';
+	import { rangeLabel } from '#lib/i18n/dates.js';
 	import { toast } from 'svelte-sonner';
 	import {
 		dateTime,
@@ -131,8 +133,8 @@
 	const filters = $derived(
 		(
 			[
-				{ value: 'all', label: 'All' },
-				{ value: 'unlabelled', label: 'No place yet' },
+				{ value: 'all', label: m.tripsPage.all },
+				{ value: 'unlabelled', label: m.tripsPage.noPlaceYet },
 				...PURPOSES.map((option) => ({ value: option.value, label: option.label }))
 			] as Array<{ value: Show; label: string }>
 		).map((option) => ({
@@ -153,13 +155,13 @@
 		try {
 			await logbook.saveMany(batch.map((fill) => fill.after));
 		} catch {
-			toast.error('Those notes could not be saved in this browser.');
+			toast.error(m.tripsPage.saveFailed);
 			return;
 		}
-		toast(`Filled in ${batch.length} ${batch.length === 1 ? 'trip' : 'trips'}`, {
-			description: 'Each one can still be changed on its own.',
+		toast(m.tripsPage.filled(batch.length), {
+			description: m.tripsPage.filledDetail,
 			action: {
-				label: 'Undo',
+				label: m.tripsPage.undo,
 				// Only trips still as the fill left them: a correction made since is kept.
 				onClick: () => {
 					const untouched = batch.filter((fill) => {
@@ -172,7 +174,7 @@
 					});
 					logbook
 						.saveMany(untouched.map((fill) => fill.before))
-						.catch(() => toast.error('The fill could not be undone in this browser.'));
+						.catch(() => toast.error(m.tripsPage.undoFailed));
 				}
 			}
 		});
@@ -250,19 +252,19 @@
 		}
 	}
 
-	const columns: Array<{ key: SortKey; label: string; align?: string }> = [
-		{ key: 'startTime', label: 'Started' },
-		{ key: 'distanceKm', label: 'Distance', align: 'text-right' },
-		{ key: 'duration', label: 'Duration', align: 'text-right' },
-		{ key: 'maxSpeed', label: 'Top speed', align: 'text-right' },
+	const columns: Array<{ key: SortKey; label: string; align?: string }> = $derived([
+		{ key: 'startTime', label: m.tripsPage.started },
+		{ key: 'distanceKm', label: m.tripsPage.distance, align: 'text-right' },
+		{ key: 'duration', label: m.tripsPage.duration, align: 'text-right' },
+		{ key: 'maxSpeed', label: m.tripsPage.topSpeed, align: 'text-right' },
 		{ key: 'consumption', label: 'kWh/100 km', align: 'text-right' }
-	];
+	]);
 </script>
 
 <svelte:window onkeydown={step} />
 
 {#snippet chips(compact = false)}
-	<div class="flex flex-wrap gap-2" role="group" aria-label="Show trips">
+	<div class="flex flex-wrap gap-2" role="group" aria-label={m.tripsPage.showTrips}>
 		{#each filters as option (option.value)}
 			<button
 				type="button"
@@ -291,18 +293,17 @@
 		class="mx-auto max-w-[90rem] xl:grid xl:grid-cols-[22rem_minmax(0,1fr)] xl:items-start xl:gap-8"
 	>
 		<aside
-			aria-label="Trips"
+			aria-label={m.tripsPage.trips}
 			class="sticky top-32 hidden max-h-[calc(100svh-10rem)] flex-col overflow-hidden rounded-2xl border bg-card xl:flex"
 		>
 			<div class="space-y-3 border-b p-4">
 				<div class="flex items-center justify-between gap-2">
 					<a href={listLink} class="font-semibold hover:underline">
-						{sorted.length}
-						{sorted.length === 1 ? 'trip' : 'trips'}
+						{m.tripsPage.count(sorted.length)}
 					</a>
 					{#if unlabelled > 0 && !shared}
 						<a href="/dash/trips/label" class="text-xs text-muted-foreground hover:text-foreground">
-							Label one by one
+							{m.tripsPage.labelOneByOne}
 						</a>
 					{/if}
 				</div>
@@ -331,7 +332,7 @@
 										? ''
 										: 'text-muted-foreground'}"
 								>
-									{route(row.startTime) || 'No place yet'}
+									{route(row.startTime) || m.tripsPage.noPlaceYet}
 								</span>
 								<span class="text-xs text-muted-foreground tabular-nums">
 									{num(row.distanceKm, 1)} km · {duration(row.duration, 'short')}
@@ -348,7 +349,7 @@
 			<div class="flex items-center gap-3">
 				<Button variant="ghost" size="sm" href={listLink} class="xl:hidden">
 					<ArrowLeftIcon class="size-4" />
-					All trips
+					{m.tripsPage.allTrips}
 				</Button>
 				<div class="min-w-0">
 					<p class="text-sm text-muted-foreground">{fullDay(trip.startTime)}</p>
@@ -360,12 +361,12 @@
 					<span class="mr-2 hidden items-center gap-1 text-xs text-muted-foreground lg:flex">
 						<kbd class="rounded border border-b-2 px-1.5 font-mono">J</kbd>
 						<kbd class="rounded border border-b-2 px-1.5 font-mono">K</kbd>
-						next / previous
+						{m.tripsPage.nextPrevious}
 					</span>
 					<Button
 						variant="ghost"
 						size="icon"
-						aria-label="Previous trip in the list"
+						aria-label={m.tripsPage.previousTrip}
 						disabled={!neighbours.previous}
 						onclick={() => neighbours.previous && goto(linkTo(neighbours.previous.startTime))}
 					>
@@ -374,7 +375,7 @@
 					<Button
 						variant="ghost"
 						size="icon"
-						aria-label="Next trip in the list"
+						aria-label={m.tripsPage.nextTrip}
 						disabled={!neighbours.next}
 						onclick={() => neighbours.next && goto(linkTo(neighbours.next.startTime))}
 					>
@@ -410,7 +411,7 @@
 						size="sm"
 						onclick={() => goto(linkTo(nextUnlabelled.startTime))}
 					>
-						Next unlabelled trip
+						{m.tripsPage.nextUnlabelled}
 						<ArrowRightIcon class="size-4" />
 					</Button>
 				</div>
@@ -420,7 +421,7 @@
 				<Card.Root>
 					<Card.Content>
 						<BigStat
-							kicker="Distance"
+							kicker={m.tripsPage.distance}
 							value={num(trip.distanceKm, 1)}
 							unit="km"
 							size="sm"
@@ -431,36 +432,36 @@
 				<Card.Root>
 					<Card.Content>
 						<BigStat
-							kicker="Duration"
+							kicker={m.tripsPage.duration}
 							value={duration(trip.duration, 'short')}
 							size="sm"
 							accent="--viz-3"
-							detail="{duration(trip.movingSeconds, 'short')} actually moving"
+							detail={m.tripsPage.moving(duration(trip.movingSeconds, 'short'))}
 						/>
 					</Card.Content>
 				</Card.Root>
 				<Card.Root>
 					<Card.Content>
 						<BigStat
-							kicker="Top speed"
+							kicker={m.tripsPage.topSpeed}
 							value={num(trip.maxSpeed)}
 							unit="km/h"
 							size="sm"
 							accent="--viz-2"
-							detail="Average {num(trip.avgSpeed)} km/h while moving"
+							detail={m.tripsPage.average(num(trip.avgSpeed))}
 						/>
 					</Card.Content>
 				</Card.Root>
 				<Card.Root>
 					<Card.Content>
 						<BigStat
-							kicker="Energy used"
+							kicker={m.tripsPage.energyUsed}
 							value={num(trip.energyKwh - trip.regenKwh, 1)}
 							unit="kWh"
 							size="sm"
 							accent="--viz-4"
 							detail={Number.isFinite(trip.regenShare)
-								? `${percent(trip.regenShare)} came back through regeneration`
+								? m.tripsPage.regen(percent(trip.regenShare))
 								: undefined}
 						/>
 					</Card.Content>
@@ -469,9 +470,9 @@
 
 			<Card.Root>
 				<Card.Header>
-					<Card.Title>Second by second</Card.Title>
+					<Card.Title>{m.tripsPage.secondBySecond}</Card.Title>
 					<Card.Description>
-						Drag across any panel to zoom; the cursor is shared between them.
+						{m.tripsPage.secondBySecondHint}
 					</Card.Description>
 				</Card.Header>
 				<Card.Content>
@@ -486,25 +487,25 @@
 
 			<Card.Root>
 				<Card.Header>
-					<Card.Title>Forces</Card.Title>
+					<Card.Title>{m.tripsPage.forces}</Card.Title>
 				</Card.Header>
 				<Card.Content class="grid gap-6 sm:grid-cols-3">
 					<BigStat
-						kicker="Hardest acceleration"
+						kicker={m.tripsPage.hardestAcceleration}
 						value={num(trip.peakAccel, 2)}
 						unit="g"
 						size="sm"
 						accent="--viz-3"
 					/>
 					<BigStat
-						kicker="Hardest braking"
+						kicker={m.tripsPage.hardestBraking}
 						value={num(trip.peakBrake, 2)}
 						unit="g"
 						size="sm"
 						accent="--viz-8"
 					/>
 					<BigStat
-						kicker="Hardest cornering"
+						kicker={m.tripsPage.hardestCornering}
 						value={num(trip.peakLateral, 2)}
 						unit="g"
 						size="sm"
@@ -519,13 +520,18 @@
 		<div class="grid grid-cols-3 gap-3 sm:gap-4">
 			<Card.Root>
 				<Card.Content>
-					<BigStat kicker="Trips" value={num(stats.trips.length)} size="sm" accent="--viz-1" />
+					<BigStat
+						kicker={m.tripsPage.trips}
+						value={num(stats.trips.length)}
+						size="sm"
+						accent="--viz-1"
+					/>
 				</Card.Content>
 			</Card.Root>
 			<Card.Root>
 				<Card.Content>
 					<BigStat
-						kicker="Longest"
+						kicker={m.tripsPage.longest}
 						value={num(Math.max(...stats.trips.map((t) => t.distanceKm)), 0)}
 						unit="km"
 						size="sm"
@@ -536,7 +542,7 @@
 			<Card.Root>
 				<Card.Content>
 					<BigStat
-						kicker="Median trip"
+						kicker={m.tripsPage.median}
 						value={num(
 							[...stats.trips.map((t) => t.distanceKm)].sort((a, b) => a - b)[
 								Math.floor(stats.trips.length / 2)
@@ -555,10 +561,9 @@
 			<Card.Header>
 				<div class="flex flex-wrap items-start justify-between gap-3">
 					<div>
-						<Card.Title>Every trip</Card.Title>
+						<Card.Title>{m.tripsPage.every}</Card.Title>
 						<Card.Description>
-							Segmented from gear and odometer movement. Select one to see it in detail, and to say
-							where it went.
+							{m.tripsPage.everyHint}
 						</Card.Description>
 					</div>
 					<div class="flex items-center gap-2">
@@ -585,7 +590,7 @@
 						{#if unlabelled > 0}
 							<Button href="/dash/trips/label" variant="ghost" size="sm" class="ml-auto">
 								<ListChecksIcon class="size-4" />
-								Label one by one
+								{m.tripsPage.labelOneByOne}
 							</Button>
 						{/if}
 					</div>
@@ -593,11 +598,13 @@
 				{#if outOfRange > 0}
 					<div class="mt-2 flex flex-wrap items-center gap-3 rounded-xl border bg-muted/40 p-4">
 						<p class="min-w-60 flex-1 text-sm">
-							{outOfRange === 1 ? 'One more trip' : `${outOfRange} more trips`} without a place
-							{outOfRange === 1 ? 'is' : 'are'} outside {data.range?.label.toLowerCase()}.
+							{m.tripsPage.outOfRange(
+								outOfRange,
+								data.range ? rangeLabel(data.range, settings.timeZone) : ''
+							)}
 						</p>
 						<Button variant="outline" size="sm" onclick={() => data.setRange(null)}>
-							Show the whole record
+							{m.tripsPage.showWhole}
 						</Button>
 					</div>
 				{/if}
@@ -609,19 +616,19 @@
 						<WandIcon class="size-5 shrink-0" style="color: var(--viz-2)" />
 						<p class="min-w-60 flex-1 text-sm">
 							<span class="font-semibold">
-								{fills.length === 1 ? 'One trip matches' : `${fills.length} trips match`} your habits.
+								{m.tripsPage.habitsMatch(fills.length)}
 							</span>
-							Same start, same distance, same time of day as trips you already filled in.
+							{m.tripsPage.habitsHint}
 						</p>
 						<Button variant="outline" size="sm" onclick={fillAll}>
-							Fill {fills.length === 1 ? 'it' : `all ${fills.length}`} in
+							{m.tripsPage.fill(fills.length)}
 						</Button>
 					</div>
 				{/if}
 			</Card.Header>
 			<Card.Content>
 				<div class="flex items-center justify-end gap-2 sm:hidden">
-					<label for="sort" class="text-sm text-muted-foreground">Sort by</label>
+					<label for="sort" class="text-sm text-muted-foreground">{m.tripsPage.sortBy}</label>
 					<select
 						id="sort"
 						class="h-9 rounded-lg border bg-background px-2 text-sm"
@@ -632,13 +639,13 @@
 							ascending = way === 'up';
 						}}
 					>
-						<option value="startTime:down">Newest first</option>
-						<option value="startTime:up">Oldest first</option>
-						<option value="distanceKm:down">Longest first</option>
-						<option value="consumption:up">Most efficient first</option>
+						<option value="startTime:down">{m.tripsPage.newest}</option>
+						<option value="startTime:up">{m.tripsPage.oldest}</option>
+						<option value="distanceKm:down">{m.tripsPage.longestFirst}</option>
+						<option value="consumption:up">{m.tripsPage.efficient}</option>
 					</select>
 				</div>
-				<ul class="-mx-5 mt-3 divide-y border-t sm:hidden" aria-label="Trips">
+				<ul class="-mx-5 mt-3 divide-y border-t sm:hidden" aria-label={m.tripsPage.trips}>
 					{#each sorted as row (row.index)}
 						{@const purpose = notes.get(row.startTime)?.purpose}
 						<li>
@@ -648,7 +655,7 @@
 							>
 								<span class="flex min-w-0 flex-1 flex-col gap-0.5">
 									<span class="truncate {route(row.startTime) ? '' : 'text-muted-foreground'}">
-										{route(row.startTime) || 'No place yet'}
+										{route(row.startTime) || m.tripsPage.noPlaceYet}
 									</span>
 									<span class="text-xs text-muted-foreground tabular-nums">
 										{dateTime(row.startTime)} · {duration(row.duration, 'short')}
@@ -679,9 +686,9 @@
 										</button>
 									</Table.Head>
 								{/each}
-								<Table.Head>Route</Table.Head>
-								<Table.Head>Purpose</Table.Head>
-								<Table.Head class="text-right">Charge</Table.Head>
+								<Table.Head>{m.tripsPage.route}</Table.Head>
+								<Table.Head>{m.tripsPage.purpose}</Table.Head>
+								<Table.Head class="text-right">{m.tripsPage.charge}</Table.Head>
 							</Table.Row>
 						</Table.Header>
 						<Table.Body>

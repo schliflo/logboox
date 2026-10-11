@@ -6,8 +6,10 @@
   below are there to check it against.
 -->
 <script lang="ts">
+	import { m } from '#lib/i18n/index.svelte.js';
 	import { page } from '$app/state';
 	import { data } from '#lib/state/dataset.svelte.js';
+	import { factText } from '#lib/i18n/facts.js';
 
 	const ACCENTS = ['--viz-4', '--viz-1', '--viz-3'];
 	/** Spelled out, so Tailwind sees every class it has to generate. */
@@ -24,24 +26,25 @@
 </script>
 
 {#if facts.length}
-	<section aria-label="What stands out" class="grid gap-4 {COLUMNS[facts.length]}">
+	<section aria-label={m.findings.whatStandsOut} class="grid gap-4 {COLUMNS[facts.length]}">
 		{#each facts as fact, index (fact.id)}
+			{@const text = factText(fact)}
 			<div
 				class="flex flex-col gap-2 rounded-2xl border p-5 sm:p-6"
 				style="background: radial-gradient(120% 120% at 0% 0%, color-mix(in oklab, var({ACCENTS[
 					index
 				]}) 14%, transparent), transparent 60%), var(--card)"
 			>
-				<span class="eyebrow">{fact.kicker}</span>
+				<span class="eyebrow">{text.kicker}</span>
 				<span class="flex flex-wrap items-baseline gap-x-2">
 					<span
 						class="text-3xl leading-none font-bold tracking-tight tabular-nums sm:text-4xl"
-						style="color: var({ACCENTS[index]})">{fact.value}</span
+						style="color: var({ACCENTS[index]})">{text.value}</span
 					>
-					{#if fact.unit}<span class="text-sm font-medium text-muted-foreground">{fact.unit}</span
+					{#if text.unit}<span class="text-sm font-medium text-muted-foreground">{text.unit}</span
 						>{/if}
 				</span>
-				<p class="text-sm leading-relaxed text-muted-foreground">{fact.detail}</p>
+				<p class="text-sm leading-relaxed text-muted-foreground">{text.detail}</p>
 			</div>
 		{/each}
 	</section>

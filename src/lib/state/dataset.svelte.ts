@@ -37,6 +37,8 @@ import { PyramidCache } from '../data/store/decimate';
 import { account } from './account.svelte';
 import { history } from './history.svelte';
 import { settings } from './settings.svelte';
+import { m } from '../i18n/index.svelte';
+import { rangeLabel } from '../i18n/dates';
 
 type Status = 'empty' | 'loading' | 'ready' | 'error';
 
@@ -221,8 +223,8 @@ class DatasetStore {
 			const slice = restrictDataset(full.dataset, edges.from, edges.to);
 			if (slice.time.length < 2) {
 				if (!quiet) {
-					toast('Nothing was recorded then', {
-						description: `${range.label} holds too little data to show on its own.`
+					toast(m.notices.nothingRecorded, {
+						description: m.notices.tooLittle(rangeLabel(range, settings.timeZone))
 					});
 				}
 				return;
@@ -234,7 +236,7 @@ class DatasetStore {
 			this.range = range;
 		} catch (error) {
 			if (ticket !== this.generation || quiet) return;
-			toast('That range could not be shown', {
+			toast(m.notices.rangeFailed, {
 				description: error instanceof Error ? error.message : undefined,
 				closeButton: true
 			});
@@ -270,7 +272,7 @@ class DatasetStore {
 
 	private fail(error: unknown) {
 		this.error = {
-			message: error instanceof Error ? error.message : 'Something went wrong.',
+			message: error instanceof Error ? error.message : m.notices.somethingWrong,
 			hint: error instanceof Error && 'hint' in error ? (error.hint as string) : undefined
 		};
 		this.status = 'error';
@@ -286,8 +288,8 @@ class DatasetStore {
 		if (!kept) return;
 
 		if (!kept.ok) {
-			toast('This export was not kept', {
-				description: `${kept.reason} You can still read it now, but it will be gone when the tab closes.`,
+			toast(m.notices.notKept, {
+				description: m.notices.notKeptDetail(kept.reason),
 				duration: 8000,
 				closeButton: true
 			});
@@ -301,9 +303,8 @@ class DatasetStore {
 		await history.refresh();
 
 		if (first) {
-			toast('Kept in this browser', {
-				description:
-					'This export is now stored on your device, so you can reopen it without dropping the files in again. Remove it whenever you like from the start page.',
+			toast(m.notices.kept, {
+				description: m.notices.keptDetail,
 				duration: 8000,
 				closeButton: true
 			});
@@ -329,7 +330,7 @@ class DatasetStore {
 		try {
 			const result = await history.sync([id]);
 			if (result.failed.length > 0) {
-				toast('This export was not copied to your account', {
+				toast(m.notices.notCopied, {
 					description: result.failed[0].reason,
 					closeButton: true
 				});
@@ -352,10 +353,10 @@ class DatasetStore {
 				this.progress = null;
 				await history.refresh();
 				const count = result.ids.length;
-				toast(count === 1 ? 'Restored one export' : `Restored ${count} exports`, {
+				toast(m.notices.restored(count), {
 					description: result.skipped.length
-						? `${result.skipped.length} could not be read by this version of the app.`
-						: 'They are listed below, ready to open.'
+						? m.notices.restoredSkipped(result.skipped.length)
+						: m.notices.restoredListed
 				});
 				return;
 			}
@@ -394,9 +395,7 @@ class DatasetStore {
 				this.status = 'empty';
 				this.progress = null;
 				await history.refresh();
-				toast(
-					result.ids.length === 1 ? 'Restored one export' : `Restored ${result.ids.length} exports`
-				);
+				toast(m.notices.restored(result.ids.length));
 				return;
 			}
 

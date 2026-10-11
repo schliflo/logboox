@@ -3,6 +3,7 @@
   a tab can be opened in a new window and the address always says where you are.
 -->
 <script lang="ts">
+	import { m } from '#lib/i18n/index.svelte.js';
 	import { page } from '$app/state';
 	import { areaFor } from '#lib/navigation.js';
 
@@ -11,7 +12,7 @@
 </script>
 
 {#if tabs.length}
-	<nav aria-label="{area?.label} sections" class="-mb-px flex gap-1 overflow-x-auto">
+	<nav aria-label={m.nav.areaSections(area?.label ?? '')} class="-mb-px flex gap-1 overflow-x-auto">
 		{#each tabs as tab (tab.href)}
 			<a
 				href={tab.href}

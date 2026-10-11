@@ -14,6 +14,7 @@
   that can fail, and it says so plainly when it does.
 -->
 <script lang="ts" generics="T">
+	import { m } from '#lib/i18n/index.svelte.js';
 	import { toast } from 'svelte-sonner';
 	import * as DropdownMenu from '#lib/components/ui/dropdown-menu/index.js';
 	import { buttonVariants } from '#lib/components/ui/button/index.js';
@@ -104,11 +105,9 @@
 		} catch (error) {
 			// Offline, this is where a PDF ends up: the chunk and the typeface are
 			// fetched on first use, and there is nothing to fall back to.
-			toast('That file could not be written', {
+			toast(m.exportMenu.failed, {
 				description:
-					error instanceof Error && navigator.onLine
-						? error.message
-						: 'A PDF needs a connection the first time. The CSV and the spreadsheet do not.',
+					error instanceof Error && navigator.onLine ? error.message : m.exportMenu.pdfOffline,
 				closeButton: true
 			});
 		} finally {
@@ -120,31 +119,30 @@
 <DropdownMenu.Root>
 	<DropdownMenu.Trigger class={buttonVariants({ variant, size })} disabled={rows.length === 0}>
 		<DownloadIcon class="size-4" />
-		Download
+		{m.exportMenu.download}
 	</DropdownMenu.Trigger>
 	<DropdownMenu.Content align="end" class="w-60">
 		<DropdownMenu.Label class="font-normal text-muted-foreground">
-			{rows.length}
-			{rows.length === 1 ? 'row' : 'rows'}, oldest first
+			{m.exportMenu.rows(rows.length)}
 		</DropdownMenu.Label>
 		<DropdownMenu.Separator />
 
 		<DropdownMenu.Item disabled={busy !== null} onSelect={() => run('csv', csv)}>
 			<TableIcon class="size-4" />
 			<span class="flex-1">CSV</span>
-			<span class="text-xs text-muted-foreground">for anything</span>
+			<span class="text-xs text-muted-foreground">{m.exportMenu.csvHint}</span>
 		</DropdownMenu.Item>
 
 		<DropdownMenu.Item disabled={busy !== null} onSelect={() => run('xlsx', xlsx)}>
 			<SheetIcon class="size-4" />
 			<span class="flex-1">Excel</span>
-			<span class="text-xs text-muted-foreground">real dates</span>
+			<span class="text-xs text-muted-foreground">{m.exportMenu.xlsxHint}</span>
 		</DropdownMenu.Item>
 
 		<DropdownMenu.Item disabled={busy !== null} onSelect={() => run('pdf', pdf)}>
 			<FileTextIcon class="size-4" />
 			<span class="flex-1">PDF</span>
-			<span class="text-xs text-muted-foreground">to hand over</span>
+			<span class="text-xs text-muted-foreground">{m.exportMenu.pdfHint}</span>
 		</DropdownMenu.Item>
 	</DropdownMenu.Content>
 </DropdownMenu.Root>

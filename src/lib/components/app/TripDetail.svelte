@@ -15,6 +15,7 @@
   own through a public link.
 -->
 <script lang="ts">
+	import { m } from '#lib/i18n/index.svelte.js';
 	import UPlotChart, { type ChartSeries } from '#lib/components/charts/UPlotChart.svelte';
 	import { decodeRange, type Column } from '#lib/data/store/columnar.js';
 	import { instantPowerKw } from '#lib/data/analytics/energy.js';
@@ -65,26 +66,30 @@
 		const speed = column('esp_vehspd');
 		if (speed) {
 			built.push({
-				title: 'Speed',
+				title: m.detail.speed,
 				height: 170,
-				series: [{ label: 'Speed', color: '--viz-speed', unit: 'km/h', fill: true, values: speed }]
+				series: [
+					{ label: m.detail.speed, color: '--viz-speed', unit: 'km/h', fill: true, values: speed }
+				]
 			});
 		}
 
 		if (powerSeries) {
 			built.push({
-				title: 'Power drawn from the battery, negative while recovering',
+				title: m.detail.powerTitle,
 				height: 150,
-				series: [{ label: 'Power', color: '--viz-2', unit: 'kW', fill: true, values: powerSeries }]
+				series: [
+					{ label: m.detail.power, color: '--viz-2', unit: 'kW', fill: true, values: powerSeries }
+				]
 			});
 		}
 
 		const soc = column('ldcu_bms_soc_disp');
 		if (soc) {
 			built.push({
-				title: 'State of charge',
+				title: m.detail.stateOfCharge,
 				height: 120,
-				series: [{ label: 'Charge', color: '--viz-soc', unit: '%', step: true, values: soc }]
+				series: [{ label: m.detail.charge, color: '--viz-soc', unit: '%', step: true, values: soc }]
 			});
 		}
 
@@ -93,24 +98,29 @@
 		if (pedal || brake) {
 			const series: ChartSeries[] = [];
 			if (pedal)
-				series.push({ label: 'Accelerator', color: '--viz-accel', unit: '%', values: pedal });
+				series.push({
+					label: m.detail.accelerator,
+					color: '--viz-accel',
+					unit: '%',
+					values: pedal
+				});
 			if (brake)
 				series.push({
-					label: 'Brake',
+					label: m.detail.brake,
 					color: '--viz-brake',
 					step: true,
 					values: brake.map((v) => (Number.isNaN(v) ? NaN : v * 100)) as unknown as Float64Array,
-					format: (value) => (value > 50 ? 'pressed' : 'released')
+					format: (value) => (value > 50 ? m.detail.pressed : m.detail.released)
 				});
-			built.push({ title: 'What the driver was doing', height: 130, series });
+			built.push({ title: m.detail.driverTitle, height: 130, series });
 		}
 
 		const steering = column('eps_steeringangle');
 		if (steering) {
 			built.push({
-				title: 'Steering angle',
+				title: m.detail.steeringAngle,
 				height: 120,
-				series: [{ label: 'Steering', color: '--viz-7', unit: '°', values: steering }]
+				series: [{ label: m.detail.steering, color: '--viz-7', unit: '°', values: steering }]
 			});
 		}
 

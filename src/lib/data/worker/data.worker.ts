@@ -17,7 +17,7 @@ import { combineStreams } from '../parse/align';
 import { mergeSources } from '../parse/merge';
 import { parseStream } from '../parse/ingest';
 import { expandDroppedFiles } from '../parse/zip';
-import { recognizeFiles, STREAM_LABELS, type StreamId } from '../schema/streams';
+import { recognizeFiles, type StreamId } from '../schema/streams';
 import { generateDemoDataset } from '../../demo/generator';
 import { backupFileName, readBackup, writeBackup, type BackupEntry } from '../../history/archive';
 import { decodeExport, encodeExport, sourceFromExport } from '../../history/codec';
@@ -110,8 +110,7 @@ async function handleParse(files: File[], timeZone: string) {
 					phase: 'parsing',
 					stream,
 					loaded: bytesRead,
-					total: totalBytes,
-					detail: STREAM_LABELS[stream]
+					total: totalBytes
 				});
 			})
 		);
@@ -234,7 +233,7 @@ async function handleTransfer(
 					phase,
 					loaded: i + (total > 0 ? loaded / total : 0),
 					total: ids.length,
-					detail: ids.length > 1 ? `Export ${i + 1} of ${ids.length}` : undefined
+					part: ids.length > 1 ? { index: i + 1, count: ids.length } : undefined
 				});
 			};
 			report(0, 1);

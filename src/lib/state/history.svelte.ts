@@ -28,6 +28,8 @@ import { estimateOpen, type ExportRecord } from '../history/codec';
 import { clearExports, deleteExports, listExports, storageAvailable } from '../history/db';
 import { downloadBlob } from '../utils/download';
 import { boardById } from '../leaderboard/boards';
+import { m } from '../i18n/index.svelte';
+import { boardText } from '../i18n/boards';
 import { account } from './account.svelte';
 import { settings } from './settings.svelte';
 
@@ -112,19 +114,16 @@ function announceCandidates(candidates: TransferResult['candidates']): void {
 
 	const first = candidates[0];
 	const board = boardById(first.board);
-	const ordinal = `#${first.rank}`;
-
 	const title =
 		candidates.length === 1
-			? `Your ${board ? board.label.toLowerCase() : 'trip'} would be ${ordinal} this month`
-			: `${candidates.length} of your trips would make this month\u2019s boards`;
+			? m.notices.candidateOne(board ? boardText(board.id).label : null, first.rank)
+			: m.notices.candidateMany(candidates.length);
 
 	toast(title, {
-		description:
-			'Nothing has been published. Have a look and decide whether to put your name to it.',
+		description: m.notices.candidateDetail,
 		duration: Number.POSITIVE_INFINITY,
 		closeButton: true,
-		action: { label: 'See', onClick: () => goto('/account#leaderboard') }
+		action: { label: m.notices.see, onClick: () => goto('/account#leaderboard') }
 	});
 }
 
@@ -208,7 +207,7 @@ class HistoryStore {
 			await this.measure();
 		} catch (error) {
 			this.status = 'unavailable';
-			this.error = error instanceof Error ? error.message : 'The local store could not be read.';
+			this.error = error instanceof Error ? error.message : m.errors.localStore;
 		}
 		await this.refreshRemote();
 	}

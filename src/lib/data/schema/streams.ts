@@ -10,12 +10,6 @@
 export const STREAM_IDS = ['status', 'operation', 'power'] as const;
 export type StreamId = (typeof STREAM_IDS)[number];
 
-export const STREAM_LABELS: Record<StreamId, string> = {
-	status: 'Doors & tyres',
-	operation: 'Driving',
-	power: 'Battery & power'
-};
-
 /** Maps the `veh_<name>_di` fragment of a filename onto our stream id. */
 const FILE_FRAGMENT_TO_STREAM: Record<string, StreamId> = {
 	driving_status: 'status',

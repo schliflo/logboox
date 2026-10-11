@@ -6,6 +6,7 @@
   answers, and the second one — no — is as easy as the first.
 -->
 <script lang="ts">
+	import { m } from '#lib/i18n/index.svelte.js';
 	import { onMount } from 'svelte';
 	import { toast } from 'svelte-sonner';
 	import * as Card from '#lib/components/ui/card/index.js';
@@ -16,9 +17,10 @@
 	import { Switch } from '#lib/components/ui/switch/index.js';
 	import { Separator } from '#lib/components/ui/separator/index.js';
 	import { account, type BoardCandidate, type BoardEntry } from '#lib/state/account.svelte.js';
-	import { boardById, formatValue } from '#lib/leaderboard/boards.js';
-	import { monthLabel } from '#lib/leaderboard/periods.js';
-	import { periodLabel, type Medal, type OwnBadge } from '#lib/leaderboard/medals.js';
+	import { boardById, type BoardId } from '#lib/leaderboard/boards.js';
+	import { monthLabel, periodLabel } from '#lib/i18n/dates.js';
+	import { boardText, boardValue, medalName } from '#lib/i18n/boards.js';
+	import type { Medal, OwnBadge } from '#lib/leaderboard/medals.js';
 	import BadgeDialog from '#lib/components/app/BadgeDialog.svelte';
 	import { dateOnly } from '#lib/utils/format.js';
 	import TrophyIcon from '@lucide/svelte/icons/trophy';
@@ -50,7 +52,7 @@
 
 	/** A year reads as such; a month by its name. */
 	function whenOf(period: string): string {
-		return /^\d{4}$/.test(period) ? `${period} · the year` : periodLabel(period);
+		return /^\d{4}$/.test(period) ? m.claims.yearSuffix(period) : periodLabel(period);
 	}
 
 	onMount(() => {
@@ -60,12 +62,12 @@
 	});
 
 	function label(id: string): string {
-		return boardById(id)?.label ?? id;
+		return boardById(id) ? boardText(id as BoardId).label : id;
 	}
 
 	function reading(id: string, value: number): string {
 		const board = boardById(id);
-		return board ? `${formatValue(board, value)} ${board.unit}` : String(value);
+		return board ? `${boardValue(board, value)} ${board.unit}` : String(value);
 	}
 
 	async function saveName() {
@@ -73,9 +75,9 @@
 		nameError = null;
 		try {
 			await account.setUsername(username);
-			toast('That is the name your places will show');
+			toast(m.claims.nameSaved);
 		} catch (error) {
-			nameError = error instanceof Error ? error.message : 'That name could not be saved.';
+			nameError = error instanceof Error ? error.message : m.claims.nameFailed;
 		} finally {
 			savingName = false;
 		}
@@ -85,11 +87,11 @@
 		working = candidate.id;
 		try {
 			const { rank } = await account.claim(candidate.id);
-			toast(`You are #${rank} for ${label(candidate.board)}`, {
-				description: `${monthLabel(candidate.month)}. You can take it down again whenever you like.`
+			toast(m.claims.youAre(rank, label(candidate.board)), {
+				description: m.claims.takeDownLaterMonth(monthLabel(candidate.month))
 			});
 		} catch (error) {
-			toast('That place could not be claimed', {
+			toast(m.claims.claimFailed, {
 				description: error instanceof Error ? error.message : undefined,
 				closeButton: true
 			});
@@ -111,8 +113,8 @@
 		working = entry.id;
 		try {
 			await account.removeEntry(entry.id);
-			toast('Taken down', {
-				description: 'It leaves the board for everyone within a few minutes.'
+			toast(m.claims.takenDown, {
+				description: m.claims.takenDownDetail
 			});
 		} finally {
 			working = null;
@@ -123,7 +125,7 @@
 		try {
 			await account.updateSettings({ boardNotify: value });
 		} catch {
-			toast('That could not be saved', { description: account.error ?? undefined });
+			toast(m.claims.saveFailed, { description: account.error ?? undefined });
 		}
 	}
 </script>
@@ -132,22 +134,21 @@
 	<Card.Header>
 		<Card.Title class="flex items-center gap-2">
 			<TrophyIcon class="size-5 text-primary" />
-			Leaderboard
+			{m.claims.title}
 		</Card.Title>
 		<Card.Description>
-			Nothing of yours appears on a board unless you put it there. When something of yours would
-			rank, it is listed here first.
+			{m.claims.description}
 		</Card.Description>
 	</Card.Header>
 
 	<Card.Content class="space-y-6">
 		<div class="space-y-2">
-			<Label for="username">The name your places appear under</Label>
+			<Label for="username">{m.claims.nameLabel}</Label>
 			<div class="flex flex-wrap gap-2">
 				<Input
 					id="username"
 					bind:value={username}
-					placeholder="Pick a name"
+					placeholder={m.claims.pickName}
 					maxlength={24}
 					class="max-w-56"
 					autocomplete="off"
@@ -157,15 +158,14 @@
 					disabled={savingName || username.trim() === (account.user?.username ?? '')}
 					onclick={saveName}
 				>
-					{account.user?.username ? 'Change' : 'Choose'}
+					{account.user?.username ? m.claims.change : m.claims.choose}
 				</Button>
 			</div>
 			{#if nameError}
 				<p class="text-xs text-destructive">{nameError}</p>
 			{:else}
 				<p class="text-xs text-muted-foreground">
-					Letters, digits, hyphens and underscores. A board shows this name, your car's model and
-					the figures, never your e-mail address. You can change it once a day.
+					{m.claims.nameRules}
 				</p>
 			{/if}
 		</div>
@@ -174,12 +174,9 @@
 
 		<div class="flex items-center justify-between gap-4">
 			<div class="space-y-1">
-				<Label for="board-notify" class="font-normal"
-					>Tell me when something of mine would rank</Label
-				>
+				<Label for="board-notify" class="font-normal">{m.claims.notify}</Label>
 				<p class="text-xs text-muted-foreground">
-					In the app, and by e-mail if you have not been back in a couple of days. Also covers the
-					summary of the year.
+					{m.claims.notifyHint}
 				</p>
 			</div>
 			<Switch
@@ -192,7 +189,7 @@
 		{#if pending.length > 0}
 			<Separator />
 			<div class="space-y-3">
-				<h3 class="text-sm font-medium">Waiting on you</h3>
+				<h3 class="text-sm font-medium">{m.claims.waiting}</h3>
 				<ul class="divide-y rounded-lg border">
 					{#each pending as candidate (candidate.id)}
 						<li class="flex flex-wrap items-center gap-3 p-3">
@@ -202,8 +199,8 @@
 									<span class="text-muted-foreground">— #{candidate.rank}</span>
 								</p>
 								<p class="text-xs text-muted-foreground">
-									{reading(candidate.board, candidate.value)} · {monthLabel(candidate.month)} · open until
-									{dateOnly(candidate.locksAt)}
+									{reading(candidate.board, candidate.value)} · {monthLabel(candidate.month)} ·
+									{m.claims.openUntil(dateOnly(candidate.locksAt))}
 								</p>
 							</div>
 							<div class="flex gap-2">
@@ -212,7 +209,7 @@
 									disabled={working === candidate.id}
 									onclick={() => take(candidate)}
 								>
-									Claim it
+									{m.claims.claim}
 								</Button>
 								<Button
 									size="sm"
@@ -220,7 +217,7 @@
 									disabled={working === candidate.id}
 									onclick={() => decline(candidate)}
 								>
-									No thanks
+									{m.claims.noThanks}
 								</Button>
 							</div>
 						</li>
@@ -232,7 +229,7 @@
 		{#if entries.length > 0}
 			<Separator />
 			<div class="space-y-3">
-				<h3 class="text-sm font-medium">On the boards</h3>
+				<h3 class="text-sm font-medium">{m.claims.onBoards}</h3>
 				<ul class="divide-y rounded-lg border">
 					{#each entries as entry (entry.id)}
 						<li class="flex flex-wrap items-center gap-3 p-3">
@@ -241,14 +238,14 @@
 								<p class="text-sm font-medium">{label(entry.board)}</p>
 								<p class="text-xs text-muted-foreground">
 									{reading(entry.board, entry.value)} · {monthLabel(entry.month)}
-									{#if entry.locked}· closed{/if}
+									{#if entry.locked}· {m.claims.closed}{/if}
 								</p>
 							</div>
 							<a
 								href="/leaderboard/{entry.month}"
 								class="text-xs text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
 							>
-								See the board
+								{m.claims.seeBoard}
 							</a>
 							<Button
 								size="sm"
@@ -256,7 +253,7 @@
 								disabled={working === entry.id}
 								onclick={() => withdraw(entry)}
 							>
-								Take down
+								{m.claims.takeDown}
 							</Button>
 						</li>
 					{/each}
@@ -267,14 +264,14 @@
 		{#if badges.length > 0}
 			<Separator />
 			<div class="space-y-3">
-				<h3 class="text-sm font-medium">Badges</h3>
+				<h3 class="text-sm font-medium">{m.claims.badges}</h3>
 				<ul class="divide-y rounded-lg border">
 					{#each badges as badge (`${badge.period}/${badge.board}`)}
 						<li class="flex flex-wrap items-center gap-3 p-3">
 							<MedalIcon
 								class="size-5 shrink-0"
 								style="color: {MEDAL_COLORS[badge.medal]}"
-								aria-label="{badge.medal} medal"
+								aria-label={m.claims.medal(medalName(badge.medal))}
 							/>
 							<div class="min-w-40 flex-1">
 								<p class="text-sm font-medium">{label(badge.board)}</p>
@@ -282,7 +279,8 @@
 									{reading(badge.board, badge.value)} · {whenOf(badge.period)}
 								</p>
 							</div>
-							<Button size="sm" variant="outline" onclick={() => showBadge(badge)}>Get badge</Button
+							<Button size="sm" variant="outline" onclick={() => showBadge(badge)}
+								>{m.claims.getBadge}</Button
 							>
 						</li>
 					{/each}
@@ -292,15 +290,14 @@
 
 		{#if pending.length === 0 && entries.length === 0}
 			<p class="text-sm text-muted-foreground">
-				Nothing yet. Keep an export in your account and anything of yours worth a place will turn up
-				here.
+				{m.claims.nothingYet}
 			</p>
 		{/if}
 	</Card.Content>
 
 	<Card.Footer>
 		<Button href="/leaderboard" variant="outline" size="sm">
-			See this month's boards
+			{m.claims.seeMonth}
 			<ExternalIcon class="size-4" />
 		</Button>
 	</Card.Footer>

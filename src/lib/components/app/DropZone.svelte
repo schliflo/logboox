@@ -6,6 +6,7 @@
   in this tab and read there.
 -->
 <script lang="ts">
+	import { m } from '#lib/i18n/index.svelte.js';
 	import { Button } from '#lib/components/ui/button/index.js';
 	import { data } from '#lib/state/dataset.svelte.js';
 	import { bytes } from '#lib/utils/format.js';
@@ -43,7 +44,7 @@
 	ondragleave={() => (dragging = false)}
 	ondrop={onDrop}
 	role="region"
-	aria-label="Drop your export files here"
+	aria-label={m.dropZone.aria}
 >
 	<input
 		bind:this={input}
@@ -63,13 +64,13 @@
 		</div>
 
 		<div class="space-y-2">
-			<p class="text-xl font-semibold tracking-tight">Drop the ZIP or the CSV files here</p>
+			<p class="text-xl font-semibold tracking-tight">{m.dropZone.title}</p>
 			<p class="text-sm text-muted-foreground">
-				All parts at once is fine. We sort and join them. Backups made here work too.
+				{m.dropZone.hint}
 			</p>
 		</div>
 
-		<Button onclick={() => input?.click()} size="lg" class="h-11 px-5">Choose files</Button>
+		<Button onclick={() => input?.click()} size="lg" class="h-11 px-5">{m.dropZone.choose}</Button>
 
 		{#if picked.length}
 			<ul class="mt-2 space-y-1 text-left text-xs text-muted-foreground">

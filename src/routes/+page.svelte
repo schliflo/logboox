@@ -1,10 +1,12 @@
 <script lang="ts">
+	import { m } from '#lib/i18n/index.svelte.js';
 	import DropZone from '#lib/components/app/DropZone.svelte';
 	import ExportLibrary from '#lib/components/app/ExportLibrary.svelte';
 	import ParseProgress from '#lib/components/app/ParseProgress.svelte';
 	import { Button, buttonVariants } from '#lib/components/ui/button/index.js';
 	import * as Card from '#lib/components/ui/card/index.js';
 	import MadeBy from '#lib/components/app/MadeBy.svelte';
+	import LocaleSwitch from '#lib/components/app/LocaleSwitch.svelte';
 	import MovedNotice from '#lib/components/app/MovedNotice.svelte';
 	import AccountMenu from '#lib/components/app/AccountMenu.svelte';
 	import Seo from '#lib/components/app/Seo.svelte';
@@ -51,28 +53,12 @@
 		};
 	});
 
-	const steps = [
-		'Download the ZIP when the e-mail arrives. It covers the last 30 days.',
-		'Drop it here. Ask again every month to build a longer record.'
-	];
+	const steps = $derived(m.landing.steps);
 
-	const highlights = [
-		{
-			icon: GaugeIcon,
-			title: 'Every trip, second by second',
-			body: 'Speed, pedal, steering and braking at one sample a second — enough to replay individual manoeuvres, not just journeys.'
-		},
-		{
-			icon: ZapIcon,
-			title: 'What charging really costs',
-			body: 'Sessions found automatically, energy integrated from pack voltage and current, and the range your car actually believes in.'
-		},
-		{
-			icon: DoorIcon,
-			title: 'The routine you never told anyone',
-			body: 'Door openings alone redraw your week: when you leave, when you return, and the days you never went out.'
-		}
-	];
+	const ICONS = [GaugeIcon, ZapIcon, DoorIcon];
+	const highlights = $derived(
+		m.landing.highlights.map((item, index) => ({ ...item, icon: ICONS[index] }))
+	);
 </script>
 
 <Seo />
@@ -94,10 +80,10 @@
 			href="#getting-your-export"
 			class="{buttonVariants({ variant: 'ghost' })} font-semibold max-md:!hidden"
 		>
-			How to get your data
+			{m.landing.howTo}
 		</a>
 		<a href="/leaderboard" class="{buttonVariants({ variant: 'ghost' })} font-semibold max-sm:px-2">
-			Leaderboard
+			{m.landing.leaderboard}
 		</a>
 		<AccountMenu />
 	</nav>
@@ -115,19 +101,18 @@
 					<header>
 						<p class="flex items-center gap-2 text-sm font-medium" style="color: var(--viz-3)">
 							<ShieldIcon class="size-4" />
-							Nothing leaves this browser unless you ask
+							{m.landing.promise}
 						</p>
 						<h1 class="mt-4 text-5xl leading-[0.95] font-extrabold tracking-[-0.045em] sm:text-7xl">
-							Your car has been keeping
+							{m.landing.headline}
 							<span
 								class="block bg-clip-text pb-2 text-transparent"
 								style="background-image: linear-gradient(100deg, var(--viz-1), var(--viz-3))"
-								>a very detailed diary.</span
+								>{m.landing.headlineAccent}</span
 							>
 						</h1>
 						<p class="mt-5 max-w-xl text-lg text-pretty text-muted-foreground">
-							Drop in the export XPeng sends under the EU Data Act. You get your trips, charging,
-							battery and a ready-to-file logbook.
+							{m.landing.lede}
 						</p>
 					</header>
 
@@ -158,9 +143,9 @@
 							onclick={() => data.loadDemoData()}
 						>
 							<PlayIcon class="size-4" />
-							Try it with a demo month
+							{m.landing.demo}
 						</Button>
-						<p class="text-sm text-muted-foreground">No export yet? Requests take about a week.</p>
+						<p class="text-sm text-muted-foreground">{m.landing.noExport}</p>
 					</div>
 				</div>
 
@@ -172,7 +157,7 @@
 							class="rounded-2xl border p-6 max-lg:order-first"
 							style="background: radial-gradient(120% 140% at 100% 0%, color-mix(in oklab, var(--viz-1) 18%, transparent), transparent 60%), var(--card)"
 						>
-							<h2 id="welcome" class="eyebrow">Welcome back</h2>
+							<h2 id="welcome" class="eyebrow">{m.landing.welcome}</h2>
 							<p class="mt-4 flex items-baseline gap-2">
 								<span
 									class="text-5xl leading-none font-bold tracking-tight tabular-nums"
@@ -180,12 +165,10 @@
 								>
 									{num(record.days)}
 								</span>
-								<span class="text-muted-foreground"
-									>{record.days === 1 ? 'day' : 'days'} recorded</span
-								>
+								<span class="text-muted-foreground">{m.landing.daysRecorded(record.days)}</span>
 							</p>
 							<p class="mt-2 text-sm text-muted-foreground">
-								{record.demo ? 'The demonstration car, ' : ''}{dateOnly(record.from)} – {dateOnly(
+								{record.demo ? m.landing.demoCar : ''}{dateOnly(record.from)} – {dateOnly(
 									record.to
 								)}
 							</p>
@@ -195,11 +178,11 @@
 								disabled={history.busy}
 								onclick={() => data.openRecord()}
 							>
-								Open my dashboard
+								{m.landing.open}
 								<ArrowRightIcon class="size-4" />
 							</Button>
 							<p class="mt-4 text-xs leading-relaxed text-muted-foreground">
-								Drop newer files in and they join on by themselves.
+								{m.landing.joinOn}
 							</p>
 						</section>
 					{/if}
@@ -209,7 +192,7 @@
 						aria-labelledby="steps"
 						class="scroll-mt-6 rounded-2xl border bg-card p-6"
 					>
-						<h2 id="steps" class="font-semibold">Getting your export</h2>
+						<h2 id="steps" class="font-semibold">{m.landing.gettingExport}</h2>
 						<ol class="mt-4 space-y-3.5 text-sm">
 							<li class="flex gap-3">
 								<span
@@ -217,7 +200,7 @@
 									>1</span
 								>
 								<span class="leading-relaxed">
-									Request it at
+									{m.landing.requestAt}
 									<a
 										href="https://www.xpeng.com/data-act"
 										target="_blank"
@@ -245,7 +228,7 @@
 								class="flex cursor-pointer list-none items-center gap-2 px-1 text-sm text-muted-foreground hover:text-foreground"
 							>
 								<ChevronRightIcon class="size-4 transition-transform group-open:rotate-90" />
-								Imported files ({history.count})
+								{m.landing.imported(history.count)}
 							</summary>
 							<ExportLibrary />
 						</details>
@@ -254,7 +237,7 @@
 			</div>
 
 			<section class="mt-24 grid gap-4 sm:grid-cols-3">
-				{#each highlights as item (item.title)}
+				{#each highlights as item, index (index)}
 					<Card.Root class="bg-card/50">
 						<Card.Header>
 							<item.icon class="mb-2 size-5 text-primary" />
@@ -271,20 +254,13 @@
 				<div class="space-y-3">
 					<h2 class="flex items-center gap-2 text-lg font-semibold">
 						<ShieldIcon class="size-5 text-primary" />
-						Nothing leaves this tab unless you ask
+						{m.landing.privacyTitle}
 					</h2>
 					<p class="text-sm leading-relaxed text-muted-foreground">
-						The files are read by a worker inside this page — no upload, no analytics, nothing that
-						travels. What the app keeps, it keeps here: a copy goes into this browser's own storage
-						so an export can be reopened without dropping the files in again, and one click removes
-						it. Your vehicle identification number appears on every row of the export; here it stays
-						masked unless you ask to see it.
+						{m.landing.privacyOne}
 					</p>
 					<p class="text-sm leading-relaxed text-muted-foreground">
-						Signing in is the one exception, and it is optional. An account can hold a copy of an
-						export so it outlives this browser, and can publish a single trip if you choose to share
-						one. Nothing is copied to it unless you ask for that, or switch automatic copying on.
-						Deleting the account takes every byte with it.
+						{m.landing.privacyTwo}
 					</p>
 				</div>
 			</section>
@@ -296,16 +272,23 @@
 	>
 		<MadeBy />
 		<p class="mr-auto">
-			Open source under the
+			{m.landing.openSource}
 			<a
 				href="https://github.com/schliflo/logboox/blob/main/LICENSE"
 				class="underline underline-offset-4 hover:text-foreground"
 				target="_blank"
-				rel="noreferrer noopener">MIT licence</a
-			>. Not affiliated with XPeng.
+				rel="noreferrer noopener">{m.landing.licence}</a
+			>{m.landing.notAffiliated}
 		</p>
-		<a href="/legal/imprint" class="underline underline-offset-4 hover:text-foreground">Imprint</a>
-		<a href="/legal/privacy" class="underline underline-offset-4 hover:text-foreground">Privacy</a>
-		<a href="/legal/terms" class="underline underline-offset-4 hover:text-foreground">Terms</a>
+		<a href="/legal/imprint" class="underline underline-offset-4 hover:text-foreground"
+			>{m.common.imprint}</a
+		>
+		<a href="/legal/privacy" class="underline underline-offset-4 hover:text-foreground"
+			>{m.common.privacy}</a
+		>
+		<a href="/legal/terms" class="underline underline-offset-4 hover:text-foreground"
+			>{m.common.terms}</a
+		>
+		<LocaleSwitch />
 	</footer>
 </main>

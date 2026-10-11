@@ -7,21 +7,18 @@
   Only the presets the record is long enough for are offered.
 -->
 <script lang="ts">
+	import { m } from '#lib/i18n/index.svelte.js';
 	import RangeFilter from '#lib/components/app/RangeFilter.svelte';
 	import { data } from '#lib/state/dataset.svelte.js';
 	import { settings } from '#lib/state/settings.svelte.js';
 	import { rangePresets, type TimeRange } from '#lib/data/range.js';
 	import LoaderIcon from '@lucide/svelte/icons/loader-circle';
 
-	const SHORT: Record<string, string> = {
-		'last-7': '7 days',
-		'last-30': '30 days',
-		'last-90': '90 days'
-	};
+	const SHORT = ['last-7', 'last-30', 'last-90'];
 
 	const loaded = $derived(data.full?.derived ?? null);
 	const quick = $derived(
-		loaded ? rangePresets(loaded, settings.timeZone).filter((p) => p.preset in SHORT) : []
+		loaded ? rangePresets(loaded, settings.timeZone).filter((p) => SHORT.includes(p.preset)) : []
 	);
 	const active = $derived(data.range?.preset ?? null);
 
@@ -34,7 +31,7 @@
 	<div
 		class="flex items-center gap-0.5 rounded-xl bg-muted p-[3px]"
 		role="group"
-		aria-label="Time range"
+		aria-label={m.range.timeRange}
 		aria-busy={data.refining}
 	>
 		{#each quick as preset (preset.preset)}
@@ -44,7 +41,7 @@
 				aria-pressed={active === preset.preset}
 				onclick={() => pick(preset)}
 			>
-				{SHORT[preset.preset]}
+				{m.range.short[preset.preset]}
 			</button>
 		{/each}
 		<button
@@ -53,11 +50,11 @@
 			aria-pressed={active === null}
 			onclick={() => pick(null)}
 		>
-			All
+			{m.range.all}
 		</button>
 	</div>
 	{#if data.refining}
-		<LoaderIcon class="size-4 animate-spin text-muted-foreground" aria-label="Updating" />
+		<LoaderIcon class="size-4 animate-spin text-muted-foreground" aria-label={m.range.updating} />
 	{/if}
 	<RangeFilter quick={quick.map((p) => p.preset)} />
 </div>

@@ -7,10 +7,12 @@
   no car open sees the community side and a way to open their own export.
 -->
 <script lang="ts">
+	import { m } from '#lib/i18n/index.svelte.js';
 	import type { Snippet } from 'svelte';
 	import { page } from '$app/state';
 	import * as Sidebar from '#lib/components/ui/sidebar/index.js';
 	import MadeBy from './MadeBy.svelte';
+	import LocaleSwitch from './LocaleSwitch.svelte';
 	import RecordBox from './RecordBox.svelte';
 	import LogoMark from './LogoMark.svelte';
 	import SectionTabs from './SectionTabs.svelte';
@@ -61,7 +63,7 @@
 		{#if count > 0}
 			<Sidebar.MenuBadge
 				class="rounded-full bg-[color-mix(in_oklab,var(--viz-2)_22%,transparent)] px-2 text-[var(--viz-2)]"
-				aria-label="{count} trips without a place"
+				aria-label={m.shell.tripsWithoutPlace(count)}
 			>
 				{count}
 			</Sidebar.MenuBadge>
@@ -75,7 +77,7 @@
 			<a
 				href="/"
 				class="flex items-center gap-2.5 rounded-lg px-1 text-[17px] font-semibold tracking-tight focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
-				aria-label="{SITE_NAME} — back to the start"
+				aria-label={m.shell.backToStart(SITE_NAME)}
 			>
 				<LogoMark size={30} />
 				<span class="group-data-[collapsible=icon]:hidden">{SITE_NAME}</span>
@@ -89,7 +91,7 @@
 
 		<Sidebar.Content class="px-1">
 			<Sidebar.Group>
-				<Sidebar.GroupLabel class="eyebrow">Your car</Sidebar.GroupLabel>
+				<Sidebar.GroupLabel class="eyebrow">{m.shell.yourCar}</Sidebar.GroupLabel>
 				<Sidebar.GroupContent>
 					<Sidebar.Menu class="gap-0.5">
 						{#if withCar}
@@ -103,14 +105,14 @@
 								)}
 							{/each}
 						{:else}
-							{@render navLink('/', 'Open your export', UploadIcon, false)}
+							{@render navLink('/', m.shell.openExport, UploadIcon, false)}
 						{/if}
 					</Sidebar.Menu>
 				</Sidebar.GroupContent>
 			</Sidebar.Group>
 
 			<Sidebar.Group>
-				<Sidebar.GroupLabel class="eyebrow">Community</Sidebar.GroupLabel>
+				<Sidebar.GroupLabel class="eyebrow">{m.shell.community}</Sidebar.GroupLabel>
 				<Sidebar.GroupContent>
 					<Sidebar.Menu>
 						{@render navLink(
@@ -128,16 +130,17 @@
 			{#if withCar}
 				<Sidebar.Menu class="gap-0.5 border-t border-sidebar-border pt-3">
 					{@render navLink(DATA.href, DATA.label, DATA.icon, active === DATA.id)}
-					{@render navLink('/wrapped', 'Replay the highlights', PlayIcon, false)}
+					{@render navLink('/wrapped', m.shell.replay, PlayIcon, false)}
 				</Sidebar.Menu>
 			{/if}
 			<div class="space-y-1 px-2 group-data-[collapsible=icon]:hidden">
 				<MadeBy />
 				<p class="text-xs text-muted-foreground">
-					<a href="/legal/imprint" class="hover:text-foreground">Imprint</a>
+					<a href="/legal/imprint" class="hover:text-foreground">{m.common.imprint}</a>
 					·
-					<a href="/legal/privacy" class="hover:text-foreground">Privacy</a>
+					<a href="/legal/privacy" class="hover:text-foreground">{m.common.privacy}</a>
 				</p>
+				<LocaleSwitch />
 			</div>
 		</Sidebar.Footer>
 		<Sidebar.Rail />

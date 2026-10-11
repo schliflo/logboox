@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { generateDemoDataset } from './generator';
 import { analyze } from '../data/analytics';
+import { factText } from '../i18n/facts';
 import { valueAt } from '../data/store/columnar';
 import { localParts } from '../data/analytics/daily';
 
@@ -139,8 +140,10 @@ describe('demo data through the analytics', () => {
 		expect(ids).toContain('distance');
 		expect(ids).toContain('top-speed');
 		for (const fact of derived.facts.headline) {
-			expect(fact.value).not.toBe('—');
-			expect(fact.detail.length).toBeGreaterThan(10);
+			for (const value of Object.values(fact.params)) expect(Number.isNaN(value)).toBe(false);
+			const text = factText(fact);
+			expect(text.value).not.toBe('—');
+			expect(text.detail.length).toBeGreaterThan(10);
 		}
 	});
 

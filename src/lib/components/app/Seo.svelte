@@ -23,6 +23,7 @@
 		SITE_NAME,
 		pageTitle
 	} from '#lib/seo.js';
+	import { i18n } from '#lib/i18n/index.svelte.js';
 
 	interface Props {
 		/** Page title without the site name; omit for the landing page. */
@@ -78,7 +79,7 @@
 	<meta property="og:site_name" content={SITE_NAME} />
 	<meta property="og:title" content={cardHeading} />
 	<meta property="og:description" content={cardBody} />
-	<meta property="og:locale" content="en_GB" />
+	<meta property="og:locale" content={i18n.locale === 'de' ? 'de_DE' : 'en_GB'} />
 	{#if canonical}
 		<meta property="og:url" content={canonical} />
 	{/if}

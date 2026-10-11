@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '#lib/i18n/index.svelte.js';
 	import PageFindings from '#lib/components/app/PageFindings.svelte';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
@@ -73,6 +74,7 @@
 			.join(' · ')
 	);
 
+	// Downloads stay in English: their columns are a stable format (see `export/columns`).
 	const exportTotals = $derived([
 		{ label: 'Sessions', value: `${num(charging.sessions.length)}` },
 		{ label: 'Energy delivered', value: measure(charging.totalKwh, 'kWh', 1) },
@@ -93,6 +95,37 @@
 		)
 	);
 
+	const glance = $derived([
+		{
+			kicker: m.charging.energyCharged,
+			value: num(charging.totalKwh),
+			unit: 'kWh',
+			accent: '--viz-4',
+			detail: m.charging.sessionsCount(num(charging.sessions.length))
+		},
+		{
+			kicker: m.charging.cost,
+			value: settings.formatCurrency(charging.totalKwh * settings.pricePerKwh),
+			unit: '',
+			accent: '--viz-5',
+			detail: m.charging.perKwh(settings.formatCurrency(settings.pricePerKwh))
+		},
+		{
+			kicker: m.charging.fast,
+			value: num(charging.dcSessions),
+			unit: m.charging.sessionUnit(charging.dcSessions),
+			accent: '--viz-3',
+			detail: m.charging.onAc(num(charging.acSessions))
+		},
+		{
+			kicker: m.charging.lowest,
+			value: lowest ? num(lowest.socStart) : '—',
+			unit: lowest ? '%' : '',
+			accent: '--viz-8',
+			detail: lowest ? m.charging.lowestBefore(dateTime(lowest.startTime)) : m.charging.noSessions
+		}
+	]);
+
 	/** When sessions start, in the viewer's own hours. */
 	const startHours = $derived.by(() => {
 		const counts = new Array(24).fill(0);
@@ -108,7 +141,7 @@
 		<div class="flex items-center gap-3">
 			<Button variant="ghost" size="sm" onclick={() => goto('/dash/charging')}>
 				<ArrowLeftIcon class="size-4" />
-				All sessions
+				{m.charging.allSessions}
 			</Button>
 			<span class="text-sm text-muted-foreground">{fullDateTime(selected.startTime)}</span>
 			<div class="ml-auto">
@@ -134,7 +167,7 @@
 			<Card.Root>
 				<Card.Content>
 					<BigStat
-						kicker="Energy delivered"
+						kicker={m.charging.energyDelivered}
 						value={num(selected.kwhDelivered, 1)}
 						unit="kWh"
 						size="sm"
@@ -145,7 +178,7 @@
 			<Card.Root>
 				<Card.Content>
 					<BigStat
-						kicker="Duration"
+						kicker={m.charging.duration}
 						value={duration(selected.duration, 'short')}
 						size="sm"
 						accent="--viz-1"
@@ -155,26 +188,26 @@
 			<Card.Root>
 				<Card.Content>
 					<BigStat
-						kicker="Peak power"
+						kicker={m.charging.peakPower}
 						value={num(selected.maxKw, 1)}
 						unit="kW"
 						size="sm"
 						accent="--viz-2"
-						detail={selected.isDc ? 'Rapid DC charging' : 'Through the onboard AC charger'}
+						detail={selected.isDc ? m.charging.rapidDc : m.charging.onboardAc}
 					/>
 				</Card.Content>
 			</Card.Root>
 			<Card.Root>
 				<Card.Content>
 					<BigStat
-						kicker="Charge added"
+						kicker={m.charging.chargeAdded}
 						value="{num(selected.socStart)} → {num(selected.socEnd)}"
 						unit="%"
 						size="sm"
 						accent="--viz-4"
-						detail="Estimated cost {settings.formatCurrency(
-							selected.kwhDelivered * settings.pricePerKwh
-						)}"
+						detail={m.charging.estimatedCostIs(
+							settings.formatCurrency(selected.kwhDelivered * settings.pricePerKwh)
+						)}
 					/>
 				</Card.Content>
 			</Card.Root>
@@ -182,9 +215,9 @@
 
 		<Card.Root>
 			<Card.Header>
-				<Card.Title>How the charge went</Card.Title>
+				<Card.Title>{m.charging.howItWent}</Card.Title>
 				<Card.Description>
-					Power tapers as the battery fills; the flat top is the charger's limit.
+					{m.charging.howItWentHint}
 				</Card.Description>
 			</Card.Header>
 			<Card.Content>
@@ -201,10 +234,10 @@
 	<div class="mx-auto max-w-6xl space-y-6">
 		<PageFindings />
 		<section
-			aria-label="At a glance"
+			aria-label={m.charging.atAGlance}
 			class="grid grid-cols-2 gap-px overflow-hidden rounded-2xl border bg-border lg:grid-cols-4"
 		>
-			{#each [{ kicker: 'Energy charged', value: num(charging.totalKwh), unit: 'kWh', accent: '--viz-4', detail: `${num(charging.sessions.length)} sessions` }, { kicker: 'Cost', value: settings.formatCurrency(charging.totalKwh * settings.pricePerKwh), unit: '', accent: '--viz-5', detail: `At ${settings.formatCurrency(settings.pricePerKwh)} per kWh` }, { kicker: 'Fast charging', value: num(charging.dcSessions), unit: charging.dcSessions === 1 ? 'session' : 'sessions', accent: '--viz-3', detail: `${num(charging.acSessions)} on AC` }, { kicker: 'Lowest charge', value: lowest ? num(lowest.socStart) : '—', unit: lowest ? '%' : '', accent: '--viz-8', detail: lowest ? `Before the session on ${dateTime(lowest.startTime)}` : 'No sessions in this range' }] as stat (stat.kicker)}
+			{#each glance as stat (stat.accent)}
 				<div class="bg-card p-5 sm:p-6">
 					<BigStat
 						kicker={stat.kicker}
@@ -221,10 +254,8 @@
 		<div class="grid gap-6 lg:grid-cols-[3fr_2fr] lg:items-start">
 			<Card.Root class="lg:order-2">
 				<Card.Header>
-					<Card.Title>When you plug in</Card.Title>
-					<Card.Description
-						>Sessions by the hour they began, in your own time zone.</Card.Description
-					>
+					<Card.Title>{m.charging.whenPlugIn}</Card.Title>
+					<Card.Description>{m.charging.whenPlugInHint}</Card.Description>
 				</Card.Header>
 				<Card.Content>
 					<Histogram
@@ -234,7 +265,7 @@
 						height={140}
 						unit=""
 						formatBin={(from) => `${hourLabel(from)}–${hourLabel((from + 1) % 24)}`}
-						label="Hour of day"
+						label={m.charging.hourOfDay}
 					/>
 				</Card.Content>
 			</Card.Root>
@@ -243,10 +274,9 @@
 				<Card.Header>
 					<div class="flex flex-wrap items-start justify-between gap-3">
 						<div>
-							<Card.Title>Every session</Card.Title>
+							<Card.Title>{m.charging.every}</Card.Title>
 							<Card.Description>
-								Found from the charging-power signal, joined across the naps the car takes
-								mid-charge.
+								{m.charging.everyHint}
 							</Card.Description>
 						</div>
 						<ExportMenu
@@ -268,11 +298,11 @@
 						<Table.Root>
 							<Table.Header>
 								<Table.Row>
-									<Table.Head>Started</Table.Head>
-									<Table.Head class="text-right">Duration</Table.Head>
-									<Table.Head class="text-right">Energy</Table.Head>
-									<Table.Head class="text-right">Peak</Table.Head>
-									<Table.Head class="text-right">Charge</Table.Head>
+									<Table.Head>{m.charging.started}</Table.Head>
+									<Table.Head class="text-right">{m.charging.duration}</Table.Head>
+									<Table.Head class="text-right">{m.charging.energy}</Table.Head>
+									<Table.Head class="text-right">{m.charging.peak}</Table.Head>
+									<Table.Head class="text-right">{m.charging.charge}</Table.Head>
 									<Table.Head></Table.Head>
 								</Table.Row>
 							</Table.Header>
@@ -297,7 +327,7 @@
 										</Table.Cell>
 										<Table.Cell class="text-right">
 											<Badge variant={session.isDc ? 'default' : 'secondary'}>
-												{session.isDc ? 'Rapid' : 'AC'}
+												{session.isDc ? m.charging.rapid : m.charging.ac}
 											</Badge>
 										</Table.Cell>
 									</Table.Row>

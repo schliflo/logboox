@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '#lib/i18n/index.svelte.js';
 	import { onMount, untrack } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
@@ -52,19 +53,19 @@
 <Seo
 	title={tab && area && area.tabs.length > 1
 		? `${tab.label} · ${area.label}`
-		: (area?.label ?? 'Dashboard')}
+		: (area?.label ?? m.common.dashboard)}
 	path={page.url.pathname}
-	description="Trips, charging, battery and driving style, read out of your own XPeng export."
+	description={m.shell.dashDescription}
 	noindex
 />
 
 {#if data.isReady && stats && loaded}
-	<AppShell title={area?.label ?? 'Dashboard'}>
+	<AppShell title={area?.label ?? m.common.dashboard}>
 		{#snippet badge()}
 			{#if data.isDemo}
-				<Badge variant="secondary" class="hidden lg:inline-flex">Demo data</Badge>
+				<Badge variant="secondary" class="hidden lg:inline-flex">{m.common.demoData}</Badge>
 			{:else if shared}
-				<Badge variant="secondary" class="hidden lg:inline-flex">Shared with you</Badge>
+				<Badge variant="secondary" class="hidden lg:inline-flex">{m.common.sharedWithYou}</Badge>
 			{/if}
 		{/snippet}
 		{#snippet actions()}

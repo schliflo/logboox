@@ -19,6 +19,7 @@
   export has: those notes would belong to whoever owns the car.
 -->
 <script lang="ts">
+	import { m } from '#lib/i18n/index.svelte.js';
 	import * as Card from '#lib/components/ui/card/index.js';
 	import { Badge } from '#lib/components/ui/badge/index.js';
 	import { Button } from '#lib/components/ui/button/index.js';
@@ -60,11 +61,13 @@
 		try {
 			await logbook.save(entry);
 		} catch {
-			toast.error('That note could not be saved in this browser.', {
-				description: 'It is still here, but will be gone when you leave the page.'
+			toast.error(m.notes.saveFailed, {
+				description: m.notes.saveFailedDetail
 			});
 		}
 	}
+
+	const reason = (text: string) => m.notes.reasons[text] ?? text;
 
 	function set(field: 'origin' | 'destination' | 'comment', value: string) {
 		return save({ ...logbook.for(trip), [field]: value });
@@ -83,16 +86,16 @@
 				<div>
 					<Card.Title class="flex items-center gap-2">
 						<MapPinIcon class="size-4 text-primary" />
-						Where did this one go?
+						{m.notes.title}
 					</Card.Title>
 					<Card.Description>
-						The export has no location data at all. Fill this in and it becomes a logbook.
+						{m.notes.description}
 					</Card.Description>
 				</div>
 				{#if logbook.syncing}
 					<Badge variant="secondary" class="gap-1">
 						<CloudIcon class="size-3" />
-						Saving
+						{m.notes.saving}
 					</Badge>
 				{/if}
 			</div>
@@ -107,11 +110,11 @@
 
 			<div class="grid gap-4 sm:grid-cols-2">
 				<div class="space-y-2">
-					<Label for="trip-origin">From</Label>
+					<Label for="trip-origin">{m.notes.from}</Label>
 					<Input
 						id="trip-origin"
 						list="known-places"
-						placeholder="Where it started"
+						placeholder={m.notes.fromPlaceholder}
 						value={note.origin}
 						onchange={(event) => set('origin', event.currentTarget.value)}
 					/>
@@ -121,7 +124,7 @@
 								<button
 									type="button"
 									class="inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs transition-colors hover:bg-muted"
-									title={suggestion.reason}
+									title={reason(suggestion.reason)}
 									onclick={() => set('origin', suggestion.value)}
 								>
 									<WandIcon class="size-3 text-primary" />
@@ -129,16 +132,16 @@
 								</button>
 							{/each}
 						</div>
-						<p class="text-xs text-muted-foreground">{origins[0].reason}</p>
+						<p class="text-xs text-muted-foreground">{reason(origins[0].reason)}</p>
 					{/if}
 				</div>
 
 				<div class="space-y-2">
-					<Label for="trip-destination">To</Label>
+					<Label for="trip-destination">{m.notes.to}</Label>
 					<Input
 						id="trip-destination"
 						list="known-places"
-						placeholder="Where it ended"
+						placeholder={m.notes.toPlaceholder}
 						value={note.destination}
 						onchange={(event) => set('destination', event.currentTarget.value)}
 					/>
@@ -148,7 +151,7 @@
 								<button
 									type="button"
 									class="inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs transition-colors hover:bg-muted"
-									title={suggestion.reason}
+									title={reason(suggestion.reason)}
 									onclick={() => set('destination', suggestion.value)}
 								>
 									<WandIcon class="size-3 text-primary" />
@@ -156,13 +159,13 @@
 								</button>
 							{/each}
 						</div>
-						<p class="text-xs text-muted-foreground">{destinations[0].reason}</p>
+						<p class="text-xs text-muted-foreground">{reason(destinations[0].reason)}</p>
 					{/if}
 				</div>
 			</div>
 
 			<div class="space-y-2">
-				<Label>Purpose</Label>
+				<Label>{m.notes.purpose}</Label>
 				<div class="grid grid-cols-3 gap-2">
 					{#each PURPOSES as option (option.value)}
 						{@const color = PURPOSE_COLOR[option.value]}
@@ -181,17 +184,17 @@
 					{/each}
 				</div>
 				{#if !note.purpose && purpose}
-					<p class="text-xs text-muted-foreground">Trips like this one are usually {purpose}.</p>
+					<p class="text-xs text-muted-foreground">{m.notes.usually(m.purpose[purpose])}</p>
 				{/if}
 			</div>
 
 			<div class="space-y-2">
-				<Label for="trip-comment">Notes</Label>
+				<Label for="trip-comment">{m.notes.notes}</Label>
 				<textarea
 					id="trip-comment"
 					rows="2"
 					class="flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs transition-[color,box-shadow] outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
-					placeholder="Anything worth remembering about this drive"
+					placeholder={m.notes.notesPlaceholder}
 					value={note.comment}
 					onchange={(event) => set('comment', event.currentTarget.value)}></textarea>
 			</div>

@@ -3,9 +3,11 @@
   struck into it in a shade dark enough to read on that metal.
 -->
 <script lang="ts">
+	import { m } from '#lib/i18n/index.svelte.js';
 	import BoardIcon from './BoardIcon.svelte';
 	import { METALS, type Medal } from '#lib/leaderboard/medals.js';
 	import type { BoardId } from '#lib/leaderboard/boards.js';
+	import { medalName } from '#lib/i18n/boards.js';
 
 	interface Props {
 		medal: Medal;
@@ -25,7 +27,7 @@
 		? `box-shadow: 0 8px 32px color-mix(in oklab, ${metal.light} 30%, transparent)`
 		: ''}"
 	role="img"
-	aria-label="{metal.name} medal"
+	aria-label={m.claims.medal(medalName(medal))}
 >
 	<span
 		class="grid place-items-center rounded-full"

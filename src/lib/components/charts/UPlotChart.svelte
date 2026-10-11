@@ -12,6 +12,8 @@
   moment can be read across speed, power and charge at once.
 -->
 <script lang="ts">
+	import { i18n, intlLocale, m } from '#lib/i18n/index.svelte.js';
+	import { num } from '#lib/utils/format.js';
 	import { onMount, untrack } from 'svelte';
 	import type uPlot from 'uplot';
 	import { settings } from '#lib/state/settings.svelte.js';
@@ -77,7 +79,7 @@
 	}
 
 	const instantFormat = $derived(
-		new Intl.DateTimeFormat('en-GB', {
+		new Intl.DateTimeFormat(intlLocale(), {
 			day: 'numeric',
 			month: 'short',
 			hour: '2-digit',
@@ -89,7 +91,7 @@
 	);
 
 	const dayFormat = $derived(
-		new Intl.DateTimeFormat('en-GB', {
+		new Intl.DateTimeFormat(intlLocale(), {
 			weekday: 'short',
 			day: 'numeric',
 			month: 'short',
@@ -104,9 +106,9 @@
 
 	/** One series value as text, honouring an enum mapping or its unit. */
 	function formatValue(item: ChartSeries, raw: number | null | undefined): string {
-		if (raw == null || Number.isNaN(raw)) return 'no reading';
+		if (raw == null || Number.isNaN(raw)) return m.common.noReading;
 		if (item.format) return item.format(raw);
-		return `${raw.toFixed(Math.abs(raw) < 10 ? 2 : 0)}${item.unit ? ` ${item.unit}` : ''}`;
+		return `${num(raw, Math.abs(raw) < 10 ? 2 : 0)}${item.unit ? ` ${item.unit}` : ''}`;
 	}
 
 	/** The values under the cursor, in the order the series were given. */
@@ -132,10 +134,30 @@
 		plotTop = over.top - outer.top;
 	}
 
+	/** Month and weekday names for uPlot's axis labels, in the chosen language. */
+	function dateNames(): uPlot.DateNames {
+		const locale = intlLocale();
+		const months = (month: 'long' | 'short') =>
+			Array.from({ length: 12 }, (_, i) =>
+				new Intl.DateTimeFormat(locale, { month, timeZone: 'UTC' }).format(
+					new Date(Date.UTC(2024, i, 1))
+				)
+			);
+		// 7 January 2024 was a Sunday, which is where uPlot starts the week.
+		const days = (weekday: 'long' | 'short') =>
+			Array.from({ length: 7 }, (_, i) =>
+				new Intl.DateTimeFormat(locale, { weekday, timeZone: 'UTC' }).format(
+					new Date(Date.UTC(2024, 0, 7 + i))
+				)
+			);
+		return { MMMM: months('long'), MMM: months('short'), WWWW: days('long'), WWW: days('short') };
+	}
+
 	function buildOptions(): uPlot.Options {
 		const axisColor = cssColor('--viz-axis', '#383835');
 		const gridColor = cssColor('--viz-grid', '#2c2c2a');
 		const labelColor = cssColor('--viz-muted', '#898781');
+		const names = dateNames();
 
 		return {
 			width,
@@ -148,6 +170,7 @@
 				points: { size: 7 }
 			},
 			legend: { show: false },
+			fmtDate: (template: string) => uPlotLib!.fmtDate(template, names),
 			scales: {
 				x: { time: true },
 				y: yRange ? { range: () => yRange } : {}
@@ -247,6 +270,18 @@
 		};
 	});
 
+	// Axis labels are drawn by uPlot, so a new language means a new chart.
+	let builtFor = i18n.locale;
+	$effect(() => {
+		const locale = i18n.locale;
+		untrack(() => {
+			if (locale === builtFor || !chart || !uPlotLib || !host) return;
+			builtFor = locale;
+			chart.destroy();
+			chart = new uPlotLib(buildOptions(), chartData(), host);
+		});
+	});
+
 	// Redraw whenever the data changes; the chart itself is only built once.
 	$effect(() => {
 		const data = chartData();
@@ -259,7 +294,7 @@
 	class="relative w-full {className}"
 	style="height: {height}px"
 	role="img"
-	aria-label="{series.map((s) => s.label).join(', ')} over time"
+	aria-label={m.charts.uplot.overTime(series.map((s) => s.label).join(', '))}
 	onpointerenter={() => (pointerInside = true)}
 	onpointerleave={() => {
 		pointerInside = false;

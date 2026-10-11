@@ -22,6 +22,7 @@ import { emptyAnnotation, isBlank, type Annotation } from '../logbook/types';
 import type { Trip } from '../data/analytics/trips';
 import { account } from './account.svelte';
 import { data } from './dataset.svelte';
+import { m } from '../i18n/index.svelte';
 
 /** Typing should not produce a write per keystroke, nor wait for a pause to end. */
 const SAVE_DELAY_MS = 600;
@@ -137,7 +138,7 @@ class LogbookStore {
 			// not be read is worse than offering no place to write. The VIN
 			// stays, since whoever called this may be reacting to it, and
 			// changing it would call again.
-			toast.error('The logbook could not be read from this browser.');
+			toast.error(m.notices.logbookUnreadable);
 			return;
 		}
 		this.loaded = true;
@@ -191,7 +192,7 @@ class LogbookStore {
 		const vin = this.vin;
 		// A note with no car to belong to would be sent to whichever car is
 		// opened next.
-		if (!vin || !this.loaded) throw new Error('There is no logbook open to keep this note in.');
+		if (!vin || !this.loaded) throw new Error(m.errors.noLogbookNote);
 
 		const next: Annotation = { ...entry, vin, updatedAt: Date.now() };
 		// A note emptied of everything is a deletion, not a blank note: that is
@@ -210,7 +211,7 @@ class LogbookStore {
 	/** Several notes in one write, for filling in or undoing many trips at once. */
 	async saveMany(entries: Annotation[]): Promise<void> {
 		const vin = this.vin;
-		if (!vin || !this.loaded) throw new Error('There is no logbook open to keep these notes in.');
+		if (!vin || !this.loaded) throw new Error(m.errors.noLogbookNotes);
 		if (entries.length === 0) return;
 
 		const now = Date.now();

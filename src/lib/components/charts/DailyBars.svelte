@@ -4,6 +4,7 @@
   record does not read as a day parked. Selecting a bar hands its date back.
 -->
 <script lang="ts">
+	import { m } from '#lib/i18n/index.svelte.js';
 	import { num, prettyDay } from '#lib/utils/format.js';
 	import ChartTooltip from './ChartTooltip.svelte';
 
@@ -71,7 +72,7 @@
 		class="relative flex items-end gap-[3px]"
 		style="height: {height}px"
 		role="group"
-		aria-label="Distance per day"
+		aria-label={m.charts.daily.aria}
 		onpointermove={track}
 		onpointerleave={() => (hovered = null)}
 	>
@@ -94,7 +95,7 @@
 				data-day={i}
 				aria-label="{prettyDay(day.date)}: {day.covered
 					? `${num(day.value, 1)} ${unit}`
-					: 'not recorded'}"
+					: m.charts.daily.notRecorded}"
 				aria-pressed={selected === day.date}
 				disabled={!day.covered || !onSelect}
 				onclick={() => onSelect?.(day.date)}
@@ -121,7 +122,9 @@
 			<ChartTooltip x={anchor.x} y={anchor.y} bounds={plotWidth}>
 				<p class="font-medium">{prettyDay(days[hovered].date)}</p>
 				<p class="mt-0.5 text-muted-foreground tabular-nums">
-					{days[hovered].covered ? `${num(days[hovered].value, 1)} ${unit}` : 'Not recorded'}
+					{days[hovered].covered
+						? `${num(days[hovered].value, 1)} ${unit}`
+						: m.charts.daily.notRecordedTitle}
 				</p>
 			</ChartTooltip>
 		{/if}

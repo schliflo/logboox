@@ -7,6 +7,8 @@
  * export was cut on.
  */
 
+import { intlLocale } from '../i18n/index.svelte';
+
 class Settings {
 	/** Timezone used for every date, hour and day boundary in the app. */
 	timeZone = $state(
@@ -25,7 +27,7 @@ class Settings {
 
 	formatCurrency(amount: number): string {
 		if (!Number.isFinite(amount)) return '—';
-		return amount.toLocaleString('en-GB', {
+		return amount.toLocaleString(intlLocale(), {
 			style: 'currency',
 			currency: this.currency,
 			maximumFractionDigits: amount >= 100 ? 0 : 2

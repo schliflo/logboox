@@ -7,13 +7,15 @@
   exactly the question of where its numbers came from.
 -->
 <script lang="ts">
+	import { m } from '#lib/i18n/index.svelte.js';
 	import * as Card from '#lib/components/ui/card/index.js';
 	import { Badge } from '#lib/components/ui/badge/index.js';
 	import { Button } from '#lib/components/ui/button/index.js';
 	import Seo from '#lib/components/app/Seo.svelte';
 	import AccountMenu from '#lib/components/app/AccountMenu.svelte';
-	import { boardById, formatValue } from '#lib/leaderboard/boards.js';
-	import { monthLabel } from '#lib/leaderboard/periods.js';
+	import { boardById } from '#lib/leaderboard/boards.js';
+	import { monthLabel } from '#lib/i18n/dates.js';
+	import { boardText, boardValue, groupLabel, medalName } from '#lib/i18n/boards.js';
 	import { dateOnly, duration, num } from '#lib/utils/format.js';
 	import { account } from '#lib/state/account.svelte.js';
 	import { absolute } from '#lib/seo.js';
@@ -42,7 +44,7 @@
 	let { data }: { data: PageData } = $props();
 
 	const heading = $derived(
-		data.kind === 'month' ? monthLabel(data.period) : `The year ${data.period}`
+		data.kind === 'month' ? monthLabel(data.period) : m.leaderboard.year(data.period)
 	);
 
 	/** This month, `YYYY-MM`: there is nothing to step forward to past it. */
@@ -131,7 +133,10 @@
 	const behind = $derived.by(() => {
 		const board = boardById(focus);
 		if (!unlisted || !ahead || !board) return '';
-		return `${formatValue(board, Math.abs(ahead.value - unlisted.value))} ${board.unit} behind #${ahead.rank}`;
+		return m.leaderboard.behind(
+			`${boardValue(board, Math.abs(ahead.value - unlisted.value))} ${board.unit}`,
+			ahead.rank
+		);
 	});
 	let claiming = $state(false);
 
@@ -140,9 +145,9 @@
 		claiming = true;
 		try {
 			const { rank } = await account.claim(unlisted.id);
-			toast(`Listed at #${rank}`);
+			toast(m.leaderboard.listedAt(rank));
 		} catch (error) {
-			toast('Could not list it', { description: (error as Error).message });
+			toast(m.leaderboard.listFailed, { description: (error as Error).message });
 		} finally {
 			claiming = false;
 		}
@@ -156,7 +161,7 @@
 
 	function reading(boardId: string, value: number): string {
 		const board = boardById(boardId);
-		return board ? `${formatValue(board, value)}` : String(value);
+		return board ? boardValue(board, value) : String(value);
 	}
 
 	function unitOf(boardId: string): string {
@@ -164,11 +169,11 @@
 	}
 
 	function describe(boardId: string): string {
-		return boardById(boardId)?.blurb ?? '';
+		return boardById(boardId) ? boardText(boardId as BoardId).blurb : '';
 	}
 
 	function labelOf(boardId: string): string {
-		return boardById(boardId)?.label ?? boardId;
+		return boardById(boardId) ? boardText(boardId as BoardId).label : boardId;
 	}
 
 	/**
@@ -184,10 +189,10 @@
 		}
 		// A month says how it was made up, which a single trip has no need to.
 		if (typeof detail.trips === 'number') {
-			parts.push(`${num(detail.trips, 0)} ${detail.trips === 1 ? 'trip' : 'trips'}`);
+			parts.push(m.leaderboard.trips(num(detail.trips, 0), detail.trips));
 		}
 		if (typeof detail.longestKm === 'number' && detail.longestKm > 0) {
-			parts.push(`longest ${num(detail.longestKm, 0)} km`);
+			parts.push(m.leaderboard.longest(num(detail.longestKm, 0)));
 		}
 		if (boardId !== 'longest-drive' && typeof detail.distanceKm === 'number') {
 			parts.push(`${num(detail.distanceKm, 0)} km`);
@@ -209,11 +214,11 @@
 </script>
 
 <Seo
-	title="Leaderboard · {heading}"
-	description="What XPeng drivers have put their name to in {when}: the fastest charge, the longest drive, the most efficient run."
+	title={m.leaderboard.seoTitle(heading)}
+	description={m.leaderboard.seoDescription(when)}
 	path="/leaderboard/{data.period}"
 	image={absolute(`/leaderboard/${data.period}/og.png`) ?? undefined}
-	imageAlt="The names and figures leading the LogbooX boards for {heading}."
+	imageAlt={m.leaderboard.seoImageAlt(heading)}
 />
 
 <svelte:window bind:innerWidth={width} />
@@ -224,7 +229,7 @@
 	>
 		<span class="w-7 font-bold text-muted-foreground tabular-nums">{offer.rank}</span>
 		<span class="flex min-w-0 flex-1 basis-40 flex-col gap-0.5">
-			<span class="text-[15px] font-semibold">You · not listed yet</span>
+			<span class="text-[15px] font-semibold">{m.leaderboard.youUnlisted}</span>
 			<span class="truncate text-xs text-muted-foreground">{extras(focus, offer.detail)}</span>
 		</span>
 		{#if behind}
@@ -237,28 +242,32 @@
 			<span class="text-[13px] font-medium text-muted-foreground">{unitOf(focus)}</span>
 		</span>
 		{#if account.user?.username}
-			<Button onclick={claim} disabled={claiming} class="max-sm:w-full">Put my name on it</Button>
+			<Button onclick={claim} disabled={claiming} class="max-sm:w-full"
+				>{m.leaderboard.putName}</Button
+			>
 		{:else}
-			<Button href="/account#leaderboard" class="max-sm:w-full">Pick a name first</Button>
+			<Button href="/account#leaderboard" class="max-sm:w-full">{m.leaderboard.pickName}</Button>
 		{/if}
 	</li>
 {/snippet}
 
-<AppShell title="Leaderboard">
+<AppShell title={m.leaderboard.title}>
 	{#snippet badge()}
 		{#if data.open}
 			<span class="chip self-center" style="--chip: var(--viz-4)"
-				><span class="max-sm:hidden">Open until {dateOnly(data.locksAt)}</span><span
-					class="sm:hidden">Open</span
+				><span class="max-sm:hidden">{m.leaderboard.openUntil(dateOnly(data.locksAt))}</span><span
+					class="sm:hidden">{m.leaderboard.open}</span
 				></span
 			>
 		{:else}
-			<span class="chip self-center" style="--chip: var(--muted-foreground)">Final</span>
+			<span class="chip self-center" style="--chip: var(--muted-foreground)"
+				>{m.leaderboard.final}</span
+			>
 		{/if}
 	{/snippet}
 	{#snippet actions()}
 		<nav
-			aria-label="Period"
+			aria-label={m.leaderboard.period}
 			class="order-last flex w-full items-center justify-between gap-3 sm:order-none sm:w-auto"
 		>
 			<span class="flex items-center gap-1">
@@ -272,7 +281,7 @@
 				</Button>
 				<span class="min-w-28 text-center text-[15px] font-semibold tabular-nums">{when}</span>
 				{#if data.next > (data.kind === 'month' ? thisMonth : thisMonth.slice(0, 4))}
-					<Button variant="ghost" size="icon" disabled aria-label="Nothing later yet">
+					<Button variant="ghost" size="icon" disabled aria-label={m.leaderboard.nothingLater}>
 						<ChevronRightIcon class="size-4" />
 					</Button>
 				{:else}
@@ -293,13 +302,13 @@
 						: [`${data.period}-12`, thisMonth].sort()[0]}"
 					aria-current={data.kind === 'month' ? 'page' : undefined}
 					class="flex h-8 items-center rounded-lg px-3 text-sm font-medium whitespace-nowrap text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none aria-[current=page]:bg-primary aria-[current=page]:text-primary-foreground"
-					>Month</a
+					>{m.leaderboard.month}</a
 				>
 				<a
 					href="/leaderboard/{data.kind === 'month' ? data.year : data.period}"
 					aria-current={data.kind === 'year' ? 'page' : undefined}
 					class="flex h-8 items-center rounded-lg px-3 text-sm font-medium whitespace-nowrap text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none aria-[current=page]:bg-primary aria-[current=page]:text-primary-foreground"
-					>Year</a
+					>{m.leaderboard.yearTab}</a
 				>
 			</span>
 		</nav>
@@ -310,24 +319,23 @@
 		{#if empty}
 			<Card.Root>
 				<Card.Header>
-					<Card.Title>Nothing here yet</Card.Title>
+					<Card.Title>{m.leaderboard.emptyTitle}</Card.Title>
 					<Card.Description>
-						No one has put a place up for {when}. If you have an export of your own, yours may well
-						be the first.
+						{m.leaderboard.emptyDetail(when)}
 					</Card.Description>
 				</Card.Header>
 				<Card.Content>
-					<Button href="/">Read your own export</Button>
+					<Button href="/">{m.leaderboard.readOwn}</Button>
 				</Card.Content>
 			</Card.Root>
 		{:else}
 			<nav
-				aria-label="Boards"
+				aria-label={m.leaderboard.boards}
 				class="grid gap-x-8 gap-y-5 md:grid-flow-col md:grid-cols-2 md:grid-rows-2"
 			>
 				{#each BOARD_GROUPS as group (group.label)}
 					<div class="space-y-2">
-						<p class="px-0.5 eyebrow">{group.label}</p>
+						<p class="px-0.5 eyebrow">{groupLabel(group.label)}</p>
 						<div class="grid grid-cols-2 gap-2">
 							{#each group.boards as id (id)}
 								{@const listing = listingFor(id)}
@@ -351,7 +359,7 @@
 									<span class="flex min-w-0 flex-col">
 										<span class="text-[13px] leading-tight font-semibold">{labelOf(id)}</span>
 										<span class="truncate text-xs text-muted-foreground tabular-nums">
-											{lead ? `${reading(id, lead.value)} ${unitOf(id)}` : 'Nobody yet'}
+											{lead ? `${reading(id, lead.value)} ${unitOf(id)}` : m.leaderboard.nobodyYet}
 										</span>
 									</span>
 								</a>
@@ -388,17 +396,17 @@
 							<span class="text-xl font-bold text-foreground tabular-nums sm:block">
 								{featured.entries.length}
 							</span>
-							{featured.entries.length === 1 ? 'driver' : 'drivers'} listed
+							{m.leaderboard.listed(featured.entries.length)}
 						</p>
 					</div>
 
 					{#if featured.entries.length === 0}
 						<p class="border-t px-6 py-8 text-sm text-muted-foreground sm:px-8">
-							Nobody has put a place on this board for {when} yet.
+							{m.leaderboard.nobodyOnBoard(when)}
 						</p>
 					{:else}
 						<ol
-							aria-label="Top three"
+							aria-label={m.leaderboard.topThree}
 							class="grid grid-cols-3 items-end gap-3 px-4 pt-10 sm:gap-4 sm:px-8"
 						>
 							{#each podiumOrder as entry (entry.username)}
@@ -413,7 +421,8 @@
 									/>
 									<span class="mt-3.5 max-w-full truncate text-[15px] font-semibold">
 										{entry.username}
-										{#if entry.mine}<Badge variant="secondary" class="ml-1 align-middle">you</Badge
+										{#if entry.mine}<Badge variant="secondary" class="ml-1 align-middle"
+												>{m.leaderboard.you}</Badge
 											>{/if}
 									</span>
 									<span class="mt-0.5 text-xs text-muted-foreground">{entry.vmodel}</span>
@@ -444,7 +453,8 @@
 											href="/s/{entry.shareId}"
 											class="mt-1 inline-flex items-center gap-0.5 text-xs text-muted-foreground hover:text-foreground"
 										>
-											Open it <ArrowUpRightIcon class="size-3" />
+											{m.leaderboard.openIt}
+											<ArrowUpRightIcon class="size-3" />
 										</a>
 									{/if}
 									<span
@@ -466,7 +476,7 @@
 						</ol>
 
 						{#if rest.length || unlisted}
-							<ol class="border-t bg-background/40 py-2" aria-label="Further places">
+							<ol class="border-t bg-background/40 py-2" aria-label={m.leaderboard.further}>
 								{#each rest as entry, i (entry.username)}
 									{#if unlisted && unlisted.rank <= entry.rank && (i === 0 || rest[i - 1].rank < unlisted.rank)}
 										{@render you(unlisted)}
@@ -483,7 +493,7 @@
 											<span class="truncate text-[15px] font-semibold">
 												{entry.username}
 												{#if entry.mine}<Badge variant="secondary" class="ml-1 align-middle"
-														>you</Badge
+														>{m.leaderboard.you}</Badge
 													>{/if}
 											</span>
 											<span class="truncate text-xs text-muted-foreground">
@@ -505,7 +515,7 @@
 													href="/s/{entry.shareId}"
 													variant="ghost"
 													size="icon"
-													aria-label="Open {entry.username}'s {labelOf(focus).toLowerCase()}"
+													aria-label={m.leaderboard.openEntry(entry.username, labelOf(focus))}
 												>
 													<ArrowUpRightIcon class="size-4" />
 												</Button>
@@ -526,10 +536,10 @@
 						<section aria-labelledby="yours" class="space-y-3">
 							<div class="flex items-baseline justify-between gap-3">
 								<h2 id="yours" class="text-lg font-semibold">
-									{medals.length ? 'Your badges' : 'Your places'}
+									{medals.length ? m.leaderboard.yourBadges : m.leaderboard.yourPlaces}
 								</h2>
 								<span class="truncate text-sm text-muted-foreground"
-									>as {mine[0].entry.username}</span
+									>{m.leaderboard.as(mine[0].entry.username)}</span
 								>
 							</div>
 							<!-- A medal gets the badge it earns; any other place is one line. -->
@@ -557,7 +567,7 @@
 												>{place.entry.username}</span
 											>
 											<span class="text-sm font-semibold" style="color: {METALS[medal].light}">
-												{METALS[medal].name}
+												{medalName(medal)}
 												<span class="font-normal text-stone-400">· {labelOf(place.board)}</span>
 											</span>
 											<span class="text-sm text-stone-300 tabular-nums">
@@ -582,7 +592,7 @@
 											}}
 										>
 											<CodeIcon class="size-4" />
-											Copy embed code
+											{m.leaderboard.copyEmbed}
 										</Button>
 										<Button
 											variant="outline"
@@ -591,7 +601,7 @@
 											download
 										>
 											<DownloadIcon class="size-4" />
-											Download PNG
+											{m.leaderboard.downloadPng}
 										</Button>
 									</figcaption>
 								</figure>
@@ -631,7 +641,7 @@
 								</ul>
 							{/if}
 							<Button href="/account#leaderboard" variant="outline" size="sm">
-								Badges and places
+								{m.leaderboard.badgesAndPlaces}
 							</Button>
 						</section>
 					{/if}
@@ -639,18 +649,20 @@
 					{#if data.kind === 'year' && data.summary.podiums.length > 0}
 						<section aria-labelledby="podiums" class="overflow-hidden rounded-2xl border bg-card">
 							<div class="px-6 pt-5 pb-3">
-								<h2 id="podiums" class="text-lg font-semibold">Most podium places</h2>
-								<p class="text-sm text-muted-foreground">Across every board in {data.period}</p>
+								<h2 id="podiums" class="text-lg font-semibold">{m.leaderboard.podiums}</h2>
+								<p class="text-sm text-muted-foreground">
+									{m.leaderboard.acrossBoards(data.period)}
+								</p>
 							</div>
 							<div class="flex items-center gap-3 border-t px-6 py-2 text-xs text-muted-foreground">
-								<span class="flex-1">Driver</span>
-								<span class="w-12 text-right" title="Wins">
+								<span class="flex-1">{m.leaderboard.driver}</span>
+								<span class="w-12 text-right" title={m.leaderboard.wins}>
 									<span
 										class="inline-block size-3 rounded-full"
 										style="background: {METALS.gold.light}"
 									></span>
 								</span>
-								<span class="w-16 text-right">Top three</span>
+								<span class="w-16 text-right">{m.leaderboard.topThreeColumn}</span>
 							</div>
 							<ol>
 								{#each data.summary.podiums as row, i (row.username)}
@@ -666,17 +678,16 @@
 					{/if}
 
 					<section aria-labelledby="how" class="space-y-3">
-						<h2 id="how" class="text-base font-semibold">How a place gets here</h2>
+						<h2 id="how" class="text-base font-semibold">{m.leaderboard.how}</h2>
 						<p class="text-sm leading-relaxed text-muted-foreground">
-							Every figure came out of one driver's own export, worked out in their browser, and
-							appears because they chose to put their name to it. Sign in, keep an export in your
-							account, and LogbooX will tell you when something of yours would rank. Nothing is
-							published until you say so, and you can take it back down at any time.
+							{m.leaderboard.howDetail}
 						</p>
 						<div class="flex flex-wrap gap-2">
-							<Button href="/" size="sm">Read your own export</Button>
+							<Button href="/" size="sm">{m.leaderboard.readOwn}</Button>
 							{#if account.signedIn && !mine.length}
-								<Button href="/account#leaderboard" variant="outline" size="sm">Your places</Button>
+								<Button href="/account#leaderboard" variant="outline" size="sm"
+									>{m.leaderboard.yourPlaces}</Button
+								>
 							{/if}
 						</div>
 					</section>

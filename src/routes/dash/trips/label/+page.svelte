@@ -11,6 +11,7 @@
   around underneath the reader as trips leave the unlabelled list.
 -->
 <script lang="ts">
+	import { m } from '#lib/i18n/index.svelte.js';
 	import { untrack } from 'svelte';
 	import { Button, buttonVariants } from '#lib/components/ui/button/index.js';
 	import { Input } from '#lib/components/ui/input/index.js';
@@ -97,7 +98,7 @@
 				purpose
 			});
 		} catch {
-			toast.error('That trip could not be saved in this browser.');
+			toast.error(m.labelPage.saveFailed);
 			return;
 		}
 		saved++;
@@ -137,7 +138,7 @@
 		<a
 			href="/dash/trips"
 			class={buttonVariants({ variant: 'ghost', size: 'icon' })}
-			aria-label="Stop labelling"
+			aria-label={m.labelPage.stop}
 		>
 			<XIcon class="size-5" />
 		</a>
@@ -147,7 +148,7 @@
 			aria-valuemin={0}
 			aria-valuemax={queue?.length ?? 0}
 			aria-valuenow={at}
-			aria-label="Trips labelled"
+			aria-label={m.labelPage.progress}
 		>
 			<div
 				class="h-full rounded-full transition-[width]"
@@ -160,13 +161,13 @@
 	</div>
 
 	{#if shared}
-		<p class="text-muted-foreground">A shared export has no logbook of yours to fill in.</p>
+		<p class="text-muted-foreground">{m.labelPage.sharedNote}</p>
 	{:else if !logbook.loaded || queue === null}
-		<p class="text-muted-foreground">Opening the logbook…</p>
+		<p class="text-muted-foreground">{m.labelPage.opening}</p>
 	{:else if queue.length === 0}
 		<div class="space-y-3 rounded-2xl border bg-card p-8 text-center">
-			<p class="text-xl font-semibold">Every trip in view already has a place</p>
-			<a href="/dash/trips" class={buttonVariants()}>Back to the trips</a>
+			<p class="text-xl font-semibold">{m.labelPage.allLabelled}</p>
+			<a href="/dash/trips" class={buttonVariants()}>{m.labelPage.backToTrips}</a>
 		</div>
 	{:else if done}
 		<div class="flex flex-col items-center gap-4 rounded-2xl border bg-card p-8 text-center">
@@ -177,16 +178,16 @@
 				<CheckIcon class="size-8" />
 			</span>
 			<p class="text-2xl font-bold tracking-tight">
-				{saved === 1 ? 'One trip' : `${saved} trips`} labelled
+				{m.labelPage.labelled(saved)}
 			</p>
 			<p class="text-muted-foreground">
 				{#if skipped > 0}
-					{skipped} skipped for later.
+					{m.labelPage.skipped(skipped)}
 				{/if}
-				Your logbook can be downloaded from the trip list, ready for the tax office.
+				{m.labelPage.download}
 			</p>
 			<div class="flex flex-wrap justify-center gap-2">
-				<a href="/dash/trips" class={buttonVariants({ size: 'lg' })}>Go to the logbook</a>
+				<a href="/dash/trips" class={buttonVariants({ size: 'lg' })}>{m.labelPage.toLogbook}</a>
 				{#if skipped > 0}
 					<Button
 						variant="ghost"
@@ -198,7 +199,7 @@
 							skipped = 0;
 						}}
 					>
-						Go through the skipped ones
+						{m.labelPage.goSkipped}
 					</Button>
 				{/if}
 			</div>
@@ -214,7 +215,9 @@
 					{num(trip.distanceKm, 1)} km · {duration(trip.duration, 'short')}
 					{#if Number.isFinite(trip.consumption)}· {num(trip.consumption, 1)} kWh/100 km{/if}
 					·
-					<a href={tripLink(trip.startTime)} class="underline underline-offset-4">details</a>
+					<a href={tripLink(trip.startTime)} class="underline underline-offset-4"
+						>{m.labelPage.details}</a
+					>
 				</p>
 			</div>
 
@@ -226,27 +229,27 @@
 
 			<div class="grid gap-3 sm:grid-cols-2">
 				<div class="space-y-1.5">
-					<Label for="label-from">From</Label>
+					<Label for="label-from">{m.labelPage.from}</Label>
 					<Input
 						id="label-from"
 						list="label-places"
-						placeholder="Where it started"
+						placeholder={m.labelPage.fromPlaceholder}
 						class="h-11 text-base"
 						bind:value={from}
 					/>
 					{#if origins[0] && from === origins[0].value}
 						<p class="flex items-center gap-1 text-xs text-muted-foreground">
 							<WandIcon class="size-3" />
-							{origins[0].reason}
+							{m.notes.reasons[origins[0].reason] ?? origins[0].reason}
 						</p>
 					{/if}
 				</div>
 				<div class="space-y-1.5">
-					<Label for="label-to">To</Label>
+					<Label for="label-to">{m.labelPage.to}</Label>
 					<Input
 						id="label-to"
 						list="label-places"
-						placeholder="Where it ended"
+						placeholder={m.labelPage.toPlaceholder}
 						class="h-11 text-base"
 						bind:value={to}
 						oninput={() => (toTouched = true)}
@@ -254,13 +257,13 @@
 					{#if destinations[0] && to === destinations[0].value}
 						<p class="flex items-center gap-1 text-xs text-muted-foreground">
 							<WandIcon class="size-3" />
-							{destinations[0].reason}
+							{m.notes.reasons[destinations[0].reason] ?? destinations[0].reason}
 						</p>
 					{/if}
 				</div>
 			</div>
 			{#if destinations.length > 1}
-				<div class="flex flex-wrap gap-1.5" aria-label="Other places">
+				<div class="flex flex-wrap gap-1.5" aria-label={m.labelPage.otherPlaces}>
 					{#each destinations.slice(1) as option (option.value)}
 						<button
 							type="button"
@@ -279,7 +282,7 @@
 
 		<section aria-labelledby="purpose" class="space-y-3">
 			<h2 id="purpose" class="text-sm font-medium text-muted-foreground">
-				Pick a purpose to save and go to the next trip
+				{m.labelPage.pickPurpose}
 			</h2>
 			<div class="grid gap-2">
 				{#each PURPOSES as option, index (option.value)}
@@ -297,7 +300,7 @@
 						<span class="flex-1">{option.label}</span>
 						{#if suggested === option.value}
 							<span class="rounded-full bg-background px-2.5 py-0.5 text-xs font-semibold">
-								Suggested
+								{m.labelPage.suggested}
 							</span>
 						{/if}
 						<kbd
@@ -309,15 +312,17 @@
 				{/each}
 			</div>
 			<div class="grid grid-cols-3 gap-2">
-				<Button variant="ghost" size="lg" disabled={at === 0} onclick={back}>Back</Button>
-				<Button variant="ghost" size="lg" onclick={skip}>Skip</Button>
+				<Button variant="ghost" size="lg" disabled={at === 0} onclick={back}
+					>{m.labelPage.back}</Button
+				>
+				<Button variant="ghost" size="lg" onclick={skip}>{m.labelPage.skip}</Button>
 				<Button
 					variant="outline"
 					size="lg"
 					disabled={!from.trim() && !to.trim()}
 					onclick={() => save('')}
 				>
-					Save, no purpose
+					{m.labelPage.saveNoPurpose}
 				</Button>
 			</div>
 		</section>

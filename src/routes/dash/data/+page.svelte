@@ -20,7 +20,8 @@
 	import { history } from '#lib/state/history.svelte.js';
 	import { settings } from '#lib/state/settings.svelte.js';
 	import { ACCOUNTS_ENABLED } from '#lib/features.js';
-	import { monthLabel } from '#lib/leaderboard/periods.js';
+	import { monthLabel } from '#lib/i18n/dates.js';
+	import { i18n, isLocale, LOCALES, m, setLocale } from '#lib/i18n/index.svelte.js';
 	import { EXPORT_WINDOW_DAYS } from '#lib/data/range.js';
 	import { dateOnly, maskVin, num } from '#lib/utils/format.js';
 	import PlusIcon from '@lucide/svelte/icons/plus';
@@ -53,6 +54,11 @@
 	const requestBy = $derived(loaded ? loaded.endTime + EXPORT_WINDOW_DAYS * 86_400 : null);
 	const lapsed = $derived(requestBy !== null && requestBy * 1000 < Date.now());
 
+	const LINK_HREFS = ['/account', '/account#leaderboard', '/account#links'];
+	const accountLinks = $derived(
+		m.dataPage.links.map((link, index) => ({ ...link, href: LINK_HREFS[index] }))
+	);
+
 	let input = $state<HTMLInputElement>();
 
 	function add(list: FileList | null) {
@@ -66,9 +72,9 @@
 		<section aria-labelledby="record" class="space-y-4">
 			<div class="flex flex-wrap items-end justify-between gap-4">
 				<div class="space-y-1">
-					<h2 id="record" class="text-xl font-semibold tracking-tight">Your record</h2>
+					<h2 id="record" class="text-xl font-semibold tracking-tight">{m.dataPage.record}</h2>
 					<p class="text-sm text-muted-foreground">
-						Everything you add joins one timeline. Overlaps and duplicates are handled for you.
+						{m.dataPage.recordHint}
 					</p>
 				</div>
 				<input
@@ -77,7 +83,7 @@
 					multiple
 					accept=".csv,.zip"
 					class="sr-only"
-					aria-label="Add newer data"
+					aria-label={m.dataPage.addNewer}
 					onchange={(event) => {
 						add(event.currentTarget.files);
 						// So that picking the same files again still counts as a pick.
@@ -86,7 +92,7 @@
 				/>
 				<Button onclick={() => input?.click()}>
 					<PlusIcon class="size-4" />
-					Add newer data
+					{m.dataPage.addNewer}
 				</Button>
 			</div>
 
@@ -94,16 +100,16 @@
 				<Card.Content class="space-y-6">
 					<dl class="flex flex-wrap gap-x-10 gap-y-4">
 						<div>
-							<dt class="eyebrow">Recorded</dt>
+							<dt class="eyebrow">{m.dataPage.recorded}</dt>
 							<dd
 								class="text-3xl font-bold tracking-tight tabular-nums"
 								style="color: var(--viz-1)"
 							>
-								{num(loaded.recordedDays)} days
+								{m.dataPage.days(num(loaded.recordedDays))}
 							</dd>
 						</div>
 						<div>
-							<dt class="eyebrow">Trips</dt>
+							<dt class="eyebrow">{m.dataPage.trips}</dt>
 							<dd
 								class="text-3xl font-bold tracking-tight tabular-nums"
 								style="color: var(--viz-3)"
@@ -112,7 +118,7 @@
 							</dd>
 						</div>
 						<div>
-							<dt class="eyebrow">Distance</dt>
+							<dt class="eyebrow">{m.dataPage.distance}</dt>
 							<dd
 								class="text-3xl font-bold tracking-tight tabular-nums"
 								style="color: var(--viz-4)"
@@ -124,9 +130,9 @@
 
 					<div
 						role="img"
-						aria-label="Months covered: {months
-							.map((m) => `${m.label}, ${Math.round(m.share * 100)}%`)
-							.join('; ')}"
+						aria-label={m.dataPage.monthsCovered(
+							months.map((month) => `${month.label}, ${Math.round(month.share * 100)}%`).join('; ')
+						)}
 						class="grid gap-1.5"
 						style="grid-template-columns: repeat({Math.max(months.length, 1)}, minmax(0, 1fr))"
 					>
@@ -149,11 +155,9 @@
 						<div class="flex flex-wrap items-center gap-3 border-t pt-4">
 							<p class="flex-1 text-sm text-muted-foreground">
 								{#if lapsed}
-									XPeng keeps only thirty days, so what came after {dateOnly(loaded.endTime)} is no longer
-									available. Request a new export to start the next stretch.
+									{m.dataPage.lapsed(dateOnly(loaded.endTime))}
 								{:else if requestBy}
-									XPeng keeps only thirty days. Request the next export before {dateOnly(requestBy)}
-									and the record stays unbroken.
+									{m.dataPage.requestBefore(dateOnly(requestBy))}
 								{/if}
 							</p>
 							<a
@@ -162,7 +166,7 @@
 								rel="noreferrer noopener"
 								class={buttonVariants({ variant: 'outline', size: 'sm' })}
 							>
-								Request at XPeng
+								{m.dataPage.requestAtXpeng}
 								<ArrowUpRightIcon class="size-4" />
 							</a>
 						</div>
@@ -174,7 +178,7 @@
 								class="flex cursor-pointer list-none items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
 							>
 								<ChevronRightIcon class="size-4 transition-transform group-open:rotate-90" />
-								Imported files ({history.count})
+								{m.dataPage.imported(history.count)}
 							</summary>
 							<ExportLibrary />
 						</details>
@@ -185,13 +189,13 @@
 	{/if}
 
 	<section aria-labelledby="prefs" class="space-y-4">
-		<h2 id="prefs" class="text-xl font-semibold tracking-tight">Preferences</h2>
+		<h2 id="prefs" class="text-xl font-semibold tracking-tight">{m.dataPage.preferences}</h2>
 		<Card.Root class="py-0">
 			<Card.Content class="divide-y px-6">
 				<div class="flex flex-wrap items-center gap-4 py-5">
 					<div class="min-w-60 flex-1">
-						<Label for="price" class="text-[15px]">Electricity price</Label>
-						<p class="text-sm text-muted-foreground">Used for every cost on the dashboard.</p>
+						<Label for="price" class="text-[15px]">{m.dataPage.price}</Label>
+						<p class="text-sm text-muted-foreground">{m.dataPage.priceHint}</p>
 					</div>
 					<div class="flex items-center gap-2">
 						<Input
@@ -202,25 +206,43 @@
 							class="w-28 tabular-nums"
 							bind:value={settings.pricePerKwh}
 						/>
-						<span class="text-sm text-muted-foreground">per kWh</span>
+						<span class="text-sm text-muted-foreground">{m.dataPage.perKwh}</span>
 					</div>
 				</div>
 				<div class="flex flex-wrap items-center gap-4 py-5">
 					<div class="min-w-60 flex-1">
-						<Label for="tz" class="text-[15px]">Time zone</Label>
+						<Label for="tz" class="text-[15px]">{m.dataPage.timeZone}</Label>
 						<p class="text-sm text-muted-foreground">
-							Days and hours are shown in your own zone. The export's date column is cut at midnight
-							in Beijing, so it is ignored.
+							{m.dataPage.timeZoneHint}
 						</p>
 					</div>
 					<Input id="tz" value={settings.timeZone} readonly class="w-56 font-mono text-xs" />
 				</div>
+				<div class="flex flex-wrap items-center gap-4 py-5">
+					<div class="min-w-60 flex-1">
+						<Label for="language" class="text-[15px]">{m.dataPage.language}</Label>
+						<p class="text-sm text-muted-foreground">{m.dataPage.languageHint}</p>
+					</div>
+					<select
+						id="language"
+						class="h-9 w-56 rounded-md border border-input bg-transparent px-3 text-sm shadow-xs"
+						value={i18n.locale}
+						onchange={(event) => {
+							const next = event.currentTarget.value;
+							if (isLocale(next)) setLocale(next);
+						}}
+					>
+						{#each LOCALES as option (option.code)}
+							<option value={option.code} lang={option.code}>{option.label}</option>
+						{/each}
+					</select>
+				</div>
 				{#if !shared}
 					<div class="flex flex-wrap items-center gap-4 py-5">
 						<div class="min-w-60 flex-1">
-							<Label for="vin" class="text-[15px]">Show the full VIN</Label>
+							<Label for="vin" class="text-[15px]">{m.dataPage.showVin}</Label>
 							<p class="text-sm text-muted-foreground">
-								Hidden by default, so screenshots are safe to share.
+								{m.dataPage.showVinHint}
 								<span class="font-mono text-xs">
 									{settings.revealVin ? data.dataset?.vin : maskVin(data.dataset?.vin ?? '')}
 								</span>
@@ -236,8 +258,8 @@
 	{#if ACCOUNTS_ENABLED}
 		<section aria-labelledby="account" class="space-y-4">
 			<div class="space-y-1">
-				<h2 id="account" class="text-xl font-semibold tracking-tight">Account</h2>
-				<p class="text-sm text-muted-foreground">Optional. Everything above works without one.</p>
+				<h2 id="account" class="text-xl font-semibold tracking-tight">{m.dataPage.account}</h2>
+				<p class="text-sm text-muted-foreground">{m.dataPage.accountHint}</p>
 			</div>
 			<Card.Root class="py-0">
 				<Card.Content class="divide-y px-6">
@@ -246,11 +268,11 @@
 							<div class="min-w-60 flex-1">
 								<p class="text-[15px] font-medium">{account.user.email}</p>
 								<p class="text-sm text-muted-foreground">
-									Keeps copies, sends reminders, shares trips and serves your data over an API.
+									{m.dataPage.accountDoes}
 								</p>
 							</div>
 						</div>
-						{#each [{ href: '/account', title: 'Copies and reminders', body: 'What the account holds, automatic copying, and when to remind you.' }, { href: '/account#leaderboard', title: 'Your leaderboard places', body: 'Put your name to a place, or take it back down.' }, { href: '/account#links', title: 'Shared links and API tokens', body: 'What is public at its own link, and the keys your scripts use.' }] as link (link.href)}
+						{#each accountLinks as link (link.href)}
 							<a
 								href={link.href}
 								class="-mx-6 flex items-center gap-4 px-6 py-5 transition-colors hover:bg-accent/50"
@@ -265,9 +287,7 @@
 					{:else}
 						<div class="flex flex-wrap items-center gap-4 py-5">
 							<p class="min-w-60 flex-1 text-sm text-muted-foreground">
-								Sign in with a link by e-mail to keep a copy that outlives this browser, get a
-								reminder before XPeng's thirty days run out, and put a place on the leaderboard.
-								Nothing is copied unless you ask.
+								{m.dataPage.signInPitch}
 							</p>
 							<AccountMenu />
 						</div>

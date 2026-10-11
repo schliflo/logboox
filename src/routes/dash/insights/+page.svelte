@@ -7,6 +7,7 @@
   links through to its full page.
 -->
 <script lang="ts">
+	import { m } from '#lib/i18n/index.svelte.js';
 	import * as Card from '#lib/components/ui/card/index.js';
 	import { buttonVariants } from '#lib/components/ui/button/index.js';
 	import GgDiagram from '#lib/components/charts/GgDiagram.svelte';
@@ -15,6 +16,7 @@
 	import { duration, hourLabel, num, percent } from '#lib/utils/format.js';
 	import ArrowRightIcon from '@lucide/svelte/icons/arrow-right';
 	import ShieldIcon from '@lucide/svelte/icons/shield-check';
+	import { factText } from '#lib/i18n/facts.js';
 
 	const stats = $derived(data.derived!);
 	const dataset = $derived(data.dataset!);
@@ -65,22 +67,26 @@
 			style="background: radial-gradient(100% 180% at 0% 0%, color-mix(in oklab, var(--viz-5) 22%, transparent), transparent 55%), var(--card)"
 		>
 			<div class="min-w-64 flex-1 space-y-2">
-				<p class="flex items-center gap-2 eyebrow"><ShieldIcon class="size-4" /> Privacy</p>
-				<h2 id="knows" class="text-3xl font-bold tracking-tight">What this file knows about you</h2>
+				<p class="flex items-center gap-2 eyebrow">
+					<ShieldIcon class="size-4" />
+					{m.insights.privacy}
+				</p>
+				<h2 id="knows" class="text-3xl font-bold tracking-tight">{m.insights.knows}</h2>
 				<p class="text-muted-foreground">
-					Not a single map coordinate, and it still gives away your routine.
+					{m.insights.knowsHint}
 				</p>
 			</div>
 			<ul class="grid min-w-72 flex-[2] gap-3 sm:grid-cols-3">
 				{#each stats.facts.privacy.slice(0, 3) as fact (fact.id)}
+					{@const text = factText(fact)}
 					<li class="rounded-xl bg-background/70 p-4">
-						<p class="text-sm font-semibold">{fact.kicker}</p>
+						<p class="text-sm font-semibold">{text.kicker}</p>
 						<p
 							class="mt-1 text-2xl font-bold tracking-tight tabular-nums"
 							style="color: var(--viz-5)"
 						>
-							{fact.value}{#if fact.unit}<span
-									class="ml-1 text-sm font-medium text-muted-foreground">{fact.unit}</span
+							{text.value}{#if text.unit}<span
+									class="ml-1 text-sm font-medium text-muted-foreground">{text.unit}</span
 								>{/if}
 						</p>
 					</li>
@@ -90,7 +96,7 @@
 				href="/dash/privacy"
 				class="{buttonVariants()} bg-[var(--viz-5)] text-[#0a0a0c] hover:bg-[color-mix(in_oklab,var(--viz-5)_85%,white)]"
 			>
-				Read the full account
+				{m.insights.readAccount}
 				<ArrowRightIcon class="size-4" />
 			</a>
 		</section>
@@ -99,16 +105,13 @@
 	<div class="grid gap-6 lg:grid-cols-2">
 		<Card.Root class="lg:row-span-2">
 			<Card.Header>
-				<p class="eyebrow">Driving style · how much grip you used</p>
+				<p class="eyebrow">{m.insights.gripEyebrow}</p>
 				<Card.Title class="text-xl leading-snug font-bold">
-					{gentle
-						? 'A narrow cross: you rarely brake and steer hard at the same time'
-						: 'You often brake or accelerate while cornering'}
+					{gentle ? m.insights.gentle : m.insights.combined}
 				</Card.Title>
 				{#if Number.isFinite(combined)}
 					<Card.Description>
-						{percent(combined, 1)} of your driving combined more than {COMBINED_G} g of cornering with
-						braking or acceleration.
+						{m.insights.combinedShare(percent(combined, 1), num(COMBINED_G, 1))}
 					</Card.Description>
 				{/if}
 			</Card.Header>
@@ -125,26 +128,26 @@
 				</div>
 				<dl class="grid grid-cols-3 gap-4 border-t pt-5">
 					<div>
-						<dt class="eyebrow">Hardest stop</dt>
+						<dt class="eyebrow">{m.insights.hardestStop}</dt>
 						<dd class="text-2xl font-bold tabular-nums" style="color: var(--viz-brake)">
 							{num(hardestStop, 2)} g
 						</dd>
 					</div>
 					<div>
-						<dt class="eyebrow">Hardest launch</dt>
+						<dt class="eyebrow">{m.insights.hardestLaunch}</dt>
 						<dd class="text-2xl font-bold tabular-nums" style="color: var(--viz-3)">
 							{num(hardestLaunch, 2)} g
 						</dd>
 					</div>
 					<div>
-						<dt class="eyebrow">Hardest corner</dt>
+						<dt class="eyebrow">{m.insights.hardestCorner}</dt>
 						<dd class="text-2xl font-bold tabular-nums" style="color: var(--viz-7)">
 							{num(hardestCorner, 2)} g
 						</dd>
 					</div>
 				</dl>
 				<a href="/dash/driving" class={buttonVariants({ variant: 'outline' })}>
-					Driving style in full
+					{m.insights.drivingInFull}
 					<ArrowRightIcon class="size-4" />
 				</a>
 			</Card.Content>
@@ -152,11 +155,11 @@
 
 		<Card.Root>
 			<Card.Header>
-				<p class="eyebrow">Speeds you drive</p>
+				<p class="eyebrow">{m.insights.speeds}</p>
 				<Card.Title class="text-xl leading-snug font-bold">
-					Top speed {num(stats.speed.maxSpeed)} km/h, above 100 for {duration(above100, 'short')}
+					{m.insights.topSpeed(num(stats.speed.maxSpeed), duration(above100, 'short'))}
 				</Card.Title>
-				<Card.Description>Of {duration(moving, 'short')} spent moving.</Card.Description>
+				<Card.Description>{m.insights.ofMoving(duration(moving, 'short'))}</Card.Description>
 			</Card.Header>
 			<Card.Content>
 				<Histogram
@@ -166,7 +169,7 @@
 					accent="--viz-speed"
 					height={130}
 					countsAreSeconds
-					label="Speed while moving"
+					label={m.insights.speedMoving}
 				/>
 			</Card.Content>
 		</Card.Root>
@@ -174,27 +177,28 @@
 		<a href="/dash/doors-tyres" class="group block">
 			<Card.Root class="h-full transition-colors group-hover:border-foreground/20">
 				<Card.Header>
-					<p class="eyebrow">Doors & tyres</p>
+					<p class="eyebrow">{m.insights.doorsTyres}</p>
 					<Card.Title class="text-xl leading-snug font-bold">
 						{#if doors.busiestHourCount > 0}
-							Doors open most around {hourLabel(
-								doors.busiestHour
-							)}{#if doors.quietStretch && doors.quietStretch.hours >= 3}, and never between {hourLabel(
-									doors.quietStretch.from
-								)} and {hourLabel(doors.quietStretch.to)}{/if}
+							{m.insights.doorsBusiest(
+								hourLabel(doors.busiestHour)
+							)}{#if doors.quietStretch && doors.quietStretch.hours >= 3}{m.insights.doorsNever(
+									hourLabel(doors.quietStretch.from),
+									hourLabel(doors.quietStretch.to)
+								)}{/if}
 						{:else}
-							Door and tyre readings, day by day
+							{m.insights.doorsFallback}
 						{/if}
 					</Card.Title>
 					{#if Number.isFinite(tyres.minPressure)}
 						<Card.Description>
-							Tyres between {num(tyres.minPressure)} and {num(tyres.maxPressure)} kPa over the period.
+							{m.insights.tyresBetween(num(tyres.minPressure), num(tyres.maxPressure))}
 						</Card.Description>
 					{/if}
 				</Card.Header>
 				<Card.Content>
 					<span class="inline-flex items-center gap-1 text-sm font-medium">
-						See the week as the doors saw it
+						{m.insights.seeWeek}
 						<ArrowRightIcon class="size-4 transition-transform group-hover:translate-x-0.5" />
 					</span>
 				</Card.Content>
@@ -204,22 +208,23 @@
 
 	<section aria-labelledby="asides" class="space-y-4">
 		<h2 id="asides" class="text-lg font-semibold tracking-tight">
-			{asides.length ? 'Things you would not have asked' : 'Go further'}
+			{asides.length ? m.insights.asides : m.insights.goFurther}
 		</h2>
 		<ul class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
 			{#each asides as fact (fact.id)}
+				{@const text = factText(fact)}
 				<li>
 					<a
 						href={fact.href}
 						class="flex h-full flex-col gap-1 rounded-xl border bg-card p-4 transition-colors hover:border-foreground/20"
 					>
-						<span class="eyebrow">{fact.kicker}</span>
+						<span class="eyebrow">{text.kicker}</span>
 						<span class="text-xl font-bold tabular-nums">
-							{fact.value}{#if fact.unit}<span
-									class="ml-1 text-sm font-medium text-muted-foreground">{fact.unit}</span
+							{text.value}{#if text.unit}<span
+									class="ml-1 text-sm font-medium text-muted-foreground">{text.unit}</span
 								>{/if}
 						</span>
-						<span class="line-clamp-2 text-sm text-muted-foreground">{fact.detail}</span>
+						<span class="line-clamp-2 text-sm text-muted-foreground">{text.detail}</span>
 					</a>
 				</li>
 			{/each}
@@ -229,10 +234,10 @@
 					class="group flex h-full flex-col gap-1 rounded-xl border bg-card p-4 transition-colors hover:border-foreground/20"
 					style="background: radial-gradient(120% 120% at 100% 0%, color-mix(in oklab, var(--viz-7) 14%, transparent), transparent 60%), var(--card)"
 				>
-					<span class="eyebrow">Signal explorer</span>
-					<span class="text-xl font-bold">Plot any of the {num(signals)} raw signals</span>
+					<span class="eyebrow">{m.insights.explorer}</span>
+					<span class="text-xl font-bold">{m.insights.plotAny(num(signals))}</span>
 					<span class="mt-auto inline-flex items-center gap-1 text-sm font-medium">
-						Open the explorer
+						{m.insights.openExplorer}
 						<ArrowRightIcon class="size-4 transition-transform group-hover:translate-x-0.5" />
 					</span>
 				</a>

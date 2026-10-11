@@ -13,6 +13,7 @@
 </script>
 
 <script lang="ts">
+	import { m } from '#lib/i18n/index.svelte.js';
 	import { PURPOSES } from '#lib/logbook/types.js';
 
 	interface Props {
@@ -36,6 +37,6 @@
 		class="rounded-full border border-dashed px-2.5 py-px text-xs font-semibold whitespace-nowrap {className}"
 		style="color: var(--viz-2); border-color: color-mix(in oklab, var(--viz-2) 70%, transparent)"
 	>
-		Label
+		{m.purpose.label}
 	</span>
 {/if}

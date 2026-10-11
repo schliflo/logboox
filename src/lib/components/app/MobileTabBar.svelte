@@ -3,6 +3,7 @@
   behind a button. Hidden once the sidebar has room to stay open.
 -->
 <script lang="ts">
+	import { m } from '#lib/i18n/index.svelte.js';
 	import { page } from '$app/state';
 	import { CAR_AREAS, DATA, areaFor } from '#lib/navigation.js';
 
@@ -11,7 +12,7 @@
 </script>
 
 <nav
-	aria-label="Sections"
+	aria-label={m.nav.sections}
 	class="fixed inset-x-0 bottom-0 z-20 flex border-t bg-background/90 pb-[env(safe-area-inset-bottom)] backdrop-blur-lg md:hidden"
 >
 	{#each items as item (item.id)}
