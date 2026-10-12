@@ -9,7 +9,7 @@ import { columns } from './columns';
 import { accountMenu } from './account';
 import { wrapped } from './wrapped';
 import { charts } from './charts';
-import { range, dropZone, moved, offline, notices, errors } from './misc';
+import { range, dropZone, moved, offline, notices, report, errors } from './misc';
 import { boards, claims, leaderboard } from './boards';
 import { detail, exportMenu, shares, share, notes, sharedPage } from './detail';
 import { tokens, library } from './library';
@@ -73,6 +73,7 @@ export const en = {
 	tripsPage,
 	leaderboard,
 	sharedPage,
+	report,
 	errors
 };
 

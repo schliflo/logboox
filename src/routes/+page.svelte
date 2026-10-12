@@ -11,6 +11,7 @@
 	import Seo from '#lib/components/app/Seo.svelte';
 	import { onMount } from 'svelte';
 	import { data, recordIds } from '#lib/state/dataset.svelte.js';
+	import { reportUrl } from '#lib/report/reporter.js';
 	import { history } from '#lib/state/history.svelte.js';
 	import { dateOnly, num } from '#lib/utils/format.js';
 	import ChevronRightIcon from '@lucide/svelte/icons/chevron-right';
@@ -120,6 +121,16 @@
 								<p class="font-medium">{data.error.message}</p>
 								{#if data.error.hint}
 									<p class="text-muted-foreground">{data.error.hint}</p>
+								{/if}
+								{#if data.error.report}
+									<p>
+										<a
+											href={reportUrl(data.error.report)}
+											target="_blank"
+											rel="noreferrer noopener"
+											class="underline underline-offset-4">{m.report.link}</a
+										>
+									</p>
 								{/if}
 							</div>
 						</div>

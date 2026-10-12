@@ -1,0 +1,40 @@
+# The app links here with the fields below filled in by id
+# (src/lib/report/issue.ts). Renaming an id breaks that prefill.
+name: Bug report
+description: Something broke or looked wrong.
+title: '[Bug] '
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting this. Your export never leaves your browser, so nothing from it is attached here; please don't paste VINs, locations or file contents either.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: What you were doing, and what you expected instead.
+      placeholder: I dropped my export ZIP and…
+    validations:
+      required: true
+  - type: textarea
+    id: error
+    attributes:
+      label: Error
+      description: Filled in by the app when it caught the error.
+      render: text
+  - type: input
+    id: page
+    attributes:
+      label: Page
+      placeholder: /dash/overview
+  - type: input
+    id: version
+    attributes:
+      label: App version
+      description: Commit the app was built from.
+  - type: input
+    id: browser
+    attributes:
+      label: Browser
+      description: Browser and operating system.

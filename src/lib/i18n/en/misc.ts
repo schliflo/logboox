@@ -75,6 +75,15 @@ export const notices = {
 	logbookUnreadable: 'The logbook could not be read from this browser.'
 };
 
+/** Asking for a bug report; see `#lib/report`. */
+export const report = {
+	title: 'Something went wrong',
+	detail:
+		'This looks like a bug in LogbooX. Reporting it on GitHub helps get it fixed. You see the report before anything is sent.',
+	action: 'Report',
+	link: 'Report this problem on GitHub'
+};
+
 export const errors = {
 	unreachable: 'LogbooX could not be reached.',
 	checkConnection: 'Check your connection and try again.',

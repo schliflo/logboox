@@ -5,6 +5,9 @@ import type { Scope } from '#lib/server/auth/apiTokens.js';
 import type { User } from '#lib/server/auth/users.js';
 
 declare global {
+	/** The commit the app was built from; see `vite.config.ts`. */
+	const __COMMIT__: string;
+
 	namespace App {
 		// No `Platform`, on purpose: the Cloudflare adapter no longer fills
 		// `event.platform`, and leaving it undeclared makes reading it a type

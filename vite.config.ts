@@ -4,8 +4,20 @@ import adapter from '@sveltejs/adapter-cloudflare';
 import { sveltekit } from '@sveltejs/kit/vite';
 import { wasmModules } from './tooling/wasm-modules.ts';
 import { onDemand } from './tooling/on-demand.ts';
+import { execSync } from 'node:child_process';
+
+/** The commit this build is of, for bug reports. CI checks out without `.git` history, but with this. */
+function commit(): string {
+	if (process.env.GITHUB_SHA) return process.env.GITHUB_SHA.slice(0, 12);
+	try {
+		return execSync('git rev-parse --short=12 HEAD', { encoding: 'utf8' }).trim();
+	} catch {
+		return 'unknown';
+	}
+}
 
 export default defineConfig({
+	define: { __COMMIT__: JSON.stringify(commit()) },
 	plugins: [
 		wasmModules(),
 		// The PDF writer and the typeface it embeds, left for whoever asks for one.
