@@ -22,6 +22,7 @@ import { generateDemoDataset } from '../../demo/generator';
 import { backupFileName, readBackup, writeBackup, type BackupEntry } from '../../history/archive';
 import { decodeExport, encodeExport, sourceFromExport } from '../../history/codec';
 import { getExport, putExport, storageAvailable } from '../../history/db';
+import { repairKept } from '../../history/repair';
 import { downloadExport, openSharedExport, uploadExport, type BoardCandidate } from './transfer';
 import {
 	packDataset,
@@ -160,7 +161,7 @@ async function handleOpen(ids: string[], timeZone: string) {
 	for (let i = 0; i < ids.length; i++) {
 		post({ type: 'progress', phase: 'loading', loaded: i, total: ids.length });
 		const entry = await getExport(ids[i]);
-		if (entry) found.push(entry);
+		if (entry) found.push(await repairKept(entry, timeZone));
 	}
 
 	if (found.length === 0) {

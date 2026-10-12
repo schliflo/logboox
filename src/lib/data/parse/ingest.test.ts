@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { parseStream } from './ingest';
-import { EARLIEST_PLAUSIBLE, orderRows } from './order';
+import { EARLIEST_PLAUSIBLE, STRAY_GAP, STRAY_ROWS, orderRows, plausibleSpan } from './order';
 import { recognizeFiles, type FileLike } from '../schema/streams';
 import { valueAt } from '../store/columnar';
 import { combineStreams, verifyAlignment } from './align';
@@ -356,5 +356,39 @@ describe('orderRows', () => {
 		const order = orderRows(time, time.length);
 		expect([...order.keep]).toEqual([1]);
 		expect(order.undated).toBe(1);
+	});
+
+	it('drops a short burst stamped years before the rest', () => {
+		// A real export: two minutes stamped 2022 ahead of a month of 2026.
+		const reset = 1664995845;
+		const time = Uint32Array.of(reset, reset + 1, T, T + 1, T + 2);
+		const order = orderRows(time, time.length);
+		expect([...order.keep]).toEqual([2, 3, 4]);
+		expect(order.undated).toBe(2);
+		expect(order.duplicates).toBe(0);
+	});
+
+	it('drops a short burst stamped years after the rest', () => {
+		const time = Uint32Array.of(T, T, T + 1, T + STRAY_GAP + 2);
+		const order = orderRows(time, time.length);
+		expect([...order.keep]).toEqual([0, 2]);
+		expect(order.undated).toBe(1);
+		expect(order.duplicates).toBe(1);
+	});
+});
+
+describe('plausibleSpan', () => {
+	const T = 1789142390;
+	const at = (time: number[]) => (i: number) => time[i];
+
+	it('keeps a gap shorter than the stray gap', () => {
+		const time = [T, T + STRAY_GAP, T + STRAY_GAP + 1];
+		expect(plausibleSpan(time.length, at(time))).toEqual({ from: 0, to: 3 });
+	});
+
+	it('keeps more than an hour of samples past a long gap', () => {
+		const block = Array.from({ length: STRAY_ROWS + 1 }, (_, i) => T + i);
+		const both = [...block, ...block.map((t) => t + 2 * STRAY_GAP)];
+		expect(plausibleSpan(both.length, at(both))).toEqual({ from: 0, to: both.length });
 	});
 });
