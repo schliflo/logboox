@@ -7,3 +7,6 @@ bun.lockb
 
 # Miscellaneous
 /static/
+
+# Written by its test (src/lib/demo/teasers.test.ts)
+src/lib/demo/teasers.json
