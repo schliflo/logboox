@@ -94,6 +94,14 @@ export const notices: Messages['notices'] = {
 	logbookUnreadable: 'Das Fahrtenbuch konnte in diesem Browser nicht gelesen werden.'
 };
 
+export const report: Messages['report'] = {
+	title: 'Etwas ist schiefgelaufen',
+	detail:
+		'Das sieht nach einem Fehler in LogbooX aus. Eine Meldung auf GitHub hilft, ihn zu beheben. Du siehst sie, bevor etwas gesendet wird.',
+	action: 'Melden',
+	link: 'Dieses Problem auf GitHub melden'
+};
+
 export const errors: Messages['errors'] = {
 	unreachable: 'LogbooX ist nicht erreichbar.',
 	checkConnection: 'Prüfe deine Verbindung und versuche es erneut.',

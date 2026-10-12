@@ -39,6 +39,8 @@ import { history } from './history.svelte';
 import { settings } from './settings.svelte';
 import { m } from '../i18n/index.svelte';
 import { rangeLabel } from '../i18n/dates';
+import type { ErrorDetail } from '../report/issue';
+import { bugDetail, reportAction } from '../report/reporter';
 
 type Status = 'empty' | 'loading' | 'ready' | 'error';
 
@@ -119,7 +121,8 @@ class DatasetStore {
 	// so there is nothing for a deep proxy to watch and a swap stays cheap.
 	dataset = $state.raw<Dataset | null>(null);
 	derived = $state.raw<DerivedData | null>(null);
-	error = $state<{ message: string; hint?: string } | null>(null);
+	/** `report` is set when the cause looks like a bug, for a link to report it. */
+	error = $state<{ message: string; hint?: string; report?: ErrorDetail } | null>(null);
 	source = $state<DataSource>({ kind: 'fresh', ids: [], demo: false });
 
 	/** The export exactly as loaded, whatever range is on screen. */
@@ -236,9 +239,11 @@ class DatasetStore {
 			this.range = range;
 		} catch (error) {
 			if (ticket !== this.generation || quiet) return;
+			const bug = bugDetail(error);
 			toast(m.notices.rangeFailed, {
 				description: error instanceof Error ? error.message : undefined,
-				closeButton: true
+				closeButton: true,
+				action: bug ? reportAction(bug) : undefined
 			});
 		} finally {
 			if (ticket === this.generation) this.refining = false;
@@ -273,7 +278,8 @@ class DatasetStore {
 	private fail(error: unknown) {
 		this.error = {
 			message: error instanceof Error ? error.message : m.notices.somethingWrong,
-			hint: error instanceof Error && 'hint' in error ? (error.hint as string) : undefined
+			hint: error instanceof Error && 'hint' in error ? (error.hint as string) : undefined,
+			report: bugDetail(error)
 		};
 		this.status = 'error';
 		this.progress = null;

@@ -24,6 +24,7 @@ import type { DerivedData } from './analytics';
 import type { Dataset } from './store/columnar';
 import type { BoardCandidate } from './worker/transfer';
 import type { StreamId } from './schema/streams';
+import type { ErrorDetail } from '../report/issue';
 
 export interface LoadProgress {
 	phase: ParsePhase;
@@ -67,7 +68,9 @@ export type WorkerResult = DatasetResult | RestoreResult | BackupResult | Transf
 export class DataLoadError extends Error {
 	constructor(
 		message: string,
-		readonly hint?: string
+		readonly hint?: string,
+		/** Set when the cause was a bug rather than the files: what to report. */
+		readonly report?: ErrorDetail
 	) {
 		super(message);
 		this.name = 'DataLoadError';
@@ -130,14 +133,26 @@ function run(
 					cleanup();
 					break;
 				case 'error':
-					reject(new DataLoadError(message.message, message.hint));
+					reject(new DataLoadError(message.message, message.hint, message.report));
 					cleanup();
 					break;
 			}
 		};
 
 		worker.onerror = (event) => {
-			reject(new DataLoadError(event.message || 'The data worker stopped unexpectedly.'));
+			// Handled here: left alone it would reach the window too, and be offered twice.
+			event.preventDefault();
+			const message = event.message || 'The data worker stopped unexpectedly.';
+			const where = event.filename
+				? `\n    at ${event.filename}:${event.lineno}:${event.colno}`
+				: '';
+			reject(
+				new DataLoadError(message, undefined, {
+					name: 'WorkerError',
+					message,
+					stack: `WorkerError: ${message}${where}`
+				})
+			);
 			cleanup();
 		};
 
@@ -145,8 +160,17 @@ function run(
 	});
 }
 
+/** The page and the worker disagree on the protocol: always a bug. */
+function unexpectedAnswer(received: string): DataLoadError {
+	const message = 'The data worker answered unexpectedly.';
+	return new DataLoadError(message, undefined, {
+		name: 'ProtocolError',
+		message: `${message} (${received})`
+	});
+}
+
 function expect<T extends WorkerResult>(result: WorkerResult, kind: T['kind']): T {
-	if (result.kind !== kind) throw new DataLoadError('The data worker answered unexpectedly.');
+	if (result.kind !== kind) throw unexpectedAnswer(result.kind);
 	return result as T;
 }
 
@@ -160,7 +184,7 @@ export async function loadFiles(
 	// cloned" and the upload silently does nothing.
 	const result = await run({ type: 'parse', files: Array.from(files), timeZone }, onProgress);
 	if (result.kind !== 'dataset' && result.kind !== 'restored') {
-		throw new DataLoadError('The data worker answered unexpectedly.');
+		throw unexpectedAnswer(result.kind);
 	}
 	return result;
 }

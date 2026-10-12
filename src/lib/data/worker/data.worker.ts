@@ -23,6 +23,7 @@ import { backupFileName, readBackup, writeBackup, type BackupEntry } from '../..
 import { decodeExport, encodeExport, sourceFromExport } from '../../history/codec';
 import { getExport, putExport, storageAvailable } from '../../history/db';
 import { repairKept } from '../../history/repair';
+import { describeError, isBug } from '../../report/issue';
 import { downloadExport, openSharedExport, uploadExport, type BoardCandidate } from './transfer';
 import {
 	packDataset,
@@ -308,7 +309,9 @@ self.addEventListener('message', async (event: MessageEvent<WorkerRequest>) => {
 			type: 'error',
 			message:
 				error instanceof Error ? error.message : 'Something went wrong while reading the export.',
-			hint: 'If the files came from a ZIP, try extracting them and dropping the CSVs directly.'
+			hint: 'If the files came from a ZIP, try extracting them and dropping the CSVs directly.',
+			// Decided here: past `postMessage` the error is only a message.
+			report: isBug(error) ? describeError(error) : undefined
 		});
 	}
 });

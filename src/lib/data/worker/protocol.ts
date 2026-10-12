@@ -12,6 +12,7 @@ import type { Column, CoverageWindow, Dataset } from '../store/columnar';
 import type { DerivedData } from '../analytics';
 import type { StreamId } from '../schema/streams';
 import type { BoardCandidate } from './transfer';
+import type { ErrorDetail } from '../../report/issue';
 
 export interface PackedColumn {
 	spec: ColumnSpec;
@@ -80,7 +81,7 @@ export type WorkerResponse =
 			failed: Array<{ id: string; reason: string }>;
 			candidates?: BoardCandidate[];
 	  }
-	| { type: 'error'; message: string; hint?: string };
+	| { type: 'error'; message: string; hint?: string; report?: ErrorDetail };
 
 export type ParsePhase =
 	| 'reading'

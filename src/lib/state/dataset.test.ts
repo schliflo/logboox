@@ -35,6 +35,7 @@ vi.mock('./account.svelte', () => ({ account: { signedIn: false, user: null } })
 vi.mock('./history.svelte', () => ({
 	history: { entries: [], refresh: vi.fn(), requestPersistence: vi.fn(), sync: vi.fn() }
 }));
+vi.mock('../report/reporter', () => ({ bugDetail: vi.fn(), reportAction: vi.fn() }));
 vi.mock('./settings.svelte', () => ({ settings: { timeZone: 'Europe/Berlin' } }));
 
 const { data } = await import('./dataset.svelte');
