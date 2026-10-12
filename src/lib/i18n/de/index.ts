@@ -12,6 +12,7 @@ import { boards, claims, leaderboard } from './boards';
 import { detail, exportMenu, shares, share, notes, sharedPage } from './detail';
 import { tokens, library } from './library';
 import { landing } from './landing';
+import { site, featuresPage, faqPage } from './site';
 import { verify, unsubscribe, accountPage } from './auth';
 import { overview } from './overview';
 import { insights, privacyPage } from './insights';
@@ -50,6 +51,9 @@ export const de: Messages = {
 	tokens,
 	library,
 	landing,
+	site,
+	featuresPage,
+	faqPage,
 	verify,
 	unsubscribe,
 	accountPage,

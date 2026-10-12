@@ -1,7 +1,7 @@
 /**
- * The landing page is the only page worth listing: everything else is empty
- * until someone drops their own files in. Without a configured origin there is
- * no absolute URL to publish, so the sitemap is served empty but valid.
+ * The public pages only: the dashboard is empty until someone drops their own
+ * files in. Without a configured origin there is no absolute URL to publish,
+ * so the sitemap is served empty but valid.
  */
 
 import { SITE_URL } from '#lib/seo.js';
@@ -12,6 +12,8 @@ export function GET(): Response {
 	const entries = SITE_URL
 		? [
 				`\t<url>\n\t\t<loc>${SITE_URL}/</loc>\n\t\t<priority>1.0</priority>\n\t</url>`,
+				`\t<url>\n\t\t<loc>${SITE_URL}/features</loc>\n\t\t<priority>0.8</priority>\n\t</url>`,
+				`\t<url>\n\t\t<loc>${SITE_URL}/faq</loc>\n\t\t<priority>0.8</priority>\n\t</url>`,
 				`\t<url>\n\t\t<loc>${SITE_URL}/leaderboard</loc>\n\t\t<priority>0.7</priority>\n\t</url>`,
 				`\t<url>\n\t\t<loc>${SITE_URL}/legal/privacy</loc>\n\t\t<priority>0.2</priority>\n\t</url>`,
 				`\t<url>\n\t\t<loc>${SITE_URL}/legal/imprint</loc>\n\t\t<priority>0.2</priority>\n\t</url>`,
