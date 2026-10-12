@@ -16,7 +16,8 @@ const FORMAT: FactFormat = {
 	list: (items) => items.join(', ')
 };
 
-export function factText(fact: Fact): FactText {
+/** `format` swaps single formatters, e.g. to read times in another zone. */
+export function factText(fact: Fact, format?: Partial<FactFormat>): FactText {
 	const word = m.facts[fact.id] as (p: Fact['params'], f: FactFormat) => FactText;
-	return word(fact.params, FORMAT);
+	return word(fact.params, format ? { ...FORMAT, ...format } : FORMAT);
 }

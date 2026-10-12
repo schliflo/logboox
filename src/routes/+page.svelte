@@ -4,7 +4,7 @@
 	import ExportLibrary from '#lib/components/app/ExportLibrary.svelte';
 	import ParseProgress from '#lib/components/app/ParseProgress.svelte';
 	import { Button, buttonVariants } from '#lib/components/ui/button/index.js';
-	import * as Card from '#lib/components/ui/card/index.js';
+	import FeatureTeasers from '#lib/components/app/FeatureTeasers.svelte';
 	import MadeBy from '#lib/components/app/MadeBy.svelte';
 	import LocaleSwitch from '#lib/components/app/LocaleSwitch.svelte';
 	import MovedNotice from '#lib/components/app/MovedNotice.svelte';
@@ -17,9 +17,6 @@
 	import { dateOnly, num } from '#lib/utils/format.js';
 	import ChevronRightIcon from '@lucide/svelte/icons/chevron-right';
 	import ShieldIcon from '@lucide/svelte/icons/shield-check';
-	import ZapIcon from '@lucide/svelte/icons/zap';
-	import GaugeIcon from '@lucide/svelte/icons/gauge';
-	import DoorIcon from '@lucide/svelte/icons/door-open';
 	import AlertIcon from '@lucide/svelte/icons/triangle-alert';
 	import ArrowRightIcon from '@lucide/svelte/icons/arrow-right';
 	import PlayIcon from '@lucide/svelte/icons/play';
@@ -54,11 +51,6 @@
 	});
 
 	const steps = $derived(m.landing.steps);
-
-	const ICONS = [GaugeIcon, ZapIcon, DoorIcon];
-	const highlights = $derived(
-		m.landing.highlights.map((item, index) => ({ ...item, icon: ICONS[index] }))
-	);
 </script>
 
 <Seo />
@@ -236,19 +228,7 @@
 				</aside>
 			</div>
 
-			<section class="mt-24 grid gap-4 sm:grid-cols-3">
-				{#each highlights as item, index (index)}
-					<Card.Root class="bg-card/50">
-						<Card.Header>
-							<item.icon class="mb-2 size-5 text-primary" />
-							<Card.Title class="text-base">{item.title}</Card.Title>
-						</Card.Header>
-						<Card.Content>
-							<p class="text-sm leading-relaxed text-muted-foreground">{item.body}</p>
-						</Card.Content>
-					</Card.Root>
-				{/each}
-			</section>
+			<FeatureTeasers />
 
 			<section class="mt-16 max-w-3xl">
 				<div class="space-y-3">
