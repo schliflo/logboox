@@ -32,12 +32,27 @@ export const dropZone = {
 export const moved = {
 	backupFailed: 'The backup could not be written',
 	somethingWrong: 'Something went wrong.',
-	title: (site: string, host: string) => `${site} has moved to ${host}`,
-	kept: 'This address will not be updated again. The exports kept in this browser stay here, so back them up first, then drop the file onto the start page at the new address to carry them over.',
-	notKept:
-		'This address will not be updated again; everything from here on happens at the new address.',
-	backUp: 'Back up everything',
-	open: (host: string) => `Open ${host}`
+	eyebrow: 'New address',
+	/** Followed by the new address, set apart. */
+	title: (site: string) => `${site} now lives at`,
+	lede: 'This old address only lets you take your exports with you. The dashboard, accounts and the leaderboard are at the new one, and only the new one gets updates.',
+	open: (host: string) => `Go to ${host}`,
+	carryTitle: 'Bring your exports along',
+	carryIntro:
+		'Exports are kept per address, so the ones in this browser are invisible from the new one until you move them.',
+	steps: (host: string) => [
+		{ title: 'Back up', detail: 'Writes every export kept here into one file.' },
+		{ title: `Open ${host}`, detail: 'The same app, at its new home.' },
+		{
+			title: 'Drop the file in',
+			detail: 'Onto the start page there. Everything comes back as it was.'
+		}
+	],
+	kept: (count: number, size: string) =>
+		count === 1 ? `One export kept here, ${size}.` : `${count} exports kept here, ${size}.`,
+	notKept: 'Nothing is kept in this browser, so there is nothing to carry over.',
+	unavailable: 'This browser’s storage could not be read, so there is nothing to back up here.',
+	backUp: 'Back up everything'
 };
 
 export const offline = {
