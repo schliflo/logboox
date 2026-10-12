@@ -5,13 +5,10 @@
 	import ParseProgress from '#lib/components/app/ParseProgress.svelte';
 	import { Button, buttonVariants } from '#lib/components/ui/button/index.js';
 	import FeatureTeasers from '#lib/components/app/FeatureTeasers.svelte';
-	import MadeBy from '#lib/components/app/MadeBy.svelte';
-	import LocaleSwitch from '#lib/components/app/LocaleSwitch.svelte';
-	import MovedNotice from '#lib/components/app/MovedNotice.svelte';
-	import AccountMenu from '#lib/components/app/AccountMenu.svelte';
+	import SiteHeader from '#lib/components/app/SiteHeader.svelte';
+	import SiteFooter from '#lib/components/app/SiteFooter.svelte';
 	import Seo from '#lib/components/app/Seo.svelte';
 	import { onMount } from 'svelte';
-	import LogoMark from '#lib/components/app/LogoMark.svelte';
 	import { data, recordIds } from '#lib/state/dataset.svelte.js';
 	import { history } from '#lib/state/history.svelte.js';
 	import { dateOnly, num } from '#lib/utils/format.js';
@@ -63,22 +60,14 @@
 		aria-hidden="true"
 	></div>
 
-	<nav class="relative flex items-center gap-2 px-4 py-5 sm:px-8 lg:px-12">
-		<a href="/" class="mr-auto flex items-center gap-2.5 text-lg font-semibold tracking-tight">
-			<LogoMark size={32} />
-			LogbooX
-		</a>
+	<SiteHeader>
 		<a
 			href="#getting-your-export"
-			class="{buttonVariants({ variant: 'ghost' })} font-semibold max-md:!hidden"
+			class="{buttonVariants({ variant: 'ghost' })} font-semibold max-lg:!hidden"
 		>
 			{m.landing.howTo}
 		</a>
-		<a href="/leaderboard" class="{buttonVariants({ variant: 'ghost' })} font-semibold max-sm:px-2">
-			{m.landing.leaderboard}
-		</a>
-		<AccountMenu />
-	</nav>
+	</SiteHeader>
 
 	<div class="relative mx-auto w-full max-w-6xl flex-1 px-4 pt-6 pb-16 sm:px-8 lg:pt-10">
 		{#if data.status === 'loading'}
@@ -86,8 +75,6 @@
 				<ParseProgress />
 			</div>
 		{:else}
-			<MovedNotice />
-
 			<div class="grid items-start gap-10 lg:grid-cols-[minmax(0,1fr)_21.5rem] lg:gap-12">
 				<div class="min-w-0">
 					<header>
@@ -247,28 +234,5 @@
 		{/if}
 	</div>
 
-	<footer
-		class="relative flex flex-wrap items-center gap-x-6 gap-y-2 border-t px-4 py-5 text-xs text-muted-foreground sm:px-8 lg:px-12"
-	>
-		<MadeBy />
-		<p class="mr-auto">
-			{m.landing.openSource}
-			<a
-				href="https://github.com/schliflo/logboox/blob/main/LICENSE"
-				class="underline underline-offset-4 hover:text-foreground"
-				target="_blank"
-				rel="noreferrer noopener">{m.landing.licence}</a
-			>{m.landing.notAffiliated}
-		</p>
-		<a href="/legal/imprint" class="underline underline-offset-4 hover:text-foreground"
-			>{m.common.imprint}</a
-		>
-		<a href="/legal/privacy" class="underline underline-offset-4 hover:text-foreground"
-			>{m.common.privacy}</a
-		>
-		<a href="/legal/terms" class="underline underline-offset-4 hover:text-foreground"
-			>{m.common.terms}</a
-		>
-		<LocaleSwitch />
-	</footer>
+	<SiteFooter />
 </main>

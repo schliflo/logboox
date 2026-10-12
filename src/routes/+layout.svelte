@@ -4,11 +4,25 @@
 	import { ModeWatcher } from 'mode-watcher';
 	import { Toaster } from '#lib/components/ui/sonner/index.js';
 	import OfflineSupport from '#lib/components/app/OfflineSupport.svelte';
+	import MovedPage from '#lib/components/app/MovedPage.svelte';
+	import { page } from '$app/state';
 	import { onMount } from 'svelte';
 	import { restoreLocale } from '#lib/i18n/index.svelte.js';
-	import { AUTHOR, AUTHOR_URL, SITE_DESCRIPTION, SITE_NAME, SITE_URL, absolute } from '#lib/seo.js';
+	import {
+		AUTHOR,
+		AUTHOR_URL,
+		MOVED_TO,
+		SITE_DESCRIPTION,
+		SITE_NAME,
+		SITE_URL,
+		absolute
+	} from '#lib/seo.js';
 
 	let { children } = $props();
+
+	// A superseded deployment is export-only: every page but the legal ones
+	// becomes the pointer at the new address.
+	const superseded = $derived(MOVED_TO && !page.url.pathname.startsWith('/legal'));
 
 	// After hydration, so the prerendered English and the first client render agree.
 	onMount(restoreLocale);
@@ -51,4 +65,8 @@
 <Toaster mobileOffset={{ bottom: 'calc(4.5rem + env(safe-area-inset-bottom))' }} />
 <OfflineSupport />
 
-{@render children()}
+{#if superseded}
+	<MovedPage />
+{:else}
+	{@render children()}
+{/if}

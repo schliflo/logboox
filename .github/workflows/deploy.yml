@@ -123,7 +123,7 @@ jobs:
           node-version: 26
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      # Serves the full app with a notice pointing at logboox.app, so exports
+      # Export-only: every page points at logboox.app, so exports
       # kept on the old origin can still be backed up and carried over.
       - run: pnpm build
         env:

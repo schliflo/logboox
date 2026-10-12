@@ -130,7 +130,7 @@ export const facts: FactCatalog = {
 		kicker: 'Zeilen ohne brauchbare Zeit',
 		value: f.num(p.count),
 		detail:
-			'Vor 2015 gestempelt oder ganz ohne Datum, meist weil die Uhr des Autos nicht gestellt war. Sie bleiben außen vor. Behalten würden sie jedes Diagramm über die Jahre dazwischen strecken.'
+			'Vor 2015 gestempelt, Jahre vom Rest entfernt oder ganz ohne Datum, meist weil die Uhr des Autos nicht gestellt war. Sie bleiben außen vor. Behalten würden sie jedes Diagramm über die Jahre dazwischen strecken.'
 	}),
 	'beijing-time': () => ({
 		kicker: 'Dein Tag beginnt um',
