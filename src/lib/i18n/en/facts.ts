@@ -158,7 +158,7 @@ export const facts: FactCatalog = {
 		kicker: 'Rows with no usable time',
 		value: f.num(p.count),
 		detail:
-			"Stamped before 2015 or with no date at all, usually because the car's clock had not been set. They are left out. Kept, they would stretch every chart back across the years in between."
+			"Stamped before 2015, years apart from the rest, or with no date at all, usually because the car's clock had not been set. They are left out. Kept, they would stretch every chart back across the years in between."
 	}),
 	'beijing-time': () => ({
 		kicker: 'Your day starts at',

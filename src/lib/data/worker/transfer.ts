@@ -17,6 +17,8 @@ import { analyze } from '../analytics';
 import { summarize } from '../analytics/summary';
 import { decodeExport } from '../../history/codec';
 import { getExport, putExport } from '../../history/db';
+import { repairKept } from '../../history/repair';
+import { dropStrays } from '../parse/order';
 import type { ExportRecord, StoredBlob } from '../../history/codec';
 import type { Dataset } from '../store/columnar';
 import { unpackDataset } from './protocol';
@@ -102,8 +104,9 @@ export async function uploadExport(
 	timeZone: string,
 	onProgress?: TransferProgress
 ): Promise<BoardCandidate[]> {
-	const entry = await getExport(id);
-	if (!entry) throw new TransferError('That export is no longer kept in this browser.');
+	const kept = await getExport(id);
+	if (!kept) throw new TransferError('That export is no longer kept in this browser.');
+	const entry = await repairKept(kept, timeZone);
 
 	const dataset = unpackDataset(decodeExport(entry.record, entry.blobs));
 	const derived = analyze(dataset, timeZone);
@@ -233,5 +236,5 @@ export async function openSharedExport(
 		onProgress?.(++done, names.length);
 	});
 
-	return unpackDataset(decodeExport(record, blobs));
+	return dropStrays(unpackDataset(decodeExport(record, blobs)));
 }
