@@ -7,7 +7,6 @@
 	import * as Card from '#lib/components/ui/card/index.js';
 	import SiteHeader from '#lib/components/app/SiteHeader.svelte';
 	import SiteFooter from '#lib/components/app/SiteFooter.svelte';
-	import MovedNotice from '#lib/components/app/MovedNotice.svelte';
 	import Seo from '#lib/components/app/Seo.svelte';
 	import { onMount } from 'svelte';
 	import { data, recordIds } from '#lib/state/dataset.svelte.js';
@@ -84,8 +83,6 @@
 				<ParseProgress />
 			</div>
 		{:else}
-			<MovedNotice />
-
 			<div class="grid items-start gap-10 lg:grid-cols-[minmax(0,1fr)_21.5rem] lg:gap-12">
 				<div class="min-w-0">
 					<header>

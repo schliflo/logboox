@@ -31,12 +31,29 @@ export const dropZone: Messages['dropZone'] = {
 export const moved: Messages['moved'] = {
 	backupFailed: 'Die Sicherung konnte nicht geschrieben werden',
 	somethingWrong: 'Etwas ist schiefgelaufen.',
-	title: (site, host) => `${site} ist umgezogen nach ${host}`,
-	kept: 'Diese Adresse wird nicht mehr aktualisiert. Die in diesem Browser gespeicherten Exporte bleiben hier — sichere sie also zuerst und lege die Datei dann auf der Startseite unter der neuen Adresse ab, um sie mitzunehmen.',
-	notKept:
-		'Diese Adresse wird nicht mehr aktualisiert; ab jetzt passiert alles unter der neuen Adresse.',
-	backUp: 'Alles sichern',
-	open: (host) => `${host} öffnen`
+	eyebrow: 'Neue Adresse',
+	title: (site) => `${site} ist jetzt unter`,
+	lede: 'Unter dieser alten Adresse kannst du nur noch deine Exporte mitnehmen. Dashboard, Konten und Bestenliste gibt es unter der neuen, und nur die wird noch aktualisiert.',
+	open: (host) => `Zu ${host}`,
+	carryTitle: 'Nimm deine Exporte mit',
+	carryIntro:
+		'Exporte werden pro Adresse gespeichert. Die in diesem Browser sind unter der neuen Adresse unsichtbar, bis du sie umziehst.',
+	steps: (host) => [
+		{ title: 'Sichern', detail: 'Schreibt alle hier gespeicherten Exporte in eine Datei.' },
+		{ title: `${host} öffnen`, detail: 'Dieselbe App, an ihrem neuen Ort.' },
+		{
+			title: 'Datei ablegen',
+			detail: 'Auf der Startseite dort. Alles kommt so zurück, wie es war.'
+		}
+	],
+	kept: (count, size) =>
+		count === 1
+			? `Ein Export hier gespeichert, ${size}.`
+			: `${count} Exporte hier gespeichert, ${size}.`,
+	notKept: 'In diesem Browser ist nichts gespeichert, also gibt es nichts mitzunehmen.',
+	unavailable:
+		'Der Speicher dieses Browsers ließ sich nicht lesen, also gibt es hier nichts zu sichern.',
+	backUp: 'Alles sichern'
 };
 
 export const offline: Messages['offline'] = {

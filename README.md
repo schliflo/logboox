@@ -220,9 +220,9 @@ The app first shipped at `xpeng-data-export-browser.schliflo.workers.dev`.
 Exports are kept per origin, so anything kept there is invisible from
 logboox.app — and a redirect would never reach anyone who installed the app,
 because the service worker serves pages from its own store and refuses a
-redirect when it checks for updates. So the old Worker keeps serving the full
-app, with a notice that points at the new address and offers a backup of
-everything kept:
+redirect when it checks for updates. So the old Worker still serves the app,
+but export-only: every page except the legal ones is replaced by a pointer at
+the new address and a backup of everything kept:
 
 ```sh
 pnpm deploy:legacy
