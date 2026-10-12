@@ -15,7 +15,7 @@
 </script>
 
 <a
-	href="https://github.com/schliflo"
+	href="https://github.com/schliflo/logboox"
 	target="_blank"
 	rel="noreferrer noopener"
 	class="inline-flex items-center gap-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground {className}"

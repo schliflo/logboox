@@ -9,7 +9,7 @@ migrations, and ships three Workers:
 2. **logboox-cron** — the Worker that starts the daily run: reminders, board
    messages, the yearly summary and the tidying up.
 3. **xpeng-data-export-browser** — the old workers.dev address, which still
-   serves the full app with a notice pointing at the new one.
+   serves an export-only page pointing at the new one.
 
 Once production is out, the cron and legacy jobs run side by side. Production
 is deployed before legacy on purpose. Wrangler attaches a custom
@@ -210,7 +210,7 @@ These ship no secrets. Put them on by hand with `wrangler secret put`:
   `sign-in link failed` in `wrangler tail logboox`. (A well-formed address also
   answers 202 and sends a real sign-in link.)
 
-- The old address still shows the moved notice, and the same request there
+- The old address shows only the moved page, on every path but `/legal`, and the same request there
   answers **503**: it has no bindings on purpose.
 - `wrangler d1 migrations list logboox --remote` reports nothing pending.
 - `wrangler tail logboox-cron` the morning after shows one request. It logs a
