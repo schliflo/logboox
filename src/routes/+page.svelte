@@ -8,6 +8,7 @@
 	import SiteHeader from '#lib/components/app/SiteHeader.svelte';
 	import SiteFooter from '#lib/components/app/SiteFooter.svelte';
 	import Seo from '#lib/components/app/Seo.svelte';
+	import RichText from '#lib/components/app/RichText.svelte';
 	import { onMount } from 'svelte';
 	import { data, recordIds } from '#lib/state/dataset.svelte.js';
 	import { reportUrl } from '#lib/report/reporter.js';
@@ -228,7 +229,18 @@
 
 			<FeatureTeasers />
 
-			<section class="mt-16 max-w-3xl">
+			<section class="mt-16 max-w-3xl" aria-labelledby="about">
+				<div class="space-y-3">
+					<h2 id="about" class="text-lg font-semibold">{m.landing.about.title}</h2>
+					{#each m.landing.about.body as paragraph, p (p)}
+						<p class="text-sm leading-relaxed text-pretty text-muted-foreground">
+							<RichText text={paragraph} />
+						</p>
+					{/each}
+				</div>
+			</section>
+
+			<section class="mt-12 max-w-3xl">
 				<div class="space-y-3">
 					<h2 class="flex items-center gap-2 text-lg font-semibold">
 						<ShieldIcon class="size-5 text-primary" />

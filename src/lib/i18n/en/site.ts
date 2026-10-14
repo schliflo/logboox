@@ -3,6 +3,7 @@
 export const site = {
 	features: 'Features',
 	faq: 'FAQ',
+	guides: 'Guides',
 	readExport: 'Read your export'
 };
 
@@ -134,13 +135,25 @@ export const faqPage = {
 				{
 					q: 'How do I get my export?',
 					a: [
-						'Request it at xpeng.com/data-act. XPeng sends an e-mail with a ZIP, usually within about a week.'
+						'Request it at xpeng.com/data-act. XPeng sends an e-mail with a ZIP, usually within about a week. [The request guide](/guides/request-xpeng-data) goes through it step by step.'
 					]
 				},
 				{
 					q: 'Which files does LogbooX need?',
 					a: [
 						'The CSV files in that ZIP — driving status, driving operation and power & energy. Long months spill into extra parts. Drop the ZIP as downloaded, or all the files at once.'
+					]
+				},
+				{
+					q: 'What is in the XPeng data export?',
+					a: [
+						'Raw signals at one sample a second while the car is awake: speed, acceleration, steering, pedals, motors, battery, charging, doors, windows and tyre pressures. There are no locations. [The export format guide](/guides/xpeng-export-format) lists every file and column.'
+					]
+				},
+				{
+					q: 'Which XPeng models does it work with?',
+					a: [
+						'LogbooX reads the export format rather than a list of models: if your files are named like DA…_dwd_opp_gdpr_veh_driving_status_di.csv, it opens them, and it takes the model name from the file itself.'
 					]
 				},
 				{
@@ -250,6 +263,12 @@ export const faqPage = {
 				{
 					q: 'What does it cost?',
 					a: ['Nothing. LogbooX is free and open source under the MIT licence.']
+				},
+				{
+					q: 'What is the EU Data Act?',
+					a: [
+						'An EU regulation, applicable since 12 September 2025, that gives the users of connected products such as cars the right to the data those products generate — free of charge and machine-readable. [The Data Act guide](/guides/eu-data-act-car-data) explains what that means for drivers.'
+					]
 				},
 				{
 					q: 'Is this an XPeng app?',

@@ -58,6 +58,13 @@ export const landing: Messages['landing'] = {
 			cta: 'Zu den Bestenlisten'
 		}
 	},
+	about: {
+		title: 'Ein Viewer für den XPeng-Datenexport',
+		body: [
+			'LogbooX ist ein kostenloser Open-Source-Viewer für die Fahrzeugdaten, die XPeng nach dem EU Data Act herausgibt. Der Export besteht aus bis zu drei CSV-Dateien mit rohen Signalen — ein Monat sind etwa 340 MB und 3,6 Millionen Zeilen, ohne Fahrten, ohne Ladevorgänge und ohne Standorte. LogbooX liest sie in deinem Browser und berechnet den Rest: jede Fahrt Sekunde für Sekunde, Ladevorgänge mit der geladenen Energie, Verlust im Stand und echte Reichweite, Fahrstil und einen Fahrtenbuch-Entwurf zum Herunterladen als PDF, Tabelle oder CSV.',
+			'Neu beim Export? Lies, [wie du deine XPeng-Daten anforderst](/guides/request-xpeng-data), [was in den Dateien steckt](/guides/xpeng-export-format), [was dir der EU Data Act gibt](/guides/eu-data-act-car-data) und [wie du daraus ein Fahrtenbuch entwirfst](/guides/xpeng-driving-logbook).'
+		]
+	},
 	privacyTitle: 'Nichts verlässt diesen Tab, außer du willst es',
 	privacyOne:
 		'Die Dateien werden von einem Worker innerhalb dieser Seite gelesen — kein Upload, keine Analyse, nichts, was das Gerät verlässt. Was die App aufbewahrt, bewahrt sie hier auf: Eine Kopie landet im Speicher dieses Browsers, damit ein Export wieder geöffnet werden kann, ohne die Dateien erneut abzulegen, und ein Klick entfernt sie. Deine Fahrzeug-Identifizierungsnummer steht in jeder Zeile des Exports; hier bleibt sie verdeckt, solange du sie nicht sehen willst.',

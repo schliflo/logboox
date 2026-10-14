@@ -42,6 +42,9 @@
 		image?: string;
 		/** What that image shows, for a reader who cannot see it. */
 		imageAlt?: string;
+		/** `article` for the guides, with the date they were last revised. */
+		ogType?: 'website' | 'article';
+		modified?: string;
 	}
 
 	let {
@@ -53,7 +56,9 @@
 		cardDescription,
 		canonicalUrl,
 		image: ownImage,
-		imageAlt: ownImageAlt
+		imageAlt: ownImageAlt,
+		ogType = 'website',
+		modified
 	}: Props = $props();
 
 	const fullTitle = $derived(pageTitle(title));
@@ -75,7 +80,10 @@
 		<link rel="canonical" href={canonical} />
 	{/if}
 
-	<meta property="og:type" content="website" />
+	<meta property="og:type" content={ogType} />
+	{#if ogType === 'article' && modified}
+		<meta property="article:modified_time" content={modified} />
+	{/if}
 	<meta property="og:site_name" content={SITE_NAME} />
 	<meta property="og:title" content={cardHeading} />
 	<meta property="og:description" content={cardBody} />

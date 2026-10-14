@@ -32,17 +32,45 @@
 	// take a nested <script> tag in markup.
 	const structuredData = JSON.stringify({
 		'@context': 'https://schema.org',
-		'@type': 'WebApplication',
-		name: SITE_NAME,
-		description: SITE_DESCRIPTION,
-		applicationCategory: 'UtilitiesApplication',
-		operatingSystem: 'Any browser',
-		browserRequirements: 'Requires JavaScript and Web Workers',
-		isAccessibleForFree: true,
-		offers: { '@type': 'Offer', price: '0', priceCurrency: 'EUR' },
-		author: { '@type': 'Person', name: AUTHOR, url: AUTHOR_URL },
-		...(SITE_URL ? { url: SITE_URL } : {}),
-		...(absolute('/og.png') ? { image: absolute('/og.png') } : {})
+		'@graph': [
+			{
+				'@type': 'WebApplication',
+				name: SITE_NAME,
+				alternateName: 'XPeng Data Export Browser',
+				description: SITE_DESCRIPTION,
+				applicationCategory: 'UtilitiesApplication',
+				applicationSubCategory: 'Vehicle data viewer',
+				operatingSystem: 'Any browser',
+				browserRequirements: 'Requires JavaScript and Web Workers',
+				inLanguage: ['en', 'de'],
+				isAccessibleForFree: true,
+				license: 'https://opensource.org/licenses/MIT',
+				offers: { '@type': 'Offer', price: '0', priceCurrency: 'EUR' },
+				featureList: [
+					'Reads the XPeng EU Data Act export (CSV or ZIP) in the browser, without uploading it',
+					'Trips second by second: speed, power and state of charge',
+					'Charging sessions with energy integrated from pack voltage and current',
+					'Battery standby drain and real-world range',
+					'Driving style g-g diagram',
+					'Driving logbook draft as PDF, spreadsheet or CSV',
+					'Combines monthly exports into one continuous record',
+					'Works offline'
+				],
+				about: { '@type': 'Brand', name: 'XPeng' },
+				author: { '@type': 'Person', name: AUTHOR, url: AUTHOR_URL },
+				sameAs: ['https://github.com/schliflo/logboox'],
+				...(SITE_URL ? { url: SITE_URL } : {}),
+				...(absolute('/og.png') ? { image: absolute('/og.png') } : {})
+			},
+			{
+				'@type': 'WebSite',
+				name: SITE_NAME,
+				description: SITE_DESCRIPTION,
+				inLanguage: ['en', 'de'],
+				publisher: { '@type': 'Person', name: AUTHOR, url: AUTHOR_URL },
+				...(SITE_URL ? { url: SITE_URL } : {})
+			}
+		]
 	});
 </script>
 

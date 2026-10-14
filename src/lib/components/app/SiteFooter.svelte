@@ -6,6 +6,7 @@
 
 	const links = $derived([
 		{ href: '/features', label: m.site.features },
+		{ href: '/guides', label: m.site.guides },
 		{ href: '/faq', label: m.site.faq },
 		{ href: '/legal/imprint', label: m.common.imprint },
 		{ href: '/legal/privacy', label: m.common.privacy },

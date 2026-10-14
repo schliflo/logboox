@@ -22,6 +22,9 @@ export const SITE_NAME = 'LogbooX';
 export const SITE_DESCRIPTION =
 	'LogbooX turns your XPeng EU Data Act export into trips, charging sessions, battery health and driving style. Read in your browser — nothing is uploaded.';
 
+/** When the guides were last checked against the export and the law. */
+export const GUIDES_UPDATED = '2026-10-14';
+
 export const OG_IMAGE = '/og.png';
 
 export const OG_IMAGE_ALT =
@@ -49,6 +52,6 @@ export function absolute(path: string): string | null {
 /** Page title, suffixed with the site name unless it already is the name. */
 export function pageTitle(title?: string): string {
 	if (!title || title === SITE_NAME)
-		return `${SITE_NAME} — read the month your XPeng quietly recorded`;
+		return `${SITE_NAME} — XPeng data export viewer: trips, charging & logbook`;
 	return `${title} · ${SITE_NAME}`;
 }

@@ -1,6 +1,7 @@
 <!--
-  The bar across the top of the public pages: the landing page, features and
-  FAQ. Features and FAQ fold into the footer on phones, where they do not fit.
+  The bar across the top of the public pages: the landing page, features,
+  guides and FAQ. Those three fold into the footer on phones, where they do not
+  fit.
 -->
 <script lang="ts">
 	import type { Snippet } from 'svelte';
@@ -19,6 +20,7 @@
 
 	const links = $derived([
 		{ href: '/features', label: m.site.features, narrow: false },
+		{ href: '/guides', label: m.site.guides, narrow: false },
 		{ href: '/faq', label: m.site.faq, narrow: false },
 		{ href: '/leaderboard', label: m.landing.leaderboard, narrow: true }
 	]);
@@ -33,7 +35,9 @@
 	{#each links as link (link.href)}
 		<a
 			href={link.href}
-			aria-current={page.url.pathname === link.href ? 'page' : undefined}
+			aria-current={page.url.pathname === link.href || page.url.pathname.startsWith(`${link.href}/`)
+				? 'page'
+				: undefined}
 			class="{buttonVariants({
 				variant: 'ghost'
 			})} font-semibold aria-[current=page]:bg-accent {link.narrow

@@ -4,21 +4,44 @@
  * so the sitemap is served empty but valid.
  */
 
-import { SITE_URL } from '#lib/seo.js';
+import { en } from '#lib/i18n/en/index.js';
+import { GUIDES_UPDATED, SITE_URL } from '#lib/seo.js';
 
 export const prerender = true;
 
+interface Entry {
+	path: string;
+	priority: string;
+	lastmod?: string;
+}
+
+const PAGES: Entry[] = [
+	{ path: '/', priority: '1.0' },
+	{ path: '/features', priority: '0.8' },
+	{ path: '/guides', priority: '0.8', lastmod: GUIDES_UPDATED },
+	...en.guides.map((guide) => ({
+		path: `/guides/${guide.slug}`,
+		priority: '0.8',
+		lastmod: GUIDES_UPDATED
+	})),
+	{ path: '/faq', priority: '0.8' },
+	{ path: '/leaderboard', priority: '0.7' },
+	{ path: '/legal/privacy', priority: '0.2' },
+	{ path: '/legal/imprint', priority: '0.2' },
+	{ path: '/legal/terms', priority: '0.2' }
+];
+
 export function GET(): Response {
 	const entries = SITE_URL
-		? [
-				`\t<url>\n\t\t<loc>${SITE_URL}/</loc>\n\t\t<priority>1.0</priority>\n\t</url>`,
-				`\t<url>\n\t\t<loc>${SITE_URL}/features</loc>\n\t\t<priority>0.8</priority>\n\t</url>`,
-				`\t<url>\n\t\t<loc>${SITE_URL}/faq</loc>\n\t\t<priority>0.8</priority>\n\t</url>`,
-				`\t<url>\n\t\t<loc>${SITE_URL}/leaderboard</loc>\n\t\t<priority>0.7</priority>\n\t</url>`,
-				`\t<url>\n\t\t<loc>${SITE_URL}/legal/privacy</loc>\n\t\t<priority>0.2</priority>\n\t</url>`,
-				`\t<url>\n\t\t<loc>${SITE_URL}/legal/imprint</loc>\n\t\t<priority>0.2</priority>\n\t</url>`,
-				`\t<url>\n\t\t<loc>${SITE_URL}/legal/terms</loc>\n\t\t<priority>0.2</priority>\n\t</url>`
-			]
+		? PAGES.map(({ path, priority, lastmod }) =>
+				[
+					'\t<url>',
+					`\t\t<loc>${SITE_URL}${path}</loc>`,
+					...(lastmod ? [`\t\t<lastmod>${lastmod}</lastmod>`] : []),
+					`\t\t<priority>${priority}</priority>`,
+					'\t</url>'
+				].join('\n')
+			)
 		: [];
 	const body = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
