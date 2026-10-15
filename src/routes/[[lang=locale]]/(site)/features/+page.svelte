@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import { m } from '#lib/i18n/index.svelte.js';
+	import { localHref, m } from '#lib/i18n/index.svelte.js';
 	import Seo from '#lib/components/app/Seo.svelte';
 	import { Button } from '#lib/components/ui/button/index.js';
 	import { data } from '#lib/state/dataset.svelte.js';
@@ -47,7 +47,7 @@
 
 	/** The demo parses on the landing page, where its progress is shown. */
 	async function demo() {
-		await goto('/');
+		await goto(localHref('/'));
 		void data.loadDemoData();
 	}
 </script>
@@ -91,7 +91,7 @@
 	<h2 class="text-2xl font-bold tracking-tight">{m.featuresPage.ctaTitle}</h2>
 	<p class="mt-2 max-w-xl text-muted-foreground">{m.featuresPage.ctaBody}</p>
 	<div class="mt-6 flex flex-wrap gap-3">
-		<Button href="/" size="lg" class="h-11 px-5">
+		<Button href={localHref('/')} size="lg" class="h-11 px-5">
 			{m.site.readExport}
 			<ArrowRightIcon class="size-4" />
 		</Button>

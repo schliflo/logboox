@@ -15,6 +15,7 @@ import { detail, exportMenu, shares, share, notes, sharedPage } from './detail';
 import { tokens, library } from './library';
 import { landing } from './landing';
 import { site, featuresPage, faqPage } from './site';
+import { guidesPage, guides } from './guides';
 import { verify, unsubscribe, accountPage } from './auth';
 import { overview } from './overview';
 import { insights, privacyPage } from './insights';
@@ -56,6 +57,8 @@ export const en = {
 	site,
 	featuresPage,
 	faqPage,
+	guidesPage,
+	guides,
 	verify,
 	unsubscribe,
 	accountPage,

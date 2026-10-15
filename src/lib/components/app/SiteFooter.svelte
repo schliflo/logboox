@@ -1,16 +1,22 @@
-<!-- The foot of the public pages: authorship, licence, the other pages, language. -->
+<!--
+  The foot of the public pages: authorship, licence, the other pages, in the
+  language being read where they have one, and the language itself.
+-->
 <script lang="ts">
-	import { m } from '#lib/i18n/index.svelte.js';
+	import { localHref, m } from '#lib/i18n/index.svelte.js';
 	import MadeBy from './MadeBy.svelte';
 	import LocaleSwitch from './LocaleSwitch.svelte';
 
-	const links = $derived([
-		{ href: '/features', label: m.site.features },
-		{ href: '/faq', label: m.site.faq },
-		{ href: '/legal/imprint', label: m.common.imprint },
-		{ href: '/legal/privacy', label: m.common.privacy },
-		{ href: '/legal/terms', label: m.common.terms }
-	]);
+	const links = $derived(
+		[
+			{ href: '/features', label: m.site.features },
+			{ href: '/guides', label: m.site.guides },
+			{ href: '/faq', label: m.site.faq },
+			{ href: '/legal/imprint', label: m.common.imprint },
+			{ href: '/legal/privacy', label: m.common.privacy },
+			{ href: '/legal/terms', label: m.common.terms }
+		].map((link) => ({ ...link, href: localHref(link.href) }))
+	);
 </script>
 
 <footer

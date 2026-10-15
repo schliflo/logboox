@@ -6,7 +6,7 @@ export const landing = {
 	headlineAccent: 'a very detailed diary.',
 	lede: 'Drop in the export XPeng sends under the EU Data Act. You get your trips, charging, battery and a ready-to-file logbook.',
 	demo: 'Try it with a demo month',
-	noExport: 'No export yet? Requests take about a week.',
+	noExport: 'No export yet? It takes a few minutes to request.',
 	welcome: 'Welcome back',
 	daysRecorded: (count: number) => (count === 1 ? 'day recorded' : 'days recorded'),
 	demoCar: 'The demonstration car, ',
@@ -15,7 +15,7 @@ export const landing = {
 	gettingExport: 'Getting your export',
 	requestAt: 'Request it at',
 	steps: [
-		'Download the ZIP when the e-mail arrives. It covers the last 30 days.',
+		'Select all data and the last 30 days, then download the ZIP when it is ready — usually within minutes.',
 		'Drop it here. Ask again every month to build a longer record.'
 	],
 	imported: (count: number) => `Imported files (${count})`,
@@ -55,6 +55,13 @@ export const landing = {
 			body: 'Fastest charge, longest drive, hardest launch and more. Sign in to claim a place each month; nothing is published until you say so.',
 			cta: 'See the boards'
 		}
+	},
+	about: {
+		title: 'A viewer for the XPeng data export',
+		body: [
+			'LogbooX is a free, open-source viewer for the vehicle data XPeng hands out under the EU Data Act. The export is up to three CSV files of raw signals — a month is about 340 MB and 3.6 million rows, with no trips, no charging sessions and no locations in it. LogbooX reads them in your browser and works out the rest: every trip second by second, charging sessions with the energy that went in, standby drain and real-world range, driving style, and a draft logbook to download as PDF, spreadsheet or CSV.',
+			'New to the export? Read [how to request your XPeng data](/guides/request-xpeng-data), [what the files contain](/guides/xpeng-export-format), [what the EU Data Act gives you](/guides/eu-data-act-car-data) and [how to draft a logbook from it](/guides/xpeng-driving-logbook).'
+		]
 	},
 	privacyTitle: 'Nothing leaves this tab unless you ask',
 	privacyOne:

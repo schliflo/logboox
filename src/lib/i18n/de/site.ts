@@ -3,7 +3,11 @@ import type { Messages } from '../en/index';
 export const site: Messages['site'] = {
 	features: 'Funktionen',
 	faq: 'FAQ',
-	readExport: 'Deinen Export lesen'
+	guides: 'Ratgeber',
+	readExport: 'Deinen Export lesen',
+	tagline: 'Viewer für den XPeng-Datenexport: Fahrten, Laden & Fahrtenbuch',
+	description:
+		'LogbooX macht aus deinem XPeng-Export nach dem EU Data Act Fahrten, Ladevorgänge, Batteriezustand und Fahrstil. Gelesen in deinem Browser — nichts wird hochgeladen.'
 };
 
 export const featuresPage: Messages['featuresPage'] = {
@@ -134,13 +138,25 @@ export const faqPage: Messages['faqPage'] = {
 				{
 					q: 'Wie bekomme ich meinen Export?',
 					a: [
-						'Fordere ihn unter xpeng.com/data-act an. XPeng schickt eine E-Mail mit einem ZIP, meist innerhalb von etwa einer Woche.'
+						'Melde dich unter xpeng.com/data-act mit deinem XPeng-Konto an, wähle alle Daten und die letzten 30 Tage und sende die Anfrage ab. Das ZIP steht meist nach wenigen Minuten in deinem Datencenter zum Download bereit, sieben Tage lang. [Der Ratgeber zur Anfrage](/guides/request-xpeng-data) führt Schritt für Schritt hindurch.'
 					]
 				},
 				{
 					q: 'Welche Dateien braucht LogbooX?',
 					a: [
 						'Die CSV-Dateien in diesem ZIP — Fahrstatus, Bedienung sowie Leistung & Energie. Lange Monate werden auf weitere Teile verteilt. Leg das ZIP so ab, wie es heruntergeladen wurde, oder alle Dateien auf einmal.'
+					]
+				},
+				{
+					q: 'Was steckt im XPeng-Datenexport?',
+					a: [
+						'Rohe Signale mit einem Messpunkt pro Sekunde, solange das Auto wach ist: Geschwindigkeit, Beschleunigung, Lenkung, Pedale, Motoren, Batterie, Laden, Türen, Fenster und Reifendruck. Standorte gibt es nicht. [Der Ratgeber zum Exportformat](/guides/xpeng-export-format) listet jede Datei und Spalte auf.'
+					]
+				},
+				{
+					q: 'Mit welchen XPeng-Modellen funktioniert es?',
+					a: [
+						'LogbooX liest das Exportformat statt einer Liste von Modellen: Heißen deine Dateien etwa DA…_dwd_opp_gdpr_veh_driving_status_di.csv, öffnet es sie, und den Modellnamen liest es aus der Datei selbst.'
 					]
 				},
 				{
@@ -250,6 +266,12 @@ export const faqPage: Messages['faqPage'] = {
 				{
 					q: 'Was kostet es?',
 					a: ['Nichts. LogbooX ist kostenlos und Open Source unter der MIT-Lizenz.']
+				},
+				{
+					q: 'Was ist der EU Data Act?',
+					a: [
+						'Eine EU-Verordnung, die seit dem 12. September 2025 gilt und Nutzern vernetzter Produkte wie Autos das Recht auf die Daten gibt, die diese erzeugen — unentgeltlich und maschinenlesbar. [Der Ratgeber zum Data Act](/guides/eu-data-act-car-data) erklärt, was das für Fahrer bedeutet.'
+					]
 				},
 				{
 					q: 'Ist das eine App von XPeng?',

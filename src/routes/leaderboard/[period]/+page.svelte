@@ -7,7 +7,7 @@
   exactly the question of where its numbers came from.
 -->
 <script lang="ts">
-	import { m } from '#lib/i18n/index.svelte.js';
+	import { localHref, m } from '#lib/i18n/index.svelte.js';
 	import * as Card from '#lib/components/ui/card/index.js';
 	import { Badge } from '#lib/components/ui/badge/index.js';
 	import { Button } from '#lib/components/ui/button/index.js';
@@ -325,7 +325,7 @@
 					</Card.Description>
 				</Card.Header>
 				<Card.Content>
-					<Button href="/">{m.leaderboard.readOwn}</Button>
+					<Button href={localHref('/')}>{m.leaderboard.readOwn}</Button>
 				</Card.Content>
 			</Card.Root>
 		{:else}
@@ -683,7 +683,7 @@
 							{m.leaderboard.howDetail}
 						</p>
 						<div class="flex flex-wrap gap-2">
-							<Button href="/" size="sm">{m.leaderboard.readOwn}</Button>
+							<Button href={localHref('/')} size="sm">{m.leaderboard.readOwn}</Button>
 							{#if account.signedIn && !mine.length}
 								<Button href="/account#leaderboard" variant="outline" size="sm"
 									>{m.leaderboard.yourPlaces}</Button

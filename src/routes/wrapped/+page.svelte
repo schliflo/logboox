@@ -6,7 +6,7 @@
   something you would never have thought to ask.
 -->
 <script lang="ts">
-	import { m } from '#lib/i18n/index.svelte.js';
+	import { localHref, m } from '#lib/i18n/index.svelte.js';
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { Button } from '#lib/components/ui/button/index.js';
@@ -46,7 +46,7 @@
 		if (data.isReady || data.status === 'loading') return;
 		// Opened cold: reopen the last record, or start over when there is none.
 		void data.restore('/wrapped').then((ok) => {
-			if (!ok) goto('/');
+			if (!ok) goto(localHref('/'));
 		});
 	});
 

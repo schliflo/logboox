@@ -1,10 +1,12 @@
 <script lang="ts">
-	import { m } from '#lib/i18n/index.svelte.js';
+	import { localHref, m } from '#lib/i18n/index.svelte.js';
 	import Seo from '#lib/components/app/Seo.svelte';
+	import RichText from '#lib/components/app/RichText.svelte';
+	import { plainText } from '#lib/utils/rich-text.js';
+	import { absolute } from '#lib/seo.js';
 	import ChevronDownIcon from '@lucide/svelte/icons/chevron-down';
 
 	const CONTACT = 'info@logboox.app';
-	const REQUEST_HOST = 'xpeng.com/data-act';
 
 	/** Lets search engines show the answers as rich results. */
 	const structuredData = $derived(
@@ -15,9 +17,10 @@
 				group.items.map((item) => ({
 					'@type': 'Question',
 					name: item.q,
-					acceptedAnswer: { '@type': 'Answer', text: item.a.join('\n\n') }
+					acceptedAnswer: { '@type': 'Answer', text: item.a.map(plainText).join('\n\n') }
 				}))
-			)
+			),
+			...(absolute(localHref('/faq')) ? { url: absolute(localHref('/faq')) } : {})
 		}).replace(/</g, '\\u003c')
 	);
 </script>
@@ -71,18 +74,7 @@
 							</summary>
 							<div class="space-y-3 pb-5 text-sm leading-relaxed text-pretty text-muted-foreground">
 								{#each item.a as paragraph, p (p)}
-									{@const parts = paragraph.split(REQUEST_HOST)}
-									<p>
-										{#each parts as part, k (k)}
-											{part}{#if k < parts.length - 1}<a
-													href="https://www.xpeng.com/data-act"
-													target="_blank"
-													rel="noreferrer noopener"
-													class="underline underline-offset-4"
-													style="color: var(--viz-1)">{REQUEST_HOST}</a
-												>{/if}
-										{/each}
-									</p>
+									<p><RichText text={paragraph} /></p>
 								{/each}
 							</div>
 						</details>

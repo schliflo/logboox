@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { m } from '#lib/i18n/index.svelte.js';
+	import { localHref, m } from '#lib/i18n/index.svelte.js';
 	import { onMount, untrack } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
@@ -30,7 +30,7 @@
 		// nothing kept here can be reopened does it go back to the start.
 		if (data.isReady || data.status === 'loading') return;
 		const here = page.url.pathname + page.url.search;
-		if (!(await data.restore(here))) goto('/');
+		if (!(await data.restore(here))) goto(localHref('/'));
 	});
 
 	// Notes belong to the car rather than to the export they were written
