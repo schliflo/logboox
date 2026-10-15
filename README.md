@@ -56,8 +56,11 @@ map coordinate.
 
 ## Getting your data
 
-Request it from [xpeng.com/data-act](https://www.xpeng.com/data-act). You
-receive CSV files named like:
+Log in at [xpeng.com/data-act](https://www.xpeng.com/data-act) with the XPeng
+account your car is linked to, select every data category and the last 30
+days, and send the request. The ZIP is usually ready to download in the same
+data centre within minutes, and the link stays valid for seven days. Inside are
+CSV files named like:
 
 ```
 DA<request-id>_dwd_opp_gdpr_veh_driving_status_di.csv

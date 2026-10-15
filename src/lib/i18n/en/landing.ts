@@ -6,7 +6,7 @@ export const landing = {
 	headlineAccent: 'a very detailed diary.',
 	lede: 'Drop in the export XPeng sends under the EU Data Act. You get your trips, charging, battery and a ready-to-file logbook.',
 	demo: 'Try it with a demo month',
-	noExport: 'No export yet? Requests take about a week.',
+	noExport: 'No export yet? It takes a few minutes to request.',
 	welcome: 'Welcome back',
 	daysRecorded: (count: number) => (count === 1 ? 'day recorded' : 'days recorded'),
 	demoCar: 'The demonstration car, ',
@@ -15,7 +15,7 @@ export const landing = {
 	gettingExport: 'Getting your export',
 	requestAt: 'Request it at',
 	steps: [
-		'Download the ZIP when the e-mail arrives. It covers the last 30 days.',
+		'Select all data and the last 30 days, then download the ZIP when it is ready — usually within minutes.',
 		'Drop it here. Ask again every month to build a longer record.'
 	],
 	imported: (count: number) => `Imported files (${count})`,

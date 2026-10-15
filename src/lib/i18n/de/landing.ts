@@ -8,7 +8,7 @@ export const landing: Messages['landing'] = {
 	headlineAccent: 'ein sehr genaues Tagebuch.',
 	lede: 'Leg den Export ab, den XPeng nach dem EU Data Act verschickt. Du bekommst deine Fahrten, Ladevorgänge, Batteriedaten und ein fertiges Fahrtenbuch.',
 	demo: 'Mit einem Demo-Monat ausprobieren',
-	noExport: 'Noch kein Export? Eine Anfrage dauert etwa eine Woche.',
+	noExport: 'Noch kein Export? Die Anfrage dauert nur ein paar Minuten.',
 	welcome: 'Willkommen zurück',
 	daysRecorded: (count) => (count === 1 ? 'Tag aufgezeichnet' : 'Tage aufgezeichnet'),
 	demoCar: 'Das Demo-Auto, ',
@@ -17,7 +17,7 @@ export const landing: Messages['landing'] = {
 	gettingExport: 'So bekommst du deinen Export',
 	requestAt: 'Fordere ihn an unter',
 	steps: [
-		'Lade das ZIP herunter, wenn die E-Mail ankommt. Es umfasst die letzten 30 Tage.',
+		'Wähle alle Daten und die letzten 30 Tage und lade das ZIP herunter, sobald es bereit ist — meist nach wenigen Minuten.',
 		'Leg es hier ab. Frag jeden Monat erneut an, um eine längere Aufzeichnung aufzubauen.'
 	],
 	imported: (count) => `Importierte Dateien (${count})`,

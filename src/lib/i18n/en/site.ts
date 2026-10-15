@@ -139,7 +139,7 @@ export const faqPage = {
 				{
 					q: 'How do I get my export?',
 					a: [
-						'Request it at xpeng.com/data-act. XPeng sends an e-mail with a ZIP, usually within about a week. [The request guide](/guides/request-xpeng-data) goes through it step by step.'
+						'Log in at xpeng.com/data-act with your XPeng account, select all data and the last 30 days, and send the request. The ZIP is usually ready to download in your data centre within minutes, for seven days. [The request guide](/guides/request-xpeng-data) goes through it step by step.'
 					]
 				},
 				{

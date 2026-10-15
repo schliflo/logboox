@@ -24,21 +24,25 @@ export const guides: Messages['guides'] = [
 		slug: 'request-xpeng-data',
 		title: 'XPeng-Daten anfordern',
 		description:
-			'Schritt für Schritt: So forderst du deine Fahrzeugdaten bei XPeng nach dem EU Data Act an, wie lange es dauert, was ankommt und wie du mehr als dreißig Tage sammelst.',
+			'Schritt für Schritt: So lädst du deine Fahrzeugdaten nach dem EU Data Act bei XPeng herunter — anmelden, Daten und Zeitraum wählen, ZIP herunterladen — und so sammelst du mehr als dreißig Tage.',
 		headline: 'So forderst du deine XPeng-Fahrzeugdaten nach dem EU Data Act an',
 		lede: 'Jeder in der EU verkaufte XPeng zeichnet auf, was er tut, einmal pro Sekunde. Der EU Data Act gibt dir das Recht auf eine Kopie. So bekommst du sie.',
 		summary: [
-			'Fordere die Daten unter [xpeng.com/data-act](https://www.xpeng.com/data-act) an. XPeng antwortet per E-Mail mit einem ZIP aus CSV-Dateien, meist innerhalb etwa einer Woche. Der Export umfasst nur die letzten dreißig Tage, also fordere ihn jeden Monat an, wenn du eine längere Aufzeichnung willst — [LogbooX](/) fügt aufeinanderfolgende Exporte zu einer Zeitleiste zusammen.'
+			'Melde dich unter [xpeng.com/data-act](https://www.xpeng.com/data-act) mit deinem XPeng-Konto an, wähle alle Datenkategorien und die letzten 30 Tage und sende die Anfrage ab. Das ZIP mit den CSV-Dateien steht meist schon nach wenigen Minuten auf derselben Seite zum Download bereit, und der Link bleibt sieben Tage gültig. Ein Export reicht nie weiter als dreißig Tage zurück, also fordere mindestens jeden Monat einen an, wenn du eine längere Aufzeichnung willst — [LogbooX](/) fügt aufeinanderfolgende Exporte zu einer Zeitleiste zusammen.'
 		],
 		sections: [
 			{
 				heading: 'Schritt für Schritt',
-				body: ['Die Anfrage dauert ein paar Minuten. Das Warten ist der längere Teil.'],
+				body: [
+					'Das Ganze dauert ein paar Minuten, im Browser, mit dem XPeng-Konto, mit dem dein Auto verknüpft ist.'
+				],
 				list: [
-					'Öffne [xpeng.com/data-act](https://www.xpeng.com/data-act) und füll das Anfrageformular aus. Rechne damit, dass Angaben abgefragt werden, die dich und das Auto identifizieren, etwa deine E-Mail-Adresse und die Fahrzeug-Identifizierungsnummer (FIN) aus dem Fahrzeugschein.',
-					'Bestätige die Anfrage, falls XPeng darum bittet. Heb die Bestätigungs-E-Mail auf: Sie belegt, wann du angefragt hast.',
-					'Warte auf die Antwort. Meist dauert es etwa eine Woche. Die E-Mail enthält ein ZIP-Archiv oder verlinkt darauf.',
-					'Lade das ZIP herunter. Entpacke und benenne die Dateien nicht um — an den Namen erkennt jedes Programm, welcher Datenstrom und welcher Teil eine Datei ist.',
+					'Öffne [xpeng.com/data-act](https://www.xpeng.com/data-act) und wähle „Meine Daten abrufen“. Melde dich mit deinem XPeng-Konto an — per E-Mail, Telefonnummer oder Google — und löse die Schieberegler-Prüfung.',
+					'Dein Datencenter zeigt das Auto mit Modell und teilweise verdeckter FIN. Wähle unter „Meine Fahrzeugdaten herunterladen“ den Button „Zum Download“.',
+					'Wähle alle Datenkategorien aus — „Alle auswählen“ erledigt das. Es sind sechs: Bewegungs- und Fahrdynamikdaten, Daten zu Fahrereingaben, Daten des elektrischen Antriebsstrangs, Batterie- und Ladedaten, Zugangs- und Sicherheitsdaten sowie Fahrzeugzustands- und Telemetriedaten. LogbooX braucht alle; eine Teilauswahl ergibt einen unvollständigen Export.',
+					'Wähle den Zeitraum: die letzten 7, 14 oder 30 Tage. Nimm 30 Tage. Die neuesten Daten sind von gestern.',
+					'Sende die Anfrage ab. Sie erscheint unter „Letzte Aktivitäten“ als „In Bearbeitung“ und wird meist innerhalb weniger Minuten zu einem Button „Herunterladen“.',
+					'Lade das ZIP herunter, benannt wie `DA2026…zip` und etwa 10 bis 20 MB groß. Entpacke und benenne die Dateien darin nicht um — an den Namen erkennt jedes Programm, welcher Datenstrom und welcher Teil eine Datei ist.',
 					'Leg das ZIP auf [der LogbooX-Startseite](/) ab. Es wird in deinem Browser gelesen; nichts wird hochgeladen.'
 				],
 				ordered: true
@@ -46,28 +50,28 @@ export const guides: Messages['guides'] = [
 			{
 				heading: 'Was ankommt',
 				body: [
-					'Bis zu drei CSV-Datenströme — Fahrstatus, Bedienung sowie Leistung & Energie — mit einem Messpunkt pro Sekunde, solange das Auto wach ist. Ein voller Monat ergibt etwa 340 MB und 3,6 Millionen Zeilen. Jeder Datenstrom ist auf eine Million Zeilen pro Datei begrenzt, längere Monate gehen also in Dateien mit der Endung `_part1`, `_part2` und so weiter über.',
+					'Bis zu drei CSV-Datenströme — Fahrstatus, Bedienung sowie Leistung & Energie — mit einem Messpunkt pro Sekunde, solange das Auto wach ist. Ein voller Monat ergibt entpackt etwa 340 MB und 3,6 Millionen Zeilen. Jeder Datenstrom ist auf eine Million Zeilen pro Datei begrenzt, längere Monate gehen also in Dateien mit der Endung `_part1`, `_part2` und so weiter über.',
 					'Es gibt darin keine GPS-Position und auch keine Liste von Fahrten oder Ladevorgängen: nur rohe Signale. Alles andere muss daraus berechnet werden. Der [Ratgeber zum Exportformat](/guides/xpeng-export-format) listet jede Datei und Spalte auf.'
 				]
 			},
 			{
 				heading: 'Nur dreißig Tage: jeden Monat anfordern',
 				body: [
-					'Jede Anfrage umfasst ein gleitendes Fenster der letzten dreißig Tage. Ein Monat, der aus diesem Fenster gefallen ist, lässt sich später nicht mehr anfordern. Eine längere Historie bekommst du also nur, wenn du erneut anfragst, bevor es sich schließt.',
+					'Jede Anfrage umfasst höchstens die letzten dreißig Tage, bis gestern. Ein Monat, der aus diesem Fenster gefallen ist, lässt sich später nicht mehr anfordern. Eine längere Historie bekommst du also nur, wenn du erneut anfragst, bevor es sich schließt. Wie oft du anfragst, ist nicht begrenzt, und jeder Download-Link läuft sieben Tage nach der Anfrage ab — lade also zügig herunter.',
 					'Eine Erinnerung im Kalender am selben Tag jedes Monats genügt. Mit einem kostenlosen LogbooX-Konto bekommst du eine E-Mail, bevor das Fenster deines letzten Exports abläuft. Exporte desselben Autos öffnen sich als eine durchgehende Aufzeichnung; wo sich zwei überschneiden, gewinnt der neuere.'
 				]
 			},
 			{
 				heading: 'Wenn die Anfrage länger dauert',
 				body: [
-					'Der Data Act verlangt, dass Daten ohne unangemessene Verzögerung bereitgestellt werden. Dauert eine Antwort deutlich länger als ein paar Wochen, schreib XPeng erneut an und nenne das Datum deiner Anfrage. Soweit die Daten dich als Person betreffen, gibt dir auch die DSGVO ein Auskunftsrecht, mit einer Frist von einem Monat, die nur mit Begründung verlängert werden darf. Der [Ratgeber zum EU Data Act](/guides/eu-data-act-car-data) erklärt, was dir zusteht.'
+					'Der Data Act verlangt, dass Daten ohne unangemessene Verzögerung bereitgestellt werden, und der Download ist normalerweise nach wenigen Minuten fertig. Steht eine Anfrage tagelang auf „In Bearbeitung“, schreib dem Datensupport von XPeng an eu.data.support@xpeng.com und nenne Datum und Uhrzeit deiner Anfrage. Soweit die Daten dich als Person betreffen, gibt dir auch die DSGVO ein Auskunftsrecht, mit einer Frist von einem Monat, die nur mit Begründung verlängert werden darf. Der [Ratgeber zum EU Data Act](/guides/eu-data-act-car-data) erklärt, was dir zusteht.'
 				]
 			}
 		],
 		faq: [
 			{
 				q: 'Wie lange dauert eine Datenanfrage bei XPeng?',
-				a: 'Meist etwa eine Woche von der Anfrage bis zur E-Mail.'
+				a: 'Meist ein paar Minuten. Der Download erscheint in deinem XPeng-Datencenter, nicht per E-Mail, und bleibt sieben Tage verfügbar.'
 			},
 			{
 				q: 'Kostet der XPeng-Datenexport etwas?',
@@ -75,7 +79,7 @@ export const guides: Messages['guides'] = [
 			},
 			{
 				q: 'Kann ich Daten anfordern, die älter als dreißig Tage sind?',
-				a: 'Nein. Jede Anfrage umfasst die letzten dreißig Tage. Fordere jeden Monat an, um eine lückenlose Aufzeichnung zu behalten.'
+				a: 'Nein. Jede Anfrage umfasst höchstens die letzten dreißig Tage. Fordere mindestens jeden Monat an, um eine lückenlose Aufzeichnung zu behalten.'
 			},
 			{
 				q: 'Mit welchem Programm öffne ich den XPeng-Export?',
@@ -181,7 +185,7 @@ export const guides: Messages['guides'] = [
 		headline: 'Der EU Data Act und dein Auto: was du verlangen kannst',
 		lede: 'Seit September 2025 haben alle, die in der EU ein vernetztes Auto nutzen, ein Recht auf die Daten, die es erzeugt. Was das bedeutet, in einfachen Worten.',
 		summary: [
-			'Der EU Data Act — Verordnung (EU) 2023/2854 — gilt seit dem 12. September 2025. Er gibt Nutzern eines vernetzten Produkts, etwa eines Autos, das Recht auf Zugang zu den Daten, die bei seiner Nutzung entstehen, unentgeltlich, in einem strukturierten, gängigen und maschinenlesbaren Format, und das Recht, sie an einen Dritten ihrer Wahl weitergeben zu lassen. XPeng setzt das mit einem Anfrageformular unter [xpeng.com/data-act](https://www.xpeng.com/data-act) um.'
+			'Der EU Data Act — Verordnung (EU) 2023/2854 — gilt seit dem 12. September 2025. Er gibt Nutzern eines vernetzten Produkts, etwa eines Autos, das Recht auf Zugang zu den Daten, die bei seiner Nutzung entstehen, unentgeltlich, in einem strukturierten, gängigen und maschinenlesbaren Format, und das Recht, sie an einen Dritten ihrer Wahl weitergeben zu lassen. XPeng setzt das mit einem Datencenter zur Selbstbedienung unter [xpeng.com/data-act](https://www.xpeng.com/data-act) um.'
 		],
 		sections: [
 			{
@@ -213,7 +217,7 @@ export const guides: Messages['guides'] = [
 			{
 				heading: 'Was XPeng bereitstellt',
 				body: [
-					'XPeng nimmt Anfragen unter [xpeng.com/data-act](https://www.xpeng.com/data-act) entgegen und antwortet mit einem ZIP aus CSV-Dateien über die letzten dreißig Tage, ein Messpunkt pro Sekunde. Der [Ratgeber zur Anfrage](/guides/request-xpeng-data) führt hindurch, und der [Ratgeber zum Exportformat](/guides/xpeng-export-format) listet auf, was in den Dateien steht.'
+					'Besitzer melden sich unter [xpeng.com/data-act](https://www.xpeng.com/data-act) mit ihrem XPeng-Konto an und erreichen ein Datencenter für jedes Auto. Dort wählen sie Datenkategorien und einen Zeitraum von bis zu dreißig Tagen und laden, meist nach wenigen Minuten, ein ZIP aus CSV-Dateien mit einem Messpunkt pro Sekunde herunter. Auf derselben Seite lassen sich Dritte autorisieren, die Daten zu empfangen — das Recht auf Weitergabe aus dem Data Act. Der [Ratgeber zur Anfrage](/guides/request-xpeng-data) führt hindurch, und der [Ratgeber zum Exportformat](/guides/xpeng-export-format) listet auf, was in den Dateien steht.'
 				]
 			},
 			{

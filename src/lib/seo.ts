@@ -23,7 +23,7 @@ export const SITE_DESCRIPTION =
 	'LogbooX turns your XPeng EU Data Act export into trips, charging sessions, battery health and driving style. Read in your browser — nothing is uploaded.';
 
 /** When the guides were last checked against the export and the law. */
-export const GUIDES_UPDATED = '2026-10-14';
+export const GUIDES_UPDATED = '2026-10-15';
 
 export const OG_IMAGE = '/og.png';
 
