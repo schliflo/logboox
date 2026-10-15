@@ -86,6 +86,19 @@ describe('asking who is signed in', () => {
 		expect(account.error).toBeNull();
 	});
 
+	it('is signed out, without an error, when the server says nobody is', async () => {
+		vi.stubGlobal('fetch', answer(200, ME));
+		await account.refresh();
+		account.error = 'Broken.';
+
+		vi.stubGlobal('fetch', answer(200, { user: null }));
+		await account.refresh();
+
+		expect(account.status).toBe('anonymous');
+		expect(account.signedIn).toBe(false);
+		expect(account.error).toBeNull();
+	});
+
 	it('is signed out, with the reason kept, on any other failure', async () => {
 		vi.stubGlobal('fetch', answer(500, { error: 'Broken.' }));
 

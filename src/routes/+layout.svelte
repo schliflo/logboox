@@ -9,6 +9,7 @@
 	import { untrack } from 'svelte';
 	import { applyLocale, restoreLocale, type Locale } from '#lib/i18n/index.svelte.js';
 	import { isLocalizedRoute } from '#lib/i18n/paths.js';
+	import geistLatin from '@fontsource-variable/geist/files/geist-latin-wght-normal.woff2?url';
 	import {
 		AUTHOR,
 		AUTHOR_URL,
@@ -95,6 +96,8 @@
 </script>
 
 <svelte:head>
+	<!-- Otherwise found only once the stylesheet has arrived. -->
+	<link rel="preload" href={geistLatin} as="font" type="font/woff2" crossorigin="anonymous" />
 	<link rel="icon" href="/favicon.svg" type="image/svg+xml" />
 	<link rel="icon" href="/favicon.ico" sizes="32x32" />
 	<link rel="apple-touch-icon" href="/apple-touch-icon.png" />

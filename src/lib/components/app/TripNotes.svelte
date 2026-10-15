@@ -30,7 +30,7 @@
 	import { settings } from '#lib/state/settings.svelte.js';
 	import { suggestDestinations, suggestOrigin, suggestPurpose } from '#lib/logbook/suggest.js';
 	import { PURPOSES, type Annotation, type Purpose } from '#lib/logbook/types.js';
-	import { PURPOSE_COLOR } from './PurposeChip.svelte';
+	import { PURPOSE_COLOR, PURPOSE_TEXT } from './PurposeChip.svelte';
 	import type { Trip } from '#lib/data/analytics/trips.js';
 	import { toast } from 'svelte-sonner';
 	import CloudIcon from '@lucide/svelte/icons/cloud';
@@ -176,7 +176,7 @@
 							onclick={() => setPurpose(option.value)}
 							class="h-12 rounded-xl border-2 text-sm font-semibold transition-colors hover:bg-accent/50 focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none"
 							style={chosen
-								? `color: ${color}; border-color: ${color}; background: color-mix(in oklab, ${color} 14%, transparent)`
+								? `color: ${PURPOSE_TEXT[option.value]}; border-color: ${color}; background: color-mix(in oklab, ${color} 14%, transparent)`
 								: ''}
 						>
 							{option.label}

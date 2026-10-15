@@ -200,7 +200,9 @@ The links the account has made and not revoked: `id`, `url`, `kind` (`trip`,
 ### `GET /api/v1/me`
 
 The account itself: address, settings, and how much room the exports are using.
-Useful as a check that a token works.
+Useful as a check that a token works, so leave out `?optional`: with it, a
+missing, expired or revoked credential answers `200 { "user": null }` rather
+than `401`.
 
 `leaderboard.badges` lists the medals the account holds, newest first: one per
 top-three place in a locked month or a final year, each with `period`

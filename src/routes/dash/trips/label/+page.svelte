@@ -16,7 +16,7 @@
 	import { Button, buttonVariants } from '#lib/components/ui/button/index.js';
 	import { Input } from '#lib/components/ui/input/index.js';
 	import { Label } from '#lib/components/ui/label/index.js';
-	import { PURPOSE_COLOR } from '#lib/components/app/PurposeChip.svelte';
+	import { PURPOSE_COLOR, PURPOSE_TEXT } from '#lib/components/app/PurposeChip.svelte';
 	import { data } from '#lib/state/dataset.svelte.js';
 	import { logbook } from '#lib/state/logbook.svelte.js';
 	import { settings } from '#lib/state/settings.svelte.js';
@@ -291,7 +291,7 @@
 						type="button"
 						onclick={() => save(option.value)}
 						class="flex min-h-14 items-center gap-3 rounded-2xl border-2 px-5 text-left text-lg font-semibold transition-colors"
-						style="color: {color}; border-color: {suggested === option.value
+						style="color: {PURPOSE_TEXT[option.value]}; border-color: {suggested === option.value
 							? color
 							: 'var(--border)'}; background: {suggested === option.value
 							? `color-mix(in oklab, ${color} 14%, transparent)`

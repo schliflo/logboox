@@ -51,6 +51,8 @@
 		type="file"
 		multiple
 		accept=".csv,.zip"
+		aria-label={m.dropZone.choose}
+		tabindex="-1"
 		class="sr-only"
 		onchange={(e) => accept(e.currentTarget.files)}
 	/>

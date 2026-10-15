@@ -16,6 +16,8 @@ import { MAX_ACCOUNT_BYTES } from '#lib/server/exports/limits.js';
 
 export const GET: RequestHandler = async (event) => {
 	const auth = event.locals.auth;
+	// The app asks on every start; a 401 there is an error in every anonymous console.
+	if (!auth && event.url.searchParams.has('optional')) return json({ user: null });
 	if (!auth) return fail(401, 'Not signed in.');
 
 	const db = requireDb(event);

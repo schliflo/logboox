@@ -104,11 +104,13 @@ export const handle: Handle = async ({ event, resolve }) => {
 	response.headers.set('x-content-type-options', 'nosniff');
 	response.headers.set('referrer-policy', 'strict-origin-when-cross-origin');
 	response.headers.set('permissions-policy', 'geolocation=(), camera=(), microphone=()');
+	response.headers.set('cross-origin-opener-policy', 'same-origin');
 
 	// Only framing is ruled out. A fuller policy would have to account for the
 	// inline script and style SvelteKit emits and the wasm renderer.
 	if (!response.headers.has('content-security-policy')) {
 		response.headers.set('content-security-policy', "frame-ancestors 'none'");
+		response.headers.set('x-frame-options', 'DENY');
 	}
 
 	// Plain http is how `wrangler dev` and the tests reach this, and a pinned

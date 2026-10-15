@@ -29,7 +29,9 @@ export default defineConfig({
 				runes: ({ filename }) =>
 					filename.split(/[/\\]/).includes('node_modules') ? undefined : true
 			},
-			adapter: adapter()
+			adapter: adapter(),
+			// Route stylesheets of a few hundred bytes, not the main one.
+			inlineStyleThreshold: 2048
 		})
 	],
 	server: {
