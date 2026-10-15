@@ -4,7 +4,10 @@ export const site: Messages['site'] = {
 	features: 'Funktionen',
 	faq: 'FAQ',
 	guides: 'Ratgeber',
-	readExport: 'Deinen Export lesen'
+	readExport: 'Deinen Export lesen',
+	tagline: 'Viewer für den XPeng-Datenexport: Fahrten, Laden & Fahrtenbuch',
+	description:
+		'LogbooX macht aus deinem XPeng-Export nach dem EU Data Act Fahrten, Ladevorgänge, Batteriezustand und Fahrstil. Gelesen in deinem Browser — nichts wird hochgeladen.'
 };
 
 export const featuresPage: Messages['featuresPage'] = {

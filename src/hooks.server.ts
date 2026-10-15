@@ -10,6 +10,9 @@
  * That last check is here rather than left to SvelteKit's own, which only
  * covers form submissions — a JSON request from another origin would sail
  * straight past it.
+ *
+ * It also fills in the page's language, which `app.html` leaves as `%lang%`:
+ * the public pages under `/de` are German from the first byte.
  */
 
 import type { Handle } from '@sveltejs/kit/hooks';
@@ -21,6 +24,7 @@ import {
 } from '#lib/server/auth/session.js';
 import { bearer, parseApiToken, timingSafeEqual } from '#lib/server/auth/tokens.js';
 import { cronSecret, maybeDb } from '#lib/server/context.js';
+import { pathLocale } from '#lib/i18n/paths.js';
 
 /** Requests that carry a credential and may therefore not be forged. */
 const GUARDED = /^\/(api|internal)\//;
@@ -92,7 +96,10 @@ export const handle: Handle = async ({ event, resolve }) => {
 		}
 	}
 
-	const response = await resolve(event);
+	const lang = pathLocale(event.url.pathname);
+	const response = await resolve(event, {
+		transformPageChunk: ({ html }) => html.replace('%lang%', lang)
+	});
 
 	response.headers.set('x-content-type-options', 'nosniff');
 	response.headers.set('referrer-policy', 'strict-origin-when-cross-origin');

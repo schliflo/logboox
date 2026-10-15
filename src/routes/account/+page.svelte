@@ -6,7 +6,7 @@
   what it did with it and let it be taken back without an exchange of letters.
 -->
 <script lang="ts">
-	import { m } from '#lib/i18n/index.svelte.js';
+	import { localHref, m } from '#lib/i18n/index.svelte.js';
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { toast } from 'svelte-sonner';
@@ -37,7 +37,7 @@
 
 	onMount(async () => {
 		await account.refresh();
-		if (!account.signedIn) goto('/');
+		if (!account.signedIn) goto(localHref('/'));
 	});
 
 	async function setAutoSync(next: boolean) {
@@ -69,7 +69,7 @@
 		try {
 			await account.deleteAccount();
 			confirmingDelete = false;
-			await goto('/');
+			await goto(localHref('/'));
 			toast(m.accountPage.deleted, {
 				description: m.accountPage.deletedDetail
 			});
@@ -82,7 +82,7 @@
 
 	async function signOut() {
 		await account.signOut();
-		await goto('/');
+		await goto(localHref('/'));
 	}
 </script>
 
@@ -90,7 +90,7 @@
 
 <main class="mx-auto min-h-svh max-w-2xl space-y-6 px-6 py-12">
 	<div class="flex items-center gap-3">
-		<Button variant="ghost" size="sm" onclick={() => goto('/')}>
+		<Button variant="ghost" size="sm" onclick={() => goto(localHref('/'))}>
 			<ArrowLeftIcon class="size-4" />
 			{m.accountPage.backToStart}
 		</Button>

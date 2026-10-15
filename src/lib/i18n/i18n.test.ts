@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { en } from './en/index';
 import { de } from './de/index';
-import { i18n, intlLocale, m, setLocale } from './index.svelte';
+import { i18n, intlLocale, localHref, m, setLocale } from './index.svelte';
 import { factText } from './facts';
 import { num } from '../utils/format';
 import { generateDemoDataset } from '../demo/generator';
@@ -37,6 +37,13 @@ describe('catalogs', () => {
 		expect(m.nav.home).toBe('Start');
 		expect(intlLocale()).toBe('de-DE');
 		expect(num(1234.5, 1)).toBe('1.234,5');
+	});
+
+	it('links to the page in the language being read', () => {
+		expect(localHref('/guides/request-xpeng-data')).toBe('/guides/request-xpeng-data');
+		setLocale('de');
+		expect(localHref('/guides/request-xpeng-data')).toBe('/de/guides/request-xpeng-data');
+		expect(localHref('/leaderboard')).toBe('/leaderboard');
 	});
 
 	it('words every finding in both languages', () => {

@@ -7,7 +7,7 @@
   no car open sees the community side and a way to open their own export.
 -->
 <script lang="ts">
-	import { m } from '#lib/i18n/index.svelte.js';
+	import { localHref, m } from '#lib/i18n/index.svelte.js';
 	import type { Snippet } from 'svelte';
 	import { page } from '$app/state';
 	import * as Sidebar from '#lib/components/ui/sidebar/index.js';
@@ -75,7 +75,7 @@
 	<Sidebar.Root collapsible="icon">
 		<Sidebar.Header class="gap-4 px-3 pt-5">
 			<a
-				href="/"
+				href={localHref('/')}
 				class="flex items-center gap-2.5 rounded-lg px-1 text-[17px] font-semibold tracking-tight focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
 				aria-label={m.shell.backToStart(SITE_NAME)}
 			>

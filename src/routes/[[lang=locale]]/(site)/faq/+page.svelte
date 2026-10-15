@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { m } from '#lib/i18n/index.svelte.js';
+	import { localHref, m } from '#lib/i18n/index.svelte.js';
 	import Seo from '#lib/components/app/Seo.svelte';
 	import RichText from '#lib/components/app/RichText.svelte';
 	import { plainText } from '#lib/utils/rich-text.js';
@@ -20,7 +20,7 @@
 					acceptedAnswer: { '@type': 'Answer', text: item.a.map(plainText).join('\n\n') }
 				}))
 			),
-			...(absolute('/faq') ? { url: absolute('/faq') } : {})
+			...(absolute(localHref('/faq')) ? { url: absolute(localHref('/faq')) } : {})
 		}).replace(/</g, '\\u003c')
 	);
 </script>

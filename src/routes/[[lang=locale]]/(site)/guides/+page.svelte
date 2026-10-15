@@ -1,6 +1,6 @@
 <!-- The guides, listed: each one a question readers arrive with before they have a file. -->
 <script lang="ts">
-	import { m } from '#lib/i18n/index.svelte.js';
+	import { localHref, m } from '#lib/i18n/index.svelte.js';
 	import Seo from '#lib/components/app/Seo.svelte';
 	import { absolute } from '#lib/seo.js';
 	import ArrowRightIcon from '@lucide/svelte/icons/arrow-right';
@@ -11,14 +11,16 @@
 			'@type': 'CollectionPage',
 			name: m.guidesPage.headline,
 			description: m.guidesPage.description,
-			...(absolute('/guides') ? { url: absolute('/guides') } : {}),
+			...(absolute(localHref('/guides')) ? { url: absolute(localHref('/guides')) } : {}),
 			mainEntity: {
 				'@type': 'ItemList',
 				itemListElement: m.guides.map((guide, index) => ({
 					'@type': 'ListItem',
 					position: index + 1,
 					name: guide.headline,
-					...(absolute(`/guides/${guide.slug}`) ? { url: absolute(`/guides/${guide.slug}`) } : {})
+					...(absolute(localHref(`/guides/${guide.slug}`))
+						? { url: absolute(localHref(`/guides/${guide.slug}`)) }
+						: {})
 				}))
 			}
 		}).replace(/</g, '\\u003c')
@@ -43,7 +45,7 @@
 	{#each m.guides as guide (guide.slug)}
 		<li>
 			<a
-				href="/guides/{guide.slug}"
+				href={localHref(`/guides/${guide.slug}`)}
 				class="group flex h-full flex-col rounded-2xl border bg-card/50 p-6 hover:bg-card"
 			>
 				<h2 class="text-lg font-semibold tracking-tight text-balance">{guide.headline}</h2>

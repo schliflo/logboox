@@ -37,7 +37,7 @@ import { PyramidCache } from '../data/store/decimate';
 import { account } from './account.svelte';
 import { history } from './history.svelte';
 import { settings } from './settings.svelte';
-import { m } from '../i18n/index.svelte';
+import { localHref, m } from '../i18n/index.svelte';
 import { rangeLabel } from '../i18n/dates';
 import type { ErrorDetail } from '../report/issue';
 import { bugDetail, reportAction } from '../report/reporter';
@@ -390,7 +390,7 @@ class DatasetStore {
 	 * could not be kept — what was dropped is shown on its own.
 	 */
 	async extend(files: File[]) {
-		await goto('/');
+		await goto(localHref('/'));
 		this.begin();
 		try {
 			const result = await loadFiles(files, settings.timeZone, (progress) => {

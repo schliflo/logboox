@@ -11,7 +11,7 @@
   browser except in the request that spends it.
 -->
 <script lang="ts">
-	import { m } from '#lib/i18n/index.svelte.js';
+	import { localHref, m } from '#lib/i18n/index.svelte.js';
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
@@ -91,7 +91,7 @@
 						{/if}
 					</div>
 				</div>
-				<Button variant="outline" class="w-full" onclick={() => goto('/')}>
+				<Button variant="outline" class="w-full" onclick={() => goto(localHref('/'))}>
 					{m.verify.backToStart}
 				</Button>
 			{:else if token}
@@ -103,7 +103,7 @@
 					{m.verify.waits}
 				</p>
 			{:else}
-				<Button variant="outline" class="w-full" onclick={() => goto('/')}>
+				<Button variant="outline" class="w-full" onclick={() => goto(localHref('/'))}>
 					{m.verify.backToStart}
 				</Button>
 			{/if}

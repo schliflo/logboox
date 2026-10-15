@@ -8,6 +8,7 @@
 <script lang="ts">
 	import MadeBy from '#lib/components/app/MadeBy.svelte';
 	import { page } from '$app/state';
+	import { localHref } from '#lib/i18n/index.svelte.js';
 
 	let { children } = $props();
 
@@ -20,7 +21,7 @@
 
 <main class="mx-auto min-h-svh max-w-2xl px-6 py-12">
 	<header class="mb-10 space-y-4">
-		<a href="/" class="flex items-center gap-2 text-sm font-medium hover:opacity-80">
+		<a href={localHref('/')} class="flex items-center gap-2 text-sm font-medium hover:opacity-80">
 			<img src="/favicon.svg" alt="" width="24" height="24" class="size-6" />
 			LogbooX
 		</a>

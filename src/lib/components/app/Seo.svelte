@@ -13,6 +13,11 @@
   site's card. Nothing drawn this way carries a vehicle identification number,
   an odometer or an e-mail address — a link travels further than the person who
   pasted it expects, and a card is the part of it strangers see.
+
+  The public pages exist in every language (`#lib/i18n/paths.ts`). On those,
+  `path` is the English one: the canonical link points at the page in its own
+  language, and the alternates name every version of it, English as the
+  default. Pages with a single address get neither.
 -->
 <script lang="ts">
 	import {
@@ -23,13 +28,17 @@
 		SITE_NAME,
 		pageTitle
 	} from '#lib/seo.js';
-	import { i18n } from '#lib/i18n/index.svelte.js';
+	import { page } from '$app/state';
+	import { i18n, m, type Locale } from '#lib/i18n/index.svelte.js';
+	import { isLocalizedRoute, localizedPath } from '#lib/i18n/paths.js';
+
+	const OG_LOCALES: Record<Locale, string> = { en: 'en_GB', de: 'de_DE' };
 
 	interface Props {
 		/** Page title without the site name; omit for the landing page. */
 		title?: string;
 		description?: string;
-		/** Route path, used for the canonical link. */
+		/** Route path, used for the canonical link; the English one on a translated page. */
 		path?: string;
 		/** Pages that are empty without a loaded export ask not to be indexed. */
 		noindex?: boolean;
@@ -61,8 +70,23 @@
 		modified
 	}: Props = $props();
 
-	const fullTitle = $derived(pageTitle(title));
-	const canonical = $derived(canonicalUrl ?? absolute(path));
+	const fullTitle = $derived(pageTitle(title, m.site.tagline));
+	const translated = $derived(isLocalizedRoute(page.route.id));
+	const canonical = $derived(
+		canonicalUrl ?? absolute(translated ? localizedPath(path, i18n.locale) : path)
+	);
+	/** Every language's version of a translated page, absolute; empty otherwise. */
+	const alternates = $derived.by(() => {
+		if (!translated || canonicalUrl) return [];
+		const en = absolute(localizedPath(path, 'en'));
+		const de = absolute(localizedPath(path, 'de'));
+		if (!en || !de) return [];
+		return [
+			{ hreflang: 'en', href: en },
+			{ hreflang: 'de', href: de },
+			{ hreflang: 'x-default', href: en }
+		];
+	});
 	const image = $derived(ownImage ?? absolute(OG_IMAGE) ?? OG_IMAGE);
 	const imageDescription = $derived(ownImage ? (ownImageAlt ?? cardTitle ?? '') : OG_IMAGE_ALT);
 	const cardHeading = $derived(cardTitle ?? fullTitle);
@@ -79,6 +103,9 @@
 	{#if canonical}
 		<link rel="canonical" href={canonical} />
 	{/if}
+	{#each alternates as alternate (alternate.hreflang)}
+		<link rel="alternate" hreflang={alternate.hreflang} href={alternate.href} />
+	{/each}
 
 	<meta property="og:type" content={ogType} />
 	{#if ogType === 'article' && modified}
@@ -87,7 +114,14 @@
 	<meta property="og:site_name" content={SITE_NAME} />
 	<meta property="og:title" content={cardHeading} />
 	<meta property="og:description" content={cardBody} />
-	<meta property="og:locale" content={i18n.locale === 'de' ? 'de_DE' : 'en_GB'} />
+	<meta property="og:locale" content={OG_LOCALES[i18n.locale]} />
+	{#if translated}
+		{#each Object.entries(OG_LOCALES) as [code, tag] (code)}
+			{#if code !== i18n.locale}
+				<meta property="og:locale:alternate" content={tag} />
+			{/if}
+		{/each}
+	{/if}
 	{#if canonical}
 		<meta property="og:url" content={canonical} />
 	{/if}

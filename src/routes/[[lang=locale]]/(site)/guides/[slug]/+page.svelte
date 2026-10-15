@@ -4,7 +4,7 @@
   questions, so a search engine or an assistant can quote the page directly.
 -->
 <script lang="ts">
-	import { m, intlLocale, i18n } from '#lib/i18n/index.svelte.js';
+	import { m, intlLocale, i18n, localHref } from '#lib/i18n/index.svelte.js';
 	import Seo from '#lib/components/app/Seo.svelte';
 	import RichText from '#lib/components/app/RichText.svelte';
 	import { Button } from '#lib/components/ui/button/index.js';
@@ -17,7 +17,9 @@
 
 	const guide = $derived(m.guides.find((item) => item.slug === data.slug)!);
 	const others = $derived(m.guides.filter((item) => item.slug !== data.slug));
+	/** The English path, which `Seo` turns into this language's. */
 	const path = $derived(`/guides/${data.slug}`);
+	const url = $derived(absolute(localHref(path)));
 	const updated = $derived(
 		new Date(GUIDES_UPDATED).toLocaleDateString(intlLocale(), { dateStyle: 'long' })
 	);
@@ -43,7 +45,7 @@
 						{ '@type': 'Thing', name: 'EU Data Act' },
 						{ '@type': 'Brand', name: 'XPeng' }
 					],
-					...(absolute(path) ? { url: absolute(path), mainEntityOfPage: absolute(path) } : {}),
+					...(url ? { url, mainEntityOfPage: url } : {}),
 					...(absolute('/og.png') ? { image: absolute('/og.png') } : {})
 				},
 				{
@@ -56,7 +58,7 @@
 						'@type': 'ListItem',
 						position: index + 1,
 						name: crumb.name,
-						...(absolute(crumb.path) ? { item: absolute(crumb.path) } : {})
+						...(absolute(localHref(crumb.path)) ? { item: absolute(localHref(crumb.path)) } : {})
 					}))
 				},
 				{
@@ -87,9 +89,11 @@
 
 <nav aria-label="Breadcrumb" class="text-sm text-muted-foreground">
 	<ol class="flex flex-wrap items-center gap-1.5">
-		<li><a href="/" class="hover:text-foreground">{m.guidesPage.home}</a></li>
+		<li><a href={localHref('/')} class="hover:text-foreground">{m.guidesPage.home}</a></li>
 		<li aria-hidden="true"><ChevronRightIcon class="size-3.5" /></li>
-		<li><a href="/guides" class="hover:text-foreground">{m.guidesPage.title}</a></li>
+		<li>
+			<a href={localHref('/guides')} class="hover:text-foreground">{m.guidesPage.title}</a>
+		</li>
 		<li aria-hidden="true"><ChevronRightIcon class="size-3.5" /></li>
 		<li aria-current="page" class="text-foreground">{guide.title}</li>
 	</ol>
@@ -190,7 +194,7 @@
 		{#each others as other (other.slug)}
 			<li>
 				<a
-					href="/guides/{other.slug}"
+					href={localHref(`/guides/${other.slug}`)}
 					class="group flex h-full flex-col rounded-2xl border bg-card/50 p-5 hover:bg-card"
 				>
 					<span class="font-semibold">{other.title}</span>
@@ -210,7 +214,7 @@
 	<h2 class="text-2xl font-bold tracking-tight">{m.guidesPage.ctaTitle}</h2>
 	<p class="mt-2 max-w-xl text-muted-foreground">{m.guidesPage.ctaBody}</p>
 	<div class="mt-6">
-		<Button href="/" size="lg" class="h-11 px-5">
+		<Button href={localHref('/')} size="lg" class="h-11 px-5">
 			{m.site.readExport}
 			<ArrowRightIcon class="size-4" />
 		</Button>

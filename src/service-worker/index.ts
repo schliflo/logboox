@@ -36,8 +36,9 @@ import {
 const sw = self as unknown as ServiceWorkerGlobalScope;
 
 // The manifest names everything relative to the base path, and the base is
-// whatever the root resolves to.
-const base = resolve('/').replace(/\/$/, '');
+// whatever the root resolves to — given as an empty path, since the root is
+// no route of its own but the optional language segment left out.
+const base = resolve('').replace(/\/$/, '');
 const underBase = (entries: Array<{ path: string }>) =>
 	entries.map((entry) => `${base}/${entry.path}`);
 

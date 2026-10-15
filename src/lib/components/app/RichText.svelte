@@ -2,11 +2,13 @@
   A paragraph from the catalogs with its links made live.
 
   Copy is kept as plain strings so it translates as one piece; the markup it
-  may carry is described in `rich-text.ts`. Links leaving the site open in a
-  new tab.
+  may carry is described in `rich-text.ts`. Site links are written as the
+  English path and point at the page in the current language; links leaving
+  the site open in a new tab.
 -->
 <script lang="ts">
 	import { parseRichText } from '#lib/utils/rich-text.js';
+	import { localHref } from '#lib/i18n/index.svelte.js';
 
 	interface Props {
 		text: string;
@@ -18,7 +20,7 @@
 </script>
 
 {#each parts as part, i (i)}{#if part.kind === 'link'}{#if part.href.startsWith('/')}<a
-				href={part.href}
+				href={localHref(part.href)}
 				class="underline underline-offset-4"
 				style="color: var(--viz-1)">{part.text}</a
 			>{:else}<a

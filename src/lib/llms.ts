@@ -5,10 +5,11 @@
  * about the XPeng export can read the answer rather than guess it.
  *
  * Written from the English catalog, so it never says something the pages
- * do not.
+ * do not; the German pages are only listed, by their own titles.
  */
 
 import { en } from '#lib/i18n/en/index.js';
+import { de } from '#lib/i18n/de/index.js';
 import type { Guide } from '#lib/i18n/en/guides.js';
 import { markdownText } from '#lib/utils/rich-text.js';
 import { SITE_DESCRIPTION, SITE_NAME, SITE_URL } from '#lib/seo.js';
@@ -44,6 +45,16 @@ export function llmsIndex(): string {
 		`- [Features](${link('/features')}): ${en.featuresPage.description}`,
 		`- [FAQ](${link('/faq')}): ${en.faqPage.description}`,
 		`- [Leaderboard](${link('/leaderboard')}): monthly boards for the fastest charge, the longest drive and more.`,
+		'',
+		'## Deutsch',
+		'',
+		'The same pages in German:',
+		'',
+		`- [${SITE_NAME}](${link('/de')})`,
+		`- [${de.site.features}](${link('/de/features')})`,
+		`- [${de.faqPage.title}](${link('/de/faq')})`,
+		`- [${de.guidesPage.title}](${link('/de/guides')})`,
+		...de.guides.map((guide) => `- [${guide.headline}](${link(`/de/guides/${guide.slug}`)})`),
 		'',
 		'## Optional',
 		'',

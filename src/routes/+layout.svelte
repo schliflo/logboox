@@ -6,8 +6,9 @@
 	import OfflineSupport from '#lib/components/app/OfflineSupport.svelte';
 	import MovedPage from '#lib/components/app/MovedPage.svelte';
 	import { page } from '$app/state';
-	import { onMount } from 'svelte';
-	import { restoreLocale } from '#lib/i18n/index.svelte.js';
+	import { untrack } from 'svelte';
+	import { applyLocale, restoreLocale, type Locale } from '#lib/i18n/index.svelte.js';
+	import { isLocalizedRoute } from '#lib/i18n/paths.js';
 	import {
 		AUTHOR,
 		AUTHOR_URL,
@@ -24,8 +25,27 @@
 	// becomes the pointer at the new address.
 	const superseded = $derived(MOVED_TO && !page.url.pathname.startsWith('/legal'));
 
-	// After hydration, so the prerendered English and the first client render agree.
-	onMount(restoreLocale);
+	// The public pages are in the language of their address. It is set before
+	// anything renders, so each prerendered page — they all share this module —
+	// is in its own language and hydration finds the same text.
+	function addressLocale(): Locale | null {
+		if (!isLocalizedRoute(page.route.id)) return null;
+		return page.params.lang === 'de' ? 'de' : 'en';
+	}
+	applyLocale(addressLocale() ?? 'en');
+
+	// Moving between the public pages, the address keeps deciding.
+	$effect.pre(() => {
+		const next = addressLocale();
+		if (next) untrack(() => applyLocale(next));
+	});
+
+	// Everywhere else the stored choice applies, after hydration, so the
+	// prerendered English and the first client render agree; leaving the
+	// public pages hands the language back to it.
+	$effect(() => {
+		if (!addressLocale()) untrack(restoreLocale);
+	});
 
 	// Describes the app to search engines as what it is: a free, install-free
 	// tool that runs in the browser. Serialised here because Svelte will not

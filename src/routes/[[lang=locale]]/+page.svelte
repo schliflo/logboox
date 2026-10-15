@@ -52,7 +52,7 @@
 	const steps = $derived(m.landing.steps);
 </script>
 
-<Seo />
+<Seo description={m.site.description} />
 
 <main class="relative flex min-h-svh flex-col overflow-hidden">
 	<!-- A quiet field of light behind the fold, so the page has depth without noise. -->

@@ -4,7 +4,11 @@ export const site = {
 	features: 'Features',
 	faq: 'FAQ',
 	guides: 'Guides',
-	readExport: 'Read your export'
+	readExport: 'Read your export',
+	/** The landing page's title after the site name, and its meta description. */
+	tagline: 'XPeng data export viewer: trips, charging & logbook',
+	description:
+		'LogbooX turns your XPeng EU Data Act export into trips, charging sessions, battery health and driving style. Read in your browser — nothing is uploaded.'
 };
 
 export const featuresPage = {

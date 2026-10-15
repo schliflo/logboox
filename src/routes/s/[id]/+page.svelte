@@ -11,7 +11,7 @@
   that travels is exactly the wrong place for it.
 -->
 <script lang="ts">
-	import { intlLocale, m } from '#lib/i18n/index.svelte.js';
+	import { intlLocale, localHref, m } from '#lib/i18n/index.svelte.js';
 	import { onMount } from 'svelte';
 	import * as Card from '#lib/components/ui/card/index.js';
 	import { Badge } from '#lib/components/ui/badge/index.js';
@@ -295,7 +295,7 @@
 			</Card.Description>
 		</Card.Header>
 		<Card.Content>
-			<Button href="/">
+			<Button href={localHref('/')}>
 				{m.sharedPage.readOwn}
 				<ArrowRightIcon class="size-4" />
 			</Button>
