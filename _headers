@@ -1,3 +1,14 @@
+# Prerendered pages are served as static assets and never pass through
+# `hooks.server.ts`, so the headers it sets are repeated here.
+/*
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: geolocation=(), camera=(), microphone=()
+  Content-Security-Policy: frame-ancestors 'none'
+  X-Frame-Options: DENY
+  Cross-Origin-Opener-Policy: same-origin
+  Strict-Transport-Security: max-age=31536000; includeSubDomains
+
 # The service worker must always be checked against the server: a copy kept
 # by a cache would hold readers on an old build indefinitely.
 /service-worker.js

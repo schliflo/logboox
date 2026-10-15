@@ -126,7 +126,12 @@ class AccountStore {
 			return;
 		}
 		try {
-			const me = await api<MeResponse>('/api/v1/me');
+			const me = await api<MeResponse | { user: null }>('/api/v1/me?optional');
+			if (!me.user) {
+				this.clear();
+				this.error = null;
+				return;
+			}
 			this.user = me.user;
 			this.storage = me.storage;
 			// Older servers answer without some of these.
