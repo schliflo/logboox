@@ -9,7 +9,7 @@
 	"type": "module",
 	"packageManager": "pnpm@12.3.4",
 	"scripts": {
-		"dev": "vite dev",
+		"dev": "vite dev --host --port $(lewp list --json | jq '.[] | select((.path | endswith(\"/logboox\")) and .host).port')",
 		"build": "vite build",
 		"preview": "wrangler dev .svelte-kit/cloudflare/_worker.js --port 4173",
 		"preview:legacy": "wrangler dev .svelte-kit/cloudflare/_worker.js --port 4173 --env legacy",

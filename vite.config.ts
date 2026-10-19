@@ -34,7 +34,8 @@ export default defineConfig({
 			inlineStyleThreshold: 2048
 		})
 	],
-	server: {
+  server: {
+    allowedHosts: ['main.xpeng.lewp'],
 		watch: {
 			// Wrangler's local state lives here: the emulated database, the
 			// bucket, and a file per message the mail binding "sends". Watching
