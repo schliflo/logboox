@@ -20,6 +20,8 @@ export const dataPage: Messages['dataPage'] = {
 	price: 'Strompreis',
 	priceHint: 'Wird für alle Kosten im Dashboard verwendet.',
 	perKwh: 'pro kWh',
+	currency: 'Währung',
+	currencyHint: 'Dreistelliger ISO 4217-Währungscode. Eine Änderung hat keinen Einfluss auf die gespeicherten Werte, sondern lediglich auf die angezeigte Währung.',
 	timeZone: 'Zeitzone',
 	timeZoneHint:
 		'Tage und Stunden werden in deiner eigenen Zone angezeigt. Die Datumsspalte des Exports wechselt um Mitternacht Pekinger Zeit, deshalb wird sie ignoriert.',

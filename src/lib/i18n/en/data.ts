@@ -17,6 +17,8 @@ export const dataPage = {
 	price: 'Electricity price',
 	priceHint: 'Used for every cost on the dashboard.',
 	perKwh: 'per kWh',
+	currency: 'Currency',
+	currencyHint: 'Three-letter ISO 4217 currency code. Changing this does not change stored values, only the displayed currency.',
 	timeZone: 'Time zone',
 	timeZoneHint:
 		"Days and hours are shown in your own zone. The export's date column is cut at midnight in Beijing, so it is ignored.",

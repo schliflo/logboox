@@ -211,6 +211,20 @@
 				</div>
 				<div class="flex flex-wrap items-center gap-4 py-5">
 					<div class="min-w-60 flex-1">
+						<Label for="currency" class="text-[15px]">{m.dataPage.currency}</Label>
+						<p class="text-sm text-muted-foreground">{m.dataPage.currencyHint}</p>
+					</div>
+					<div class="flex items-center gap-2">
+						<Input
+							id="currency"
+							type="string"
+							class="w-28"
+							bind:value={settings.currency}
+						/>
+					</div>
+				</div>
+				<div class="flex flex-wrap items-center gap-4 py-5">
+					<div class="min-w-60 flex-1">
 						<Label for="tz" class="text-[15px]">{m.dataPage.timeZone}</Label>
 						<p class="text-sm text-muted-foreground">
 							{m.dataPage.timeZoneHint}
