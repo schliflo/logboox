@@ -16,7 +16,7 @@
 	import { data } from '#lib/state/dataset.svelte.js';
 	import { sessionLink, startFromParam } from '#lib/data/range.js';
 	import { settings } from '#lib/state/settings.svelte.js';
-	import { CHARGING_COLUMNS } from '#lib/export/columns.js';
+	import { chargingColumns } from '#lib/export/columns.js';
 	import {
 		dateTime,
 		duration,
@@ -284,7 +284,7 @@
 							variant="ghost"
 							title="Charging sessions"
 							subtitle={exportVehicle}
-							columns={CHARGING_COLUMNS}
+							columns={chargingColumns(settings.distanceUnit)}
 							rows={exportRows}
 							totals={exportTotals}
 							timeZone={settings.timeZone}

@@ -2,12 +2,23 @@
 
 import type { Fact } from '../data/analytics/facts';
 import type { FactFormat, FactText } from './en/facts';
-import { duration, num, fullDateTime, hourLabel, prettyDay } from '../utils/format';
+import {
+	duration,
+	num,
+	fullDateTime,
+	hourLabel,
+	prettyDay,
+	toDistance,
+	units
+} from '../utils/format';
 import { columnLabel } from './columns';
 import { m } from './index.svelte';
 
 const FORMAT: FactFormat = {
 	num,
+	distance: (km, digits) => num(toDistance(km), digits),
+	speed: (kmh) => num(toDistance(kmh)),
+	units,
 	duration: (seconds) => duration(seconds),
 	when: fullDateTime,
 	hour: hourLabel,

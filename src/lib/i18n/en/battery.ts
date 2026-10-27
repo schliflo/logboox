@@ -1,7 +1,7 @@
 export const battery = {
 	fullRange: 'Full-charge range',
 	fullRangeDetail: (min: string, max: string) =>
-		`Typically ${min}–${max} km, from the car's own estimate`,
+		`Typically ${min}–${max}, from the car's own estimate`,
 	lostParked: 'Lost while parked',
 	lostParkedDetail: (count: number, hours: string) =>
 		`Across ${count} long stands, totalling ${hours} hours`,

@@ -2,7 +2,7 @@ import type { Messages } from '../en/index';
 
 export const battery: Messages['battery'] = {
 	fullRange: 'Reichweite bei voller Ladung',
-	fullRangeDetail: (min, max) => `Meist ${min}–${max} km, nach der Schätzung des Autos selbst`,
+	fullRangeDetail: (min, max) => `Meist ${min}–${max}, nach der Schätzung des Autos selbst`,
 	lostParked: 'Verlust im Stand',
 	lostParkedDetail: (count, hours) => `Über ${count} lange Standzeiten, zusammen ${hours} Stunden`,
 	packTemp: 'Akkutemperatur',

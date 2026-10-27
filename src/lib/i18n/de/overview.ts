@@ -15,7 +15,7 @@ export const overview: Messages['overview'] = {
 	requestAtXpeng: 'Bei XPeng anfordern',
 	addData: 'Daten hinzufügen',
 	monthly: 'Monatliche Bestenliste',
-	longestDrive: (km) => `Deine längste Fahrt: ${km} km`,
+	longestDrive: (km) => `Deine längste Fahrt: ${km}`,
 	seeStands:
 		'Sieh nach, wo sie steht. Nichts wird eingetragen, solange du nicht deinen Namen daruntersetzt.',
 	seeBoards: 'Zu den Bestenlisten',
@@ -32,7 +32,7 @@ export const overview: Messages['overview'] = {
 	chargingCost: 'Ladekosten',
 	atPrice: (price) => `Bei ${price} pro kWh, einstellbar unter Daten`,
 	consumption: 'Verbrauch',
-	odometerNow: (km) => `Kilometerstand jetzt ${km} km`,
+	odometerNow: (km) => `Kilometerstand jetzt ${km}`,
 	perDay: 'Strecke pro Tag',
 	perDayHint:
 		'Wähle einen Tag, um zu sehen, was passiert ist. Gestrichelte Linie: dein Tagesdurchschnitt.',

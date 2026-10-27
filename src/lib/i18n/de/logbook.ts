@@ -10,7 +10,7 @@ export const logbookPage: Messages['logbookPage'] = {
 	labelTrip: 'Eine Fahrt zuordnen',
 	title: 'Fahrtenbuch',
 	summary: (labelled, trips, count, km) =>
-		`${labelled} von ${trips} ${s(count, 'Fahrt', 'Fahrten')} eingetragen, über ${km} km.`,
+		`${labelled} von ${trips} ${s(count, 'Fahrt', 'Fahrten')} eingetragen, über ${km}.`,
 	writtenDown: 'Eingetragen',
 	ofTrips: (labelled, trips, count) => `${labelled} von ${trips} ${s(count, 'Fahrt', 'Fahrten')}`,
 	routes: 'Strecken',
@@ -47,7 +47,7 @@ export const logbookPage: Messages['logbookPage'] = {
 	leaves: 'Abfahrt',
 	best: 'Beste',
 	routeDetail: (km, weekday, weekend, last) =>
-		`${km} km insgesamt · ${weekday} unter der Woche, ${weekend} am Wochenende · zuletzt gefahren ${last}`,
+		`${km} insgesamt · ${weekday} unter der Woche, ${weekend} am Wochenende · zuletzt gefahren ${last}`,
 	trip: (index) => `Fahrt ${index}`,
 	completeness: 'Vollständigkeit',
 	completenessHint:
@@ -58,7 +58,7 @@ export const logbookPage: Messages['logbookPage'] = {
 			: `Für ${count} Fahrten ist nichts eingetragen.`,
 	labelNext: 'Die nächste zuordnen',
 	gapExplain: (km) =>
-		`${km} km liegen zwischen dem Ende einer Fahrt und dem Beginn der nächsten. Das Auto wurde bewegt, ohne dass der Export es aufgezeichnet hat — meist, weil es gefahren wurde, während der Logger schlief, oder über die Naht zwischen zwei Exporten hinweg.`
+		`${km} liegen zwischen dem Ende einer Fahrt und dem Beginn der nächsten. Das Auto wurde bewegt, ohne dass der Export es aufgezeichnet hat — meist, weil es gefahren wurde, während der Logger schlief, oder über die Naht zwischen zwei Exporten hinweg.`
 };
 
 export const labelPage: Messages['labelPage'] = {
@@ -110,7 +110,7 @@ export const tripsPage: Messages['tripsPage'] = {
 	nextTrip: 'Nächste Fahrt in der Liste',
 	nextUnlabelled: 'Nächste Fahrt ohne Ort',
 	moving: (time) => `davon ${time} in Bewegung`,
-	average: (speed) => `Durchschnittlich ${speed} km/h in Bewegung`,
+	average: (speed) => `Durchschnittlich ${speed} in Bewegung`,
 	energyUsed: 'Verbrauchte Energie',
 	regen: (share) => `${share} kamen durch Rekuperation zurück`,
 	secondBySecond: 'Sekunde für Sekunde',

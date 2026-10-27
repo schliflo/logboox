@@ -35,6 +35,15 @@ function finite(value: number): number | null {
 	return Number.isFinite(value) ? value : null;
 }
 
+export type DistanceUnit = 'km' | 'mi';
+
+export const KM_PER_MILE = 1.609344;
+
+/** Kilometres, as the car reports them, in `unit`. */
+export function distanceIn(km: number, unit: DistanceUnit): number {
+	return unit === 'mi' ? km / KM_PER_MILE : km;
+}
+
 export interface LogbookRow {
 	trip: Trip;
 	note: Annotation | undefined;
@@ -45,32 +54,33 @@ export interface LogbookRow {
  *
  * These eleven, in this order, are what an accountant or a tax office expects,
  * and they are what the CSV has always written. Changing the order changes
- * every file anyone has already downloaded, so it does not change.
+ * every file anyone has already downloaded, so it does not change. Only the
+ * distance unit may, for readers whose finance department wants miles.
  */
-export const LOGBOOK_COLUMNS: Array<Column<LogbookRow>> = [
+export const logbookColumns = (unit: DistanceUnit = 'km'): Array<Column<LogbookRow>> => [
 	{ header: 'Date', kind: 'date', width: 13, value: ({ trip }) => trip.startTime },
 	{ header: 'Start', kind: 'time', width: 7, value: ({ trip }) => trip.startTime },
 	{ header: 'End', kind: 'time', width: 7, value: ({ trip }) => trip.endTime },
 	{
-		header: 'Odometer start (km)',
+		header: `Odometer start (${unit})`,
 		kind: 'number',
 		digits: 0,
 		width: 12,
-		value: ({ trip }) => finite(trip.odoStart)
+		value: ({ trip }) => finite(distanceIn(trip.odoStart, unit))
 	},
 	{
-		header: 'Odometer end (km)',
+		header: `Odometer end (${unit})`,
 		kind: 'number',
 		digits: 0,
 		width: 12,
-		value: ({ trip }) => finite(trip.odoEnd)
+		value: ({ trip }) => finite(distanceIn(trip.odoEnd, unit))
 	},
 	{
-		header: 'Distance (km)',
+		header: `Distance (${unit})`,
 		kind: 'number',
 		digits: 1,
 		width: 11,
-		value: ({ trip }) => finite(trip.distanceKm)
+		value: ({ trip }) => finite(distanceIn(trip.distanceKm, unit))
 	},
 	{
 		header: 'Duration (min)',
@@ -84,6 +94,8 @@ export const LOGBOOK_COLUMNS: Array<Column<LogbookRow>> = [
 	{ header: 'Purpose', kind: 'text', width: 11, value: ({ note }) => note?.purpose ?? '' },
 	{ header: 'Comment', kind: 'text', width: 30, value: ({ note }) => note?.comment ?? '' }
 ];
+
+export const LOGBOOK_COLUMNS = logbookColumns();
 
 export interface ChargingRow {
 	session: ChargeSession;
@@ -99,7 +111,7 @@ export interface ChargingRow {
  * cost beside it is an estimate at a single price, which is what the app has to
  * work with — nothing in the export says what anything cost.
  */
-export const CHARGING_COLUMNS: Array<Column<ChargingRow>> = [
+export const chargingColumns = (unit: DistanceUnit = 'km'): Array<Column<ChargingRow>> => [
 	{ header: 'Date', kind: 'date', width: 13, value: ({ session }) => session.startTime },
 	{ header: 'Start', kind: 'time', width: 7, value: ({ session }) => session.startTime },
 	{ header: 'End', kind: 'time', width: 7, value: ({ session }) => session.endTime },
@@ -111,11 +123,11 @@ export const CHARGING_COLUMNS: Array<Column<ChargingRow>> = [
 		value: ({ session }) => finite(session.duration / 60)
 	},
 	{
-		header: 'Odometer (km)',
+		header: `Odometer (${unit})`,
 		kind: 'number',
 		digits: 0,
 		width: 12,
-		value: ({ session }) => finite(session.odometer)
+		value: ({ session }) => finite(distanceIn(session.odometer, unit))
 	},
 	{
 		header: 'Charge from (%)',
@@ -162,3 +174,5 @@ export const CHARGING_COLUMNS: Array<Column<ChargingRow>> = [
 			pricePerKwh > 0 ? finite(session.kwhDelivered * pricePerKwh) : null
 	}
 ];
+
+export const CHARGING_COLUMNS = chargingColumns();

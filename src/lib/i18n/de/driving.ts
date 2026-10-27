@@ -47,7 +47,7 @@ export const drivingPage: Messages['drivingPage'] = {
 	emergency: 'Über 0,6 g ist eine Notbremsung',
 	hardestLaunch: 'Stärkster Antritt',
 	fullThrottle: 'Anfahren mit Vollgas',
-	above100: 'Zeit über 100',
+	above100: (speed) => `Zeit über ${speed}`,
 	ofMoving: (time) => `Von ${time} in Bewegung`,
 	grip: 'Wie viel Haftung du genutzt hast',
 	gripHint:
@@ -58,5 +58,5 @@ export const drivingPage: Messages['drivingPage'] = {
 	pedal: 'Wie weit du das Pedal trittst',
 	pedalHint: 'Fahrpedalstellung, sobald es überhaupt getreten wurde.',
 	pedalLabel: 'Fahrpedalstellung',
-	atSpeed: (speed) => `bei ${speed} km/h`
+	atSpeed: (speed) => `bei ${speed}`
 };

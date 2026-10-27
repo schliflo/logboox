@@ -13,7 +13,8 @@ export const insights = {
 	hardestCorner: 'Hardest corner',
 	drivingInFull: 'Driving style in full',
 	speeds: 'Speeds you drive',
-	topSpeed: (speed: string, above: string) => `Top speed ${speed} km/h, above 100 for ${above}`,
+	topSpeed: (speed: string, limit: string, above: string) =>
+		`Top speed ${speed}, above ${limit} for ${above}`,
 	ofMoving: (time: string) => `Of ${time} spent moving.`,
 	speedMoving: 'Speed while moving',
 	doorsTyres: 'Doors & tyres',

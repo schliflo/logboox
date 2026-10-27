@@ -9,6 +9,7 @@
 
 import { settings } from '../state/settings.svelte';
 import { intlLocale, m } from '../i18n/index.svelte';
+import { distanceIn, KM_PER_MILE } from '../export/columns';
 
 export function num(value: number, digits = 0): string {
 	if (!Number.isFinite(value)) return '—';
@@ -23,6 +24,29 @@ export function measure(value: number, unit: string, digits = 0): string {
 	if (!Number.isFinite(value)) return '—';
 	return `${num(value, digits)}${unit ? ` ${unit}` : ''}`;
 }
+
+/** Display units for the chosen distance unit. The data itself is always metric. */
+export function units() {
+	return settings.distanceUnit === 'mi'
+		? { distance: 'mi', speed: 'mph', consumption: 'mi/kWh' }
+		: { distance: 'km', speed: 'km/h', consumption: 'kWh/100 km' };
+}
+
+/** Kilometres, or km/h, in the chosen unit. */
+export function toDistance(km: number): number {
+	return distanceIn(km, settings.distanceUnit);
+}
+
+/** kWh/100 km, or its inverse mi/kWh: lower is no longer better in miles. */
+export function toConsumption(kwhPer100km: number): number {
+	return settings.distanceUnit === 'mi' ? 100 / (kwhPer100km * KM_PER_MILE) : kwhPer100km;
+}
+
+export const distance = (km: number, digits = 0) =>
+	measure(toDistance(km), units().distance, digits);
+export const speed = (kmh: number) => measure(toDistance(kmh), units().speed);
+export const consumption = (kwhPer100km: number) =>
+	measure(toConsumption(kwhPer100km), units().consumption, 1);
 
 export function duration(seconds: number, style: 'long' | 'short' = 'long'): string {
 	if (!Number.isFinite(seconds) || seconds < 0) return '—';

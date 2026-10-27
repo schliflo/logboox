@@ -14,6 +14,10 @@ export interface FactText {
 
 export interface FactFormat {
 	num: (value: number, digits?: number) => string;
+	/** Kilometres, or km/h, as a number in the reader's unit. */
+	distance: (km: number, digits?: number) => string;
+	speed: (kmh: number) => string;
+	units: () => { distance: string; speed: string };
 	duration: (seconds: number) => string;
 	/** "Sunday 30 August, 18:04". */
 	when: (epochSeconds: number) => string;
@@ -34,9 +38,9 @@ export const facts: FactCatalog = {
 			p.sources > 1
 				? `Across ${p.sources} exports, in ${p.recordedDays} days you drove`
 				: `In ${p.recordedDays} days you drove`,
-		value: f.num(p.km),
-		unit: 'km',
-		detail: `Across ${p.trips} trips, averaging ${f.num(p.km / Math.max(1, p.recordedDays), 1)} km a day.`
+		value: f.distance(p.km),
+		unit: f.units().distance,
+		detail: `Across ${p.trips} trips, averaging ${f.distance(p.km / Math.max(1, p.recordedDays), 1)} ${f.units().distance} a day.`
 	}),
 	'time-driving': (p, f) => ({
 		kicker: 'Time behind the wheel',
@@ -45,14 +49,14 @@ export const facts: FactCatalog = {
 	}),
 	'top-speed': (p, f) => ({
 		kicker: 'Your top speed',
-		value: f.num(p.speed),
-		unit: 'km/h',
+		value: f.speed(p.speed),
+		unit: f.units().speed,
 		detail: `Reached on ${f.when(p.time)}.`
 	}),
 	'longest-trip': (p, f) => ({
 		kicker: 'Longest single trip',
-		value: f.num(p.km),
-		unit: 'km',
+		value: f.distance(p.km),
+		unit: f.units().distance,
 		detail: `${f.duration(p.seconds)} on ${f.when(p.time)}.`
 	}),
 	'hardest-brake': (p, f) => ({
@@ -60,7 +64,7 @@ export const facts: FactCatalog = {
 		value: f.num(p.g, 2),
 		unit: 'g',
 		detail: Number.isFinite(p.speed)
-			? `From ${f.num(p.speed)} km/h on ${f.when(p.time)}. Anything past 0.6 g is an emergency stop.`
+			? `From ${f.speed(p.speed)} ${f.units().speed} on ${f.when(p.time)}. Anything past 0.6 g is an emergency stop.`
 			: `On ${f.when(p.time)}.`
 	}),
 	'energy-charged': (p, f) => ({
@@ -112,8 +116,8 @@ export const facts: FactCatalog = {
 	}),
 	'busiest-day': (p, f) => ({
 		kicker: 'Your busiest day',
-		value: f.num(p.km),
-		unit: 'km',
+		value: f.distance(p.km),
+		unit: f.units().distance,
 		detail: `${f.day(p.day)}, with ${p.trips} trips and ${f.duration(p.seconds)} of driving.`
 	}),
 	'phantom-drain': (p, f) => ({
@@ -124,9 +128,9 @@ export const facts: FactCatalog = {
 	}),
 	'implied-range': (p, f) => ({
 		kicker: 'Your real full-charge range',
-		value: f.num(p.km),
-		unit: 'km',
-		detail: `Extrapolated from what the car itself predicts. It ranged between ${f.num(p.min)} and ${f.num(p.max)} km depending on weather and how you were driving.`
+		value: f.distance(p.km),
+		unit: f.units().distance,
+		detail: `Extrapolated from what the car itself predicts. It ranged between ${f.distance(p.min)} and ${f.distance(p.max)} ${f.units().distance} depending on weather and how you were driving.`
 	}),
 	'door-rhythm': (p, f) => ({
 		kicker: 'Doors opened',

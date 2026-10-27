@@ -6,9 +6,9 @@ export const facts: FactCatalog = {
 			p.sources > 1
 				? `Über ${p.sources} Exporte, in ${p.recordedDays} Tagen bist du gefahren`
 				: `In ${p.recordedDays} Tagen bist du gefahren`,
-		value: f.num(p.km),
-		unit: 'km',
-		detail: `Auf ${p.trips} Fahrten, im Schnitt ${f.num(p.km / Math.max(1, p.recordedDays), 1)} km am Tag.`
+		value: f.distance(p.km),
+		unit: f.units().distance,
+		detail: `Auf ${p.trips} Fahrten, im Schnitt ${f.distance(p.km / Math.max(1, p.recordedDays), 1)} ${f.units().distance} am Tag.`
 	}),
 	'time-driving': (p, f) => ({
 		kicker: 'Zeit am Steuer',
@@ -17,14 +17,14 @@ export const facts: FactCatalog = {
 	}),
 	'top-speed': (p, f) => ({
 		kicker: 'Deine Höchstgeschwindigkeit',
-		value: f.num(p.speed),
-		unit: 'km/h',
+		value: f.speed(p.speed),
+		unit: f.units().speed,
 		detail: `Erreicht am ${f.when(p.time)}.`
 	}),
 	'longest-trip': (p, f) => ({
 		kicker: 'Längste einzelne Fahrt',
-		value: f.num(p.km),
-		unit: 'km',
+		value: f.distance(p.km),
+		unit: f.units().distance,
 		detail: `${f.duration(p.seconds)} am ${f.when(p.time)}.`
 	}),
 	'hardest-brake': (p, f) => ({
@@ -32,7 +32,7 @@ export const facts: FactCatalog = {
 		value: f.num(p.g, 2),
 		unit: 'g',
 		detail: Number.isFinite(p.speed)
-			? `Aus ${f.num(p.speed)} km/h am ${f.when(p.time)}. Alles über 0,6 g ist eine Notbremsung.`
+			? `Aus ${f.speed(p.speed)} ${f.units().speed} am ${f.when(p.time)}. Alles über 0,6 g ist eine Notbremsung.`
 			: `Am ${f.when(p.time)}.`
 	}),
 	'energy-charged': (p, f) => ({
@@ -84,8 +84,8 @@ export const facts: FactCatalog = {
 	}),
 	'busiest-day': (p, f) => ({
 		kicker: 'Dein fahrintensivster Tag',
-		value: f.num(p.km),
-		unit: 'km',
+		value: f.distance(p.km),
+		unit: f.units().distance,
 		detail: `${f.day(p.day)}, mit ${p.trips} Fahrten und ${f.duration(p.seconds)} am Steuer.`
 	}),
 	'phantom-drain': (p, f) => ({
@@ -96,9 +96,9 @@ export const facts: FactCatalog = {
 	}),
 	'implied-range': (p, f) => ({
 		kicker: 'Deine echte Reichweite mit voller Ladung',
-		value: f.num(p.km),
-		unit: 'km',
-		detail: `Hochgerechnet aus der Prognose des Autos selbst. Sie lag je nach Wetter und Fahrweise zwischen ${f.num(p.min)} und ${f.num(p.max)} km.`
+		value: f.distance(p.km),
+		unit: f.units().distance,
+		detail: `Hochgerechnet aus der Prognose des Autos selbst. Sie lag je nach Wetter und Fahrweise zwischen ${f.distance(p.min)} und ${f.distance(p.max)} ${f.units().distance}.`
 	}),
 	'door-rhythm': (p, f) => ({
 		kicker: 'Türen geöffnet',

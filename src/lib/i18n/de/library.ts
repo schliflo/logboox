@@ -70,7 +70,7 @@ export const library: Messages['library'] = {
 	both: 'Hier und in deinem Konto gespeichert',
 	inAccount: 'In deinem Konto',
 	onlyHere: 'Nur in diesem Browser',
-	entry: (days, km, trips, size) => `${days} Tage · ${km} km · ${trips} Fahrten · ${size}`,
+	entry: (days, km, trips, size) => `${days} Tage · ${km} · ${trips} Fahrten · ${size}`,
 	more: 'Mehr zu diesem Export',
 	openAlone: 'Einzeln öffnen',
 	fetchOpen: 'Abrufen und öffnen',

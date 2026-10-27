@@ -17,6 +17,12 @@ export const dataPage = {
 	price: 'Electricity price',
 	priceHint: 'Used for every cost on the dashboard.',
 	perKwh: 'per kWh',
+	currency: 'Currency',
+	currencyHint: 'Used for the electricity price and every cost.',
+	distanceUnit: 'Distance unit',
+	distanceUnitHint: 'Distances, speeds and consumption, on screen and in downloads.',
+	kilometres: 'Kilometres',
+	miles: 'Miles',
 	timeZone: 'Time zone',
 	timeZoneHint:
 		"Days and hours are shown in your own zone. The export's date column is cut at midnight in Beijing, so it is ignored.",

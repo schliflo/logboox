@@ -45,7 +45,7 @@ export const drivingPage = {
 	emergency: 'Beyond 0.6 g is an emergency stop',
 	hardestLaunch: 'Hardest launch',
 	fullThrottle: 'Pulling away at full throttle',
-	above100: 'Time above 100',
+	above100: (speed: string) => `Time above ${speed}`,
 	ofMoving: (time: string) => `Of ${time} moving`,
 	grip: 'How much grip you used',
 	gripHint:
@@ -56,5 +56,5 @@ export const drivingPage = {
 	pedal: 'How far you press the pedal',
 	pedalHint: 'Accelerator position whenever it was pressed at all.',
 	pedalLabel: 'Accelerator position',
-	atSpeed: (speed: string) => `at ${speed} km/h`
+	atSpeed: (speed: string) => `at ${speed}`
 };

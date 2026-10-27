@@ -64,7 +64,7 @@ export const library = {
 	inAccount: 'In your account',
 	onlyHere: 'Only in this browser',
 	entry: (days: number, km: string, trips: number, size: string) =>
-		`${days} days · ${km} km · ${trips} trips · ${size}`,
+		`${days} days · ${km} · ${trips} trips · ${size}`,
 	more: 'More for this export',
 	openAlone: 'Open on its own',
 	fetchOpen: 'Fetch and open',

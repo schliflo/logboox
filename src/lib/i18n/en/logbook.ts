@@ -8,7 +8,7 @@ export const logbookPage = {
 	labelTrip: 'Label a trip',
 	title: 'Logbook (Fahrtenbuch)',
 	summary: (labelled: string, trips: string, count: number, km: string) =>
-		`${labelled} of ${trips} ${s(count, 'trip')} written down, over ${km} km.`,
+		`${labelled} of ${trips} ${s(count, 'trip')} written down, over ${km}.`,
 	writtenDown: 'Written down',
 	ofTrips: (labelled: string, trips: string, count: number) =>
 		`${labelled} of ${trips} ${s(count, 'trip')}`,
@@ -47,7 +47,7 @@ export const logbookPage = {
 	leaves: 'Leaves',
 	best: 'Best',
 	routeDetail: (km: string, weekday: string, weekend: string, last: string) =>
-		`${km} km in all · ${weekday} on weekdays, ${weekend} at weekends · last driven ${last}`,
+		`${km} in all · ${weekday} on weekdays, ${weekend} at weekends · last driven ${last}`,
 	trip: (index: number) => `Trip ${index}`,
 	completeness: 'Completeness',
 	completenessHint: 'A logbook kept for tax has to account for every kilometre the car moved.',
@@ -57,7 +57,7 @@ export const logbookPage = {
 			: `${count} trips have nothing written against them.`,
 	labelNext: 'Label the next one',
 	gapExplain: (km: string, n: number) =>
-		`${km} km ${n === 1 ? 'sits' : 'sit'} between the end of one trip and the start of the next. The car moved without the export recording it — most often because it was driven while the logger was asleep, or across the seam between two exports.`
+		`${km} ${n === 1 ? 'sits' : 'sit'} between the end of one trip and the start of the next. The car moved without the export recording it — most often because it was driven while the logger was asleep, or across the seam between two exports.`
 };
 
 export const labelPage = {
@@ -108,7 +108,7 @@ export const tripsPage = {
 	nextTrip: 'Next trip in the list',
 	nextUnlabelled: 'Next unlabelled trip',
 	moving: (time: string) => `${time} actually moving`,
-	average: (speed: string) => `Average ${speed} km/h while moving`,
+	average: (speed: string) => `Average ${speed} while moving`,
 	energyUsed: 'Energy used',
 	regen: (share: string) => `${share} came back through regeneration`,
 	secondBySecond: 'Second by second',

@@ -32,7 +32,7 @@
 	} from '#lib/share/slice.js';
 	import { shareHeading, shareImageAlt, shareSummary } from '#lib/share/describe.js';
 	import { TIME_BLOB } from '#lib/history/codec.js';
-	import { duration, num, percent } from '#lib/utils/format.js';
+	import { distance, duration, num, percent, toDistance, units } from '#lib/utils/format.js';
 	import ArrowRightIcon from '@lucide/svelte/icons/arrow-right';
 	import ShieldIcon from '@lucide/svelte/icons/shield-check';
 	import type { PageData } from './$types';
@@ -77,7 +77,7 @@
 	const shownHeading = $derived.by(() => {
 		if (share.title) return share.title;
 		if (share.kind === 'trip')
-			return m.sharedPage.tripHeading(num(Number(meta.distanceKm ?? NaN), 1));
+			return m.sharedPage.tripHeading(distance(Number(meta.distanceKm ?? NaN), 1));
 		if (share.kind === 'charging')
 			return m.sharedPage.chargeHeading(num(Number(meta.kwhDelivered ?? NaN), 1));
 		return m.sharedPage.monthHeading;
@@ -150,8 +150,8 @@
 				<Card.Content>
 					<BigStat
 						kicker={m.sharedPage.distance}
-						value={num(Number(meta.distanceKm ?? NaN), 1)}
-						unit="km"
+						value={num(toDistance(Number(meta.distanceKm ?? NaN)), 1)}
+						unit={units().distance}
 						size="sm"
 						accent="--viz-1"
 					/>
@@ -171,8 +171,8 @@
 				<Card.Content>
 					<BigStat
 						kicker={m.sharedPage.topSpeed}
-						value={num(Number(meta.maxSpeed ?? NaN))}
-						unit="km/h"
+						value={num(toDistance(Number(meta.maxSpeed ?? NaN)))}
+						unit={units().speed}
 						size="sm"
 						accent="--viz-2"
 					/>
