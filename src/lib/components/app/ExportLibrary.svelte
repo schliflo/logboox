@@ -24,7 +24,7 @@
 	import { account } from '#lib/state/account.svelte.js';
 	import { history, type LibraryEntry, type VehicleGroup } from '#lib/state/history.svelte.js';
 	import { settings } from '#lib/state/settings.svelte.js';
-	import { bytes, dateOnly, maskVin, num } from '#lib/utils/format.js';
+	import { bytes, dateOnly, distance, maskVin, num } from '#lib/utils/format.js';
 	import CarIcon from '@lucide/svelte/icons/car';
 	import CloudIcon from '@lucide/svelte/icons/cloud';
 	import CloudOffIcon from '@lucide/svelte/icons/cloud-off';
@@ -312,7 +312,7 @@
 								<p class="text-xs text-muted-foreground tabular-nums">
 									{m.library.entry(
 										entry.days,
-										num(entry.distanceKm),
+										distance(entry.distanceKm),
 										entry.trips,
 										bytes(entry.storedBytes)
 									)}

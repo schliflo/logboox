@@ -28,7 +28,7 @@
 	} from '#lib/logbook/suggest.js';
 	import { PURPOSES, type Purpose } from '#lib/logbook/types.js';
 	import { tripLink } from '#lib/data/range.js';
-	import { duration, fullDateTime, num, timeOnly } from '#lib/utils/format.js';
+	import { consumption, distance, duration, fullDateTime, timeOnly } from '#lib/utils/format.js';
 	import { toast } from 'svelte-sonner';
 	import XIcon from '@lucide/svelte/icons/x';
 	import CheckIcon from '@lucide/svelte/icons/check';
@@ -212,8 +212,8 @@
 					{timeOnly(trip.startTime)} – {timeOnly(trip.endTime)}
 				</p>
 				<p class="mt-1 text-sm text-muted-foreground tabular-nums">
-					{num(trip.distanceKm, 1)} km · {duration(trip.duration, 'short')}
-					{#if Number.isFinite(trip.consumption)}· {num(trip.consumption, 1)} kWh/100 km{/if}
+					{distance(trip.distanceKm, 1)} · {duration(trip.duration, 'short')}
+					{#if Number.isFinite(trip.consumption)}· {consumption(trip.consumption)}{/if}
 					·
 					<a href={tripLink(trip.startTime)} class="underline underline-offset-4"
 						>{m.labelPage.details}</a

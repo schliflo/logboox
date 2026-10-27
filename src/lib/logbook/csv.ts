@@ -12,12 +12,16 @@
 
 import { toCsv } from '../export/csv';
 import { exportFileName } from '../export/filenames';
-import { LOGBOOK_COLUMNS, type LogbookRow } from '../export/columns';
+import { logbookColumns, type DistanceUnit, type LogbookRow } from '../export/columns';
 
 export type { LogbookRow };
 
-export function logbookCsv(rows: LogbookRow[], timeZone: string): string {
-	return toCsv(LOGBOOK_COLUMNS, rows, timeZone);
+export function logbookCsv(
+	rows: LogbookRow[],
+	timeZone: string,
+	unit: DistanceUnit = 'km'
+): string {
+	return toCsv(logbookColumns(unit), rows, timeZone);
 }
 
 export function logbookFileName(from: number, to: number, timeZone: string): string {

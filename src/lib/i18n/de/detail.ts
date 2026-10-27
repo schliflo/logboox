@@ -104,7 +104,7 @@ export const notes: Messages['notes'] = {
 };
 
 export const sharedPage: Messages['sharedPage'] = {
-	tripHeading: (km) => `Eine Fahrt über ${km} km`,
+	tripHeading: (km) => `Eine Fahrt über ${km}`,
 	chargeHeading: (kwh) => `Eine Ladung mit ${kwh} kWh`,
 	monthHeading: 'Ein Monat Fahren',
 	unreadable: 'Die Messpunkte konnten nicht gelesen werden.',

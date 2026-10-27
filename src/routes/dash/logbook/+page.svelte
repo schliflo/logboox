@@ -27,7 +27,17 @@
 	import { analyseLogbook } from '#lib/logbook/analytics.js';
 	import { logbookDocument } from '#lib/logbook/document.js';
 	import { PURPOSES, type Purpose } from '#lib/logbook/types.js';
-	import { dateOnly, duration, maskVin, num, percent } from '#lib/utils/format.js';
+	import {
+		dateOnly,
+		distance,
+		duration,
+		maskVin,
+		num,
+		percent,
+		toConsumption,
+		toDistance,
+		units
+	} from '#lib/utils/format.js';
 	import BookIcon from '@lucide/svelte/icons/book-marked';
 	import ArrowRightIcon from '@lucide/svelte/icons/arrow-right';
 
@@ -49,7 +59,15 @@
 	);
 
 	const book = $derived(
-		logbookDocument(stats.trips, notes, settings.timeZone, vehicle, settings.pricePerKwh, analysis)
+		logbookDocument(
+			stats.trips,
+			notes,
+			settings.timeZone,
+			vehicle,
+			settings.pricePerKwh,
+			analysis,
+			settings.distanceUnit
+		)
 	);
 
 	let openRoute = $state<string | null>(null);
@@ -118,7 +136,7 @@
 						num(analysis.coverage.labelled),
 						num(analysis.coverage.trips),
 						analysis.coverage.trips,
-						num(analysis.coverage.km, 0)
+						distance(analysis.coverage.km)
 					)}
 				</p>
 			</div>
@@ -182,8 +200,8 @@
 				<Card.Content>
 					<BigStat
 						kicker={m.logbookPage.unaccounted}
-						value={num(analysis.coverage.unrecordedKm, 0)}
-						unit="km"
+						value={num(toDistance(analysis.coverage.unrecordedKm), 0)}
+						unit={units().distance}
 						size="sm"
 						accent={analysis.coverage.unrecordedKm > 0 ? '--viz-8' : '--viz-6'}
 						detail={analysis.coverage.gaps.length === 0
@@ -225,7 +243,7 @@
 										</span>
 									</Table.Cell>
 									<Table.Cell class="text-right tabular-nums">{num(row.trips)}</Table.Cell>
-									<Table.Cell class="text-right tabular-nums">{num(row.km, 0)} km</Table.Cell>
+									<Table.Cell class="text-right tabular-nums">{distance(row.km)}</Table.Cell>
 									<Table.Cell class="text-right tabular-nums">
 										{settings.formatCurrency(row.cost)}
 									</Table.Cell>
@@ -331,7 +349,7 @@
 								<Table.Head class="text-right">{m.logbookPage.usually}</Table.Head>
 								<Table.Head class="text-right">{m.logbookPage.leaves}</Table.Head>
 								<Table.Head class="text-right">{m.logbookPage.best}</Table.Head>
-								<Table.Head class="text-right">kWh/100 km</Table.Head>
+								<Table.Head class="text-right">{units().consumption}</Table.Head>
 							</Table.Row>
 						</Table.Header>
 						<Table.Body>
@@ -362,7 +380,7 @@
 									</Table.Cell>
 									<Table.Cell class="text-right tabular-nums">
 										{Number.isFinite(route.medianConsumption)
-											? num(route.medianConsumption, 1)
+											? num(toConsumption(route.medianConsumption), 1)
 											: '—'}
 									</Table.Cell>
 								</Table.Row>
@@ -372,7 +390,7 @@
 											<div class="flex flex-wrap items-center gap-2 py-1 text-xs">
 												<span class="text-muted-foreground">
 													{m.logbookPage.routeDetail(
-														num(route.km, 0),
+														distance(route.km),
 														num(route.weekdayTrips),
 														num(route.weekendTrips),
 														dateOnly(route.lastDriven)
@@ -425,7 +443,7 @@
 						<div class="space-y-2">
 							<p class="text-sm">
 								{m.logbookPage.gapExplain(
-									num(analysis.coverage.unrecordedKm, 0),
+									distance(analysis.coverage.unrecordedKm),
 									Math.round(analysis.coverage.unrecordedKm)
 								)}
 							</p>
@@ -434,9 +452,9 @@
 									<li class="flex items-center gap-3 p-2">
 										<span class="text-muted-foreground tabular-nums">{dateOnly(gap.after)}</span>
 										<span class="tabular-nums">
-											{num(gap.fromOdo, 0)} → {num(gap.toOdo, 0)} km
+											{num(toDistance(gap.fromOdo), 0)} → {distance(gap.toOdo)}
 										</span>
-										<span class="ml-auto font-medium tabular-nums">+{num(gap.km, 0)} km</span>
+										<span class="ml-auto font-medium tabular-nums">+{distance(gap.km)}</span>
 									</li>
 								{/each}
 							</ul>

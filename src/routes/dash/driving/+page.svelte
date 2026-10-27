@@ -9,7 +9,7 @@
 	import GgDiagram from '#lib/components/charts/GgDiagram.svelte';
 	import { data } from '#lib/state/dataset.svelte.js';
 	import { tripLink } from '#lib/data/range.js';
-	import { dateTime, duration, num } from '#lib/utils/format.js';
+	import { dateTime, duration, num, speed, toDistance, units } from '#lib/utils/format.js';
 
 	const stats = $derived(data.derived!);
 
@@ -35,8 +35,8 @@
 		{
 			title: m.drivingPage.fastest,
 			accent: '--viz-speed',
-			unit: 'km/h',
-			rows: stats.fastestMoments
+			unit: units().speed,
+			rows: stats.fastestMoments.map((row) => ({ ...row, value: toDistance(row.value) }))
 		}
 	]);
 </script>
@@ -48,8 +48,8 @@
 			<Card.Content>
 				<BigStat
 					kicker={m.drivingPage.topSpeed}
-					value={num(stats.speed.maxSpeed)}
-					unit="km/h"
+					value={num(toDistance(stats.speed.maxSpeed))}
+					unit={units().speed}
 					size="sm"
 					accent="--viz-speed"
 					detail={dateTime(stats.speed.maxSpeedTime)}
@@ -83,7 +83,7 @@
 		<Card.Root>
 			<Card.Content>
 				<BigStat
-					kicker={m.drivingPage.above100}
+					kicker={m.drivingPage.above100(speed(100))}
 					value={duration(
 						stats.speed.secondsAbove.find((s) => s.speed === 100)?.seconds ?? 0,
 						'short'
@@ -128,9 +128,9 @@
 				</Card.Header>
 				<Card.Content>
 					<Histogram
-						edges={stats.speed.histogram.edges}
+						edges={stats.speed.histogram.edges.map(toDistance)}
 						counts={stats.speed.histogram.counts}
-						unit="km/h"
+						unit={units().speed}
 						accent="--viz-speed"
 						height={140}
 						countsAreSeconds
@@ -183,7 +183,7 @@
 									<Table.Cell class="py-2 text-right text-xs text-muted-foreground">
 										{dateTime(event.time)}
 										{#if group.unit === 'g' && Number.isFinite(event.speed)}
-											<span class="block">{m.drivingPage.atSpeed(num(event.speed))}</span>
+											<span class="block">{m.drivingPage.atSpeed(speed(event.speed))}</span>
 										{/if}
 									</Table.Cell>
 								</Table.Row>

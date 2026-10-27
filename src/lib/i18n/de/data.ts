@@ -20,6 +20,12 @@ export const dataPage: Messages['dataPage'] = {
 	price: 'Strompreis',
 	priceHint: 'Wird für alle Kosten im Dashboard verwendet.',
 	perKwh: 'pro kWh',
+	currency: 'Währung',
+	currencyHint: 'Für den Strompreis und alle Kosten.',
+	distanceUnit: 'Entfernungseinheit',
+	distanceUnitHint: 'Strecken, Geschwindigkeiten und Verbrauch, am Bildschirm und in Downloads.',
+	kilometres: 'Kilometer',
+	miles: 'Meilen',
 	timeZone: 'Zeitzone',
 	timeZoneHint:
 		'Tage und Stunden werden in deiner eigenen Zone angezeigt. Die Datumsspalte des Exports wechselt um Mitternacht Pekinger Zeit, deshalb wird sie ignoriert.',

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { toCsv } from './csv';
-import { LOGBOOK_COLUMNS, type LogbookRow } from './columns';
+import { LOGBOOK_COLUMNS, logbookColumns, type LogbookRow } from './columns';
+import { browserRegion } from '../state/settings.svelte';
 import type { Column } from './columns';
 
 interface Row {
@@ -87,5 +88,35 @@ describe('numbers and dates', () => {
 	it('are not touched', () => {
 		const [line] = body([{ text: 'x', km: 5, when: WHEN }]);
 		expect(line).toBe('x;5,0;14/09/2026');
+	});
+});
+
+describe('the logbook in miles', () => {
+	it('converts the odometer and distance and says so in the header', () => {
+		const row = {
+			trip: {
+				startTime: WHEN,
+				endTime: WHEN + 600,
+				odoStart: 1609.344,
+				odoEnd: 1625.437,
+				distanceKm: 16.09344,
+				duration: 600
+			},
+			note: undefined
+		} as unknown as LogbookRow;
+		const [head, line] = toCsv(logbookColumns('mi'), [row], 'Europe/Berlin')
+			.replace('\ufeff', '')
+			.trim()
+			.split('\r\n');
+		expect(head).toContain('Odometer start (mi);Odometer end (mi);Distance (mi)');
+		expect(line).toContain(';1000;1010;10,0;');
+	});
+});
+
+describe('the browser region', () => {
+	it('comes from the first language tag that names one', () => {
+		expect(browserRegion(['en', 'en-GB', 'de-DE'])).toBe('GB');
+		expect(browserRegion(['de'])).toBeUndefined();
+		expect(browserRegion(['not a tag', 'de-AT'])).toBe('AT');
 	});
 });

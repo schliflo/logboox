@@ -13,7 +13,15 @@
 	import GgDiagram from '#lib/components/charts/GgDiagram.svelte';
 	import Histogram from '#lib/components/charts/Histogram.svelte';
 	import { data } from '#lib/state/dataset.svelte.js';
-	import { duration, hourLabel, num, percent } from '#lib/utils/format.js';
+	import {
+		duration,
+		hourLabel,
+		num,
+		percent,
+		speed,
+		toDistance,
+		units
+	} from '#lib/utils/format.js';
 	import ArrowRightIcon from '@lucide/svelte/icons/arrow-right';
 	import ShieldIcon from '@lucide/svelte/icons/shield-check';
 	import { factText } from '#lib/i18n/facts.js';
@@ -157,15 +165,19 @@
 			<Card.Header>
 				<p class="eyebrow">{m.insights.speeds}</p>
 				<Card.Title class="text-xl leading-snug font-bold">
-					{m.insights.topSpeed(num(stats.speed.maxSpeed), duration(above100, 'short'))}
+					{m.insights.topSpeed(
+						speed(stats.speed.maxSpeed),
+						speed(100),
+						duration(above100, 'short')
+					)}
 				</Card.Title>
 				<Card.Description>{m.insights.ofMoving(duration(moving, 'short'))}</Card.Description>
 			</Card.Header>
 			<Card.Content>
 				<Histogram
-					edges={stats.speed.histogram.edges}
+					edges={stats.speed.histogram.edges.map(toDistance)}
 					counts={stats.speed.histogram.counts}
-					unit="km/h"
+					unit={units().speed}
 					accent="--viz-speed"
 					height={130}
 					countsAreSeconds

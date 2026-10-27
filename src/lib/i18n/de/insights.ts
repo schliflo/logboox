@@ -15,7 +15,7 @@ export const insights: Messages['insights'] = {
 	hardestCorner: 'Stärkste Kurve',
 	drivingInFull: 'Fahrstil im Detail',
 	speeds: 'Deine Geschwindigkeiten',
-	topSpeed: (speed, above) => `Höchstens ${speed} km/h, über 100 für ${above}`,
+	topSpeed: (speed, limit, above) => `Höchstens ${speed}, über ${limit} für ${above}`,
 	ofMoving: (time) => `Von ${time} in Bewegung.`,
 	speedMoving: 'Geschwindigkeit in Bewegung',
 	doorsTyres: 'Türen & Reifen',

@@ -99,7 +99,7 @@ export const notes = {
 };
 
 export const sharedPage = {
-	tripHeading: (km: string) => `A ${km} km drive`,
+	tripHeading: (km: string) => `A ${km} drive`,
 	chargeHeading: (kwh: string) => `A ${kwh} kWh charge`,
 	monthHeading: 'A month of driving',
 	unreadable: 'The samples could not be read.',

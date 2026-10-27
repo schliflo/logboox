@@ -18,19 +18,19 @@
 	import { data } from '#lib/state/dataset.svelte.js';
 	import { account } from '#lib/state/account.svelte.js';
 	import { history } from '#lib/state/history.svelte.js';
-	import { settings } from '#lib/state/settings.svelte.js';
+	import { CURRENCIES, settings } from '#lib/state/settings.svelte.js';
 	import { ACCOUNTS_ENABLED } from '#lib/features.js';
 	import { monthLabel } from '#lib/i18n/dates.js';
 	import { i18n, isLocale, LOCALES, m, setLocale } from '#lib/i18n/index.svelte.js';
 	import { EXPORT_WINDOW_DAYS } from '#lib/data/range.js';
-	import { dateOnly, maskVin, num } from '#lib/utils/format.js';
+	import { dateOnly, distance, maskVin, num } from '#lib/utils/format.js';
 	import PlusIcon from '@lucide/svelte/icons/plus';
 	import ArrowUpRightIcon from '@lucide/svelte/icons/arrow-up-right';
 	import ChevronRightIcon from '@lucide/svelte/icons/chevron-right';
 
 	const loaded = $derived(data.full?.derived ?? data.derived);
 	const shared = $derived(data.source.kind === 'shared');
-	const distance = $derived(loaded ? loaded.days.reduce((sum, day) => sum + day.distanceKm, 0) : 0);
+	const totalKm = $derived(loaded ? loaded.days.reduce((sum, day) => sum + day.distanceKm, 0) : 0);
 
 	/** Every calendar month the record touches, and how much of it was recorded. */
 	const months = $derived.by(() => {
@@ -123,7 +123,7 @@
 								class="text-3xl font-bold tracking-tight tabular-nums"
 								style="color: var(--viz-4)"
 							>
-								{num(distance)} km
+								{distance(totalKm)}
 							</dd>
 						</div>
 					</dl>
@@ -208,6 +208,35 @@
 						/>
 						<span class="text-sm text-muted-foreground">{m.dataPage.perKwh}</span>
 					</div>
+				</div>
+				<div class="flex flex-wrap items-center gap-4 py-5">
+					<div class="min-w-60 flex-1">
+						<Label for="currency" class="text-[15px]">{m.dataPage.currency}</Label>
+						<p class="text-sm text-muted-foreground">{m.dataPage.currencyHint}</p>
+					</div>
+					<select
+						id="currency"
+						class="h-9 w-56 rounded-md border border-input bg-transparent px-3 text-sm shadow-xs"
+						bind:value={settings.currency}
+					>
+						{#each CURRENCIES as code (code)}
+							<option value={code}>{code}</option>
+						{/each}
+					</select>
+				</div>
+				<div class="flex flex-wrap items-center gap-4 py-5">
+					<div class="min-w-60 flex-1">
+						<Label for="distance-unit" class="text-[15px]">{m.dataPage.distanceUnit}</Label>
+						<p class="text-sm text-muted-foreground">{m.dataPage.distanceUnitHint}</p>
+					</div>
+					<select
+						id="distance-unit"
+						class="h-9 w-56 rounded-md border border-input bg-transparent px-3 text-sm shadow-xs"
+						bind:value={settings.distanceUnit}
+					>
+						<option value="km">{m.dataPage.kilometres}</option>
+						<option value="mi">{m.dataPage.miles}</option>
+					</select>
 				</div>
 				<div class="flex flex-wrap items-center gap-4 py-5">
 					<div class="min-w-60 flex-1">

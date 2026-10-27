@@ -18,7 +18,7 @@
 import type { Trip } from '../data/analytics/trips';
 import type { Annotation } from './types';
 import { analyseLogbook, type LogbookAnalysis } from './analytics';
-import { LOGBOOK_COLUMNS, type LogbookRow } from '../export/columns';
+import { distanceIn, logbookColumns, type DistanceUnit, type LogbookRow } from '../export/columns';
 import type { Column } from '../export/columns';
 import { measure, num } from '../og/format';
 
@@ -60,8 +60,10 @@ export function logbookDocument(
 	vehicle: string,
 	pricePerKwh = 0,
 	/** Already worked out by the caller, which saves doing it twice per change. */
-	analysis: LogbookAnalysis = analyseLogbook(trips, notes, timeZone, pricePerKwh)
+	analysis: LogbookAnalysis = analyseLogbook(trips, notes, timeZone, pricePerKwh),
+	unit: DistanceUnit = 'km'
 ): LogbookDocument {
+	const distance = (km: number) => measure(distanceIn(km, unit), unit, 1);
 	// Chronological, and complete: a book with the rows in the order the table
 	// happened to be sorted in, or with a filter still applied, is not a book.
 	const rows: LogbookRow[] = [...trips]
@@ -73,10 +75,10 @@ export function logbookDocument(
 
 	const totals = [
 		{ label: 'Trips', value: `${num(analysis.coverage.trips)}` },
-		{ label: 'Distance', value: measure(analysis.coverage.km, 'km', 1) },
+		{ label: 'Distance', value: distance(analysis.coverage.km) },
 		...analysis.purposes.map((bucket) => ({
 			label: PURPOSE_LABELS[bucket.purpose] ?? bucket.purpose,
-			value: `${measure(bucket.km, 'km', 1)} over ${num(bucket.trips)} ${
+			value: `${distance(bucket.km)} over ${num(bucket.trips)} ${
 				bucket.trips === 1 ? 'trip' : 'trips'
 			}`
 		}))
@@ -91,7 +93,7 @@ export function logbookDocument(
 	}
 	if (unrecordedKm >= 1) {
 		written.push(
-			`${measure(unrecordedKm, 'km', 1)} are unaccounted for, across ${num(gaps.length)} ${
+			`${distance(unrecordedKm)} are unaccounted for, across ${num(gaps.length)} ${
 				gaps.length === 1 ? 'gap' : 'gaps'
 			} between the end of one recorded trip and the start of the next.`
 		);
@@ -100,7 +102,7 @@ export function logbookDocument(
 	return {
 		title: 'Fahrtenbuch',
 		subtitle: rows.length ? `${vehicle} · ${period(from, to, timeZone)}` : vehicle,
-		columns: LOGBOOK_COLUMNS,
+		columns: logbookColumns(unit),
 		rows,
 		totals,
 		notes: written,

@@ -19,6 +19,7 @@
 	import UPlotChart, { type ChartSeries } from '#lib/components/charts/UPlotChart.svelte';
 	import { decodeRange, type Column } from '#lib/data/store/columnar.js';
 	import { instantPowerKw } from '#lib/data/analytics/energy.js';
+	import { toDistance, units } from '#lib/utils/format.js';
 
 	export interface SampleSource {
 		time: Uint32Array;
@@ -69,7 +70,13 @@
 				title: m.detail.speed,
 				height: 170,
 				series: [
-					{ label: m.detail.speed, color: '--viz-speed', unit: 'km/h', fill: true, values: speed }
+					{
+						label: m.detail.speed,
+						color: '--viz-speed',
+						unit: units().speed,
+						fill: true,
+						values: speed.map(toDistance)
+					}
 				]
 			});
 		}

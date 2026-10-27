@@ -17,7 +17,7 @@
 	import { data } from '#lib/state/dataset.svelte.js';
 	import { DEMO_ZONE, type Teasers } from '#lib/demo/teasers.js';
 	import snapshot from '#lib/demo/teasers.json';
-	import { duration, measure, num } from '#lib/utils/format.js';
+	import { distance, duration, measure, num, toDistance, units } from '#lib/utils/format.js';
 	import type { Purpose } from '#lib/logbook/types.js';
 	import type { Medal } from '#lib/leaderboard/medals.js';
 	import type { BoardId } from '#lib/leaderboard/boards.js';
@@ -65,7 +65,12 @@
 	const peakAt = (trip.peak / (trip.speed.length - 1)) * 100;
 	const lanes = $derived(
 		[
-			{ label: m.detail.speed, color: 'var(--viz-speed)', values: trip.speed, unit: 'km/h' },
+			{
+				label: m.detail.speed,
+				color: 'var(--viz-speed)',
+				values: trip.speed.map(toDistance),
+				unit: units().speed
+			},
 			{ label: m.detail.power, color: 'var(--viz-accel)', values: trip.power, unit: 'kW' },
 			{ label: m.detail.charge, color: 'var(--viz-soc)', values: trip.soc, unit: '%' }
 		].map((lane) => {
@@ -276,7 +281,7 @@
 						<span class="min-w-0 flex-1">
 							<span class="block truncate">{t.logbook.places[index]}</span>
 							<span class="block text-xs text-muted-foreground tabular-nums">
-								{measure(entry.distanceKm, 'km')} · {duration(entry.duration, 'short')}
+								{distance(entry.distanceKm)} · {duration(entry.duration, 'short')}
 							</span>
 						</span>
 						<PurposeChip purpose={PURPOSES[index]} />

@@ -21,12 +21,16 @@
 	import { PURPOSES } from '#lib/logbook/types.js';
 	import {
 		dateOnly,
+		distance,
 		duration,
 		num,
 		percent,
 		prettyDay,
 		shortDay,
-		timeOnly
+		timeOnly,
+		toConsumption,
+		toDistance,
+		units
 	} from '#lib/utils/format.js';
 	import ArrowUpRightIcon from '@lucide/svelte/icons/arrow-up-right';
 	import PlayIcon from '@lucide/svelte/icons/play';
@@ -42,11 +46,15 @@
 	// Measured against the time the exports actually account for, not the
 	// calendar span: a merged record has holes that were never recorded.
 	const coverage = $derived(dataset.time.length / stats.recordedSeconds);
-	const consumption = $derived(totalKm > 0 ? (stats.charging.totalKwh / totalKm) * 100 : NaN);
+	const kwhPer100km = $derived(totalKm > 0 ? (stats.charging.totalKwh / totalKm) * 100 : NaN);
 	const cost = $derived(stats.charging.totalKwh * settings.pricePerKwh);
 
 	const calendar = $derived(
-		stats.days.map((day) => ({ date: day.date, value: day.distanceKm, covered: day.covered }))
+		stats.days.map((day) => ({
+			date: day.date,
+			value: toDistance(day.distanceKm),
+			covered: day.covered
+		}))
 	);
 
 	const busiest = $derived(
@@ -90,8 +98,8 @@
 	const glance = $derived([
 		{
 			kicker: m.overview.distance,
-			value: num(totalKm),
-			unit: 'km',
+			value: num(toDistance(totalKm)),
+			unit: units().distance,
 			accent: '--viz-1',
 			detail: m.overview.tripsOver(num(stats.trips.length), stats.recordedDays)
 		},
@@ -118,10 +126,10 @@
 		},
 		{
 			kicker: m.overview.consumption,
-			value: Number.isFinite(consumption) ? num(consumption, 1) : '—',
-			unit: 'kWh/100 km',
+			value: Number.isFinite(kwhPer100km) ? num(toConsumption(kwhPer100km), 1) : '—',
+			unit: units().consumption,
 			accent: '--viz-7',
-			detail: m.overview.odometerNow(num(stats.odometerEnd))
+			detail: m.overview.odometerNow(distance(stats.odometerEnd))
 		}
 	]);
 
@@ -202,7 +210,7 @@
 						<Card.Content class="flex h-full flex-col gap-2.5">
 							<p class="chip" style="--chip: var(--viz-4)">{m.overview.monthly}</p>
 							<p class="text-lg font-semibold">
-								{m.overview.longestDrive(num(longest.distanceKm))}
+								{m.overview.longestDrive(distance(longest.distanceKm))}
 							</p>
 							<p class="text-sm text-muted-foreground max-sm:hidden">
 								{m.overview.seeStands}
@@ -281,7 +289,7 @@
 				<p class="text-sm text-muted-foreground tabular-nums">
 					{m.overview.busiest}
 					<span class="font-medium text-foreground"
-						>{prettyDay(busiest.date)}, {num(busiest.distanceKm)} km</span
+						>{prettyDay(busiest.date)}, {distance(busiest.distanceKm)}</span
 					>
 				</p>
 			{/if}
@@ -289,6 +297,7 @@
 		<Card.Content>
 			<DailyBars
 				days={calendar}
+				unit={units().distance}
 				selected={selectedDay}
 				onSelect={(date) => (selectedDay = selectedDay === date ? null : date)}
 			/>
@@ -302,7 +311,7 @@
 						<div>
 							<dt class="inline">{m.overview.distance}</dt>
 							<dd class="inline text-foreground tabular-nums">
-								{num(dayDetail.distanceKm, 1)} km
+								{distance(dayDetail.distanceKm, 1)}
 							</dd>
 						</div>
 						<div>
@@ -354,7 +363,7 @@
 							>
 								{route(trip.startTime) || m.overview.noPlace}
 							</span>
-							<span class="text-sm tabular-nums">{num(trip.distanceKm, 1)} km</span>
+							<span class="text-sm tabular-nums">{distance(trip.distanceKm, 1)}</span>
 							<span class="hidden w-24 justify-end sm:flex">
 								{#if purpose || !shared}
 									<PurposeChip purpose={purpose?.value} />

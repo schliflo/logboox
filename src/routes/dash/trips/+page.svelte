@@ -24,13 +24,18 @@
 	import { toast } from 'svelte-sonner';
 	import {
 		dateTime,
+		distance,
 		duration,
 		fullDay,
 		maskVin,
 		num,
 		percent,
 		shortDay,
-		timeOnly
+		speed,
+		timeOnly,
+		toConsumption,
+		toDistance,
+		units
 	} from '#lib/utils/format.js';
 	import ArrowLeftIcon from '@lucide/svelte/icons/arrow-left';
 	import ArrowUpDownIcon from '@lucide/svelte/icons/arrow-up-down';
@@ -116,7 +121,15 @@
 	);
 
 	const book = $derived(
-		logbookDocument(stats.trips, notes, settings.timeZone, vehicle, settings.pricePerKwh)
+		logbookDocument(
+			stats.trips,
+			notes,
+			settings.timeZone,
+			vehicle,
+			settings.pricePerKwh,
+			undefined,
+			settings.distanceUnit
+		)
 	);
 
 	function hasPlace(startTime: number): boolean {
@@ -257,7 +270,7 @@
 		{ key: 'distanceKm', label: m.tripsPage.distance, align: 'text-right' },
 		{ key: 'duration', label: m.tripsPage.duration, align: 'text-right' },
 		{ key: 'maxSpeed', label: m.tripsPage.topSpeed, align: 'text-right' },
-		{ key: 'consumption', label: 'kWh/100 km', align: 'text-right' }
+		{ key: 'consumption', label: units().consumption, align: 'text-right' }
 	]);
 </script>
 
@@ -335,7 +348,7 @@
 									{route(row.startTime) || m.tripsPage.noPlaceYet}
 								</span>
 								<span class="text-xs text-muted-foreground tabular-nums">
-									{num(row.distanceKm, 1)} km · {duration(row.duration, 'short')}
+									{distance(row.distanceKm, 1)} · {duration(row.duration, 'short')}
 								</span>
 							</span>
 							{#if purpose || !shared}<PurposeChip {purpose} />{/if}
@@ -422,8 +435,8 @@
 					<Card.Content>
 						<BigStat
 							kicker={m.tripsPage.distance}
-							value={num(trip.distanceKm, 1)}
-							unit="km"
+							value={num(toDistance(trip.distanceKm), 1)}
+							unit={units().distance}
 							size="sm"
 							accent="--viz-1"
 						/>
@@ -444,11 +457,11 @@
 					<Card.Content>
 						<BigStat
 							kicker={m.tripsPage.topSpeed}
-							value={num(trip.maxSpeed)}
-							unit="km/h"
+							value={num(toDistance(trip.maxSpeed))}
+							unit={units().speed}
 							size="sm"
 							accent="--viz-2"
-							detail={m.tripsPage.average(num(trip.avgSpeed))}
+							detail={m.tripsPage.average(speed(trip.avgSpeed))}
 						/>
 					</Card.Content>
 				</Card.Root>
@@ -532,8 +545,8 @@
 				<Card.Content>
 					<BigStat
 						kicker={m.tripsPage.longest}
-						value={num(Math.max(...stats.trips.map((t) => t.distanceKm)), 0)}
-						unit="km"
+						value={num(toDistance(Math.max(...stats.trips.map((t) => t.distanceKm))), 0)}
+						unit={units().distance}
 						size="sm"
 						accent="--viz-3"
 					/>
@@ -544,12 +557,14 @@
 					<BigStat
 						kicker={m.tripsPage.median}
 						value={num(
-							[...stats.trips.map((t) => t.distanceKm)].sort((a, b) => a - b)[
-								Math.floor(stats.trips.length / 2)
-							] ?? NaN,
+							toDistance(
+								[...stats.trips.map((t) => t.distanceKm)].sort((a, b) => a - b)[
+									Math.floor(stats.trips.length / 2)
+								] ?? NaN
+							),
 							1
 						)}
-						unit="km"
+						unit={units().distance}
 						size="sm"
 						accent="--viz-4"
 					/>
@@ -662,7 +677,8 @@
 									</span>
 								</span>
 								<span class="flex flex-col items-end gap-1">
-									<span class="text-sm font-semibold tabular-nums">{num(row.distanceKm, 1)} km</span
+									<span class="text-sm font-semibold tabular-nums"
+										>{distance(row.distanceKm, 1)}</span
 									>
 									{#if purpose || !shared}<PurposeChip {purpose} />{/if}
 								</span>
@@ -698,13 +714,19 @@
 									onclick={() => goto(linkTo(row.startTime))}
 								>
 									<Table.Cell class="font-medium">{dateTime(row.startTime)}</Table.Cell>
-									<Table.Cell class="text-right tabular-nums">{num(row.distanceKm, 1)}</Table.Cell>
+									<Table.Cell class="text-right tabular-nums"
+										>{num(toDistance(row.distanceKm), 1)}</Table.Cell
+									>
 									<Table.Cell class="text-right tabular-nums">
 										{duration(row.duration, 'short')}
 									</Table.Cell>
-									<Table.Cell class="text-right tabular-nums">{num(row.maxSpeed)}</Table.Cell>
+									<Table.Cell class="text-right tabular-nums"
+										>{num(toDistance(row.maxSpeed))}</Table.Cell
+									>
 									<Table.Cell class="text-right tabular-nums">
-										{Number.isFinite(row.consumption) ? num(row.consumption, 1) : '—'}
+										{Number.isFinite(row.consumption)
+											? num(toConsumption(row.consumption), 1)
+											: '—'}
 									</Table.Cell>
 									<Table.Cell class="max-w-56">
 										{#if route(row.startTime)}

@@ -8,7 +8,7 @@
 	import { data } from '#lib/state/dataset.svelte.js';
 	import { breakAtGaps, selectSeries } from '#lib/data/store/decimate.js';
 	import { AWAKE_GAP_SECONDS } from '#lib/data/analytics/sessions.js';
-	import { dateTime, duration, num } from '#lib/utils/format.js';
+	import { dateTime, distance, duration, num, toDistance, units } from '#lib/utils/format.js';
 
 	const stats = $derived(data.derived!);
 	const dataset = $derived(data.dataset!);
@@ -75,13 +75,13 @@
 			<Card.Content>
 				<BigStat
 					kicker={m.battery.fullRange}
-					value={num(stats.range.medianFullRange)}
-					unit="km"
+					value={num(toDistance(stats.range.medianFullRange))}
+					unit={units().distance}
 					size="sm"
 					accent="--viz-3"
 					detail={m.battery.fullRangeDetail(
-						num(stats.range.minFullRange),
-						num(stats.range.maxFullRange)
+						num(toDistance(stats.range.minFullRange)),
+						distance(stats.range.maxFullRange)
 					)}
 				/>
 			</Card.Content>
@@ -163,9 +163,9 @@
 							{
 								label: m.battery.range,
 								color: '--viz-1',
-								unit: 'km',
+								unit: units().distance,
 								fill: true,
-								values: rangeSeries.y
+								values: rangeSeries.y.map(toDistance)
 							}
 						]}
 						height={200}
