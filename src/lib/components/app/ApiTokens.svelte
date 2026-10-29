@@ -32,7 +32,8 @@
 		lastUsedAt: number | null;
 	}
 
-	let tokens = $state<TokenRow[]>([]);
+	// null: not loaded. Never shown as "none", since tokens may still work.
+	let tokens = $state<TokenRow[] | null>(null);
 	let creating = $state(false);
 	let name = $state('');
 	let busy = $state(false);
@@ -45,7 +46,7 @@
 		try {
 			tokens = (await api<{ tokens: TokenRow[] }>('/api/v1/tokens')).tokens;
 		} catch {
-			tokens = [];
+			tokens = null;
 		}
 	}
 
@@ -100,35 +101,37 @@
 </script>
 
 <AccountSection id="tokens" title={m.tokens.title} description={m.tokens.description}>
-	{#each tokens as token (token.id)}
-		<div class="flex flex-wrap items-center gap-3">
-			<KeyIcon class="size-4 shrink-0 text-muted-foreground" />
-			<div class="min-w-32 flex-1">
-				<p class="text-[15px] font-medium">{token.name}</p>
-				<p class="text-sm text-muted-foreground">
-					<code>lbx_…{token.hint}</code>
-					· {m.tokens.made(dateOnly(token.createdAt))}
-					{#if token.lastUsedAt}
-						· {m.tokens.lastUsed(dateOnly(token.lastUsedAt))}
-					{:else}
-						· {m.tokens.neverUsed}
-					{/if}
-				</p>
+	{#if tokens}
+		{#each tokens as token (token.id)}
+			<div class="flex flex-wrap items-center gap-3">
+				<KeyIcon class="size-4 shrink-0 text-muted-foreground" />
+				<div class="min-w-32 flex-1">
+					<p class="text-[15px] font-medium">{token.name}</p>
+					<p class="text-sm text-muted-foreground">
+						<code>lbx_…{token.hint}</code>
+						· {m.tokens.made(dateOnly(token.createdAt))}
+						{#if token.lastUsedAt}
+							· {m.tokens.lastUsed(dateOnly(token.lastUsedAt))}
+						{:else}
+							· {m.tokens.neverUsed}
+						{/if}
+					</p>
+				</div>
+				<Badge variant="secondary">{token.scopes.join(', ')}</Badge>
+				<Button
+					variant="ghost"
+					size="icon"
+					class="text-destructive hover:text-destructive"
+					onclick={() => revoke(token)}
+				>
+					<TrashIcon class="size-4" />
+					<span class="sr-only">{m.tokens.revoke(token.name)}</span>
+				</Button>
 			</div>
-			<Badge variant="secondary">{token.scopes.join(', ')}</Badge>
-			<Button
-				variant="ghost"
-				size="icon"
-				class="text-destructive hover:text-destructive"
-				onclick={() => revoke(token)}
-			>
-				<TrashIcon class="size-4" />
-				<span class="sr-only">{m.tokens.revoke(token.name)}</span>
-			</Button>
-		</div>
-	{:else}
-		<p class="text-sm text-muted-foreground">{m.tokens.none}</p>
-	{/each}
+		{:else}
+			<p class="text-sm text-muted-foreground">{m.tokens.none}</p>
+		{/each}
+	{/if}
 
 	<div class="flex flex-wrap items-center gap-4">
 		<p class="flex-[1_1_16rem] text-sm text-muted-foreground">
