@@ -8,10 +8,14 @@ import { parseStream } from '../../data/parse/ingest';
 import { sourceFromDataset } from '../../data/parse/merge';
 import { recognizeFiles, type FileLike, type StreamId } from '../../data/schema/streams';
 import { getRecord } from '../exports/repo';
+import { MAX_ACCOUNT_BYTES } from '../exports/limits';
 import { BLOCK_PREFIX, blockSlot, sourceFromExport } from '../../history/codec';
+import { freezeShare, SHARE_RECORD } from '../shares/snapshot';
+import { shareBlobKey } from '../exports/r2';
 import {
 	WEEK,
 	foldUpload,
+	isFolded,
 	mergeIntoBlocks,
 	readBlobs,
 	slotOf,
@@ -141,6 +145,24 @@ describe('mergeIntoBlocks', () => {
 		expect(await speedAt(block.id, BASE + DAY + 8 * 3600)).toBe(70);
 		expect(await speedAt(block.id, BASE + 4 * DAY + 8 * 3600)).toBe(50);
 	});
+
+	it('merges and removes every version of a week a dead writer left behind', async () => {
+		await merge(drives(0, 1), 50);
+		await storeDataset(
+			db,
+			bucket,
+			userId,
+			`${slotOf(BASE, VIN)}deadbeef`,
+			await dataset(drives(1, 1), 60),
+			'UTC'
+		);
+		await merge(drives(2, 1), 70);
+
+		const stored = await blocks();
+		expect(stored).toHaveLength(1);
+		expect(stored[0].rows).toBe(3 * 3600);
+		expect(await speedAt(stored[0].id, BASE + DAY + 8 * 3600)).toBe(60);
+	});
 });
 
 describe('foldUpload', () => {
@@ -160,6 +182,57 @@ describe('foldUpload', () => {
 
 		// Asking again does nothing.
 		expect(await foldUpload(db, bucket, userId, upload)).toBeNull();
+	});
+
+	it('fits an account whose upload fills its quota: the upload is not charged twice', async () => {
+		const upload = 'upload-1';
+		await storeDataset(db, bucket, userId, upload, await dataset(drives(0, 3), 50), 'UTC');
+		await run(
+			db,
+			'UPDATE exports SET stored_bytes = ? WHERE id = ?',
+			MAX_ACCOUNT_BYTES - 1000,
+			upload
+		);
+
+		expect((await foldUpload(db, bucket, userId, upload))?.blocks).toHaveLength(1);
+		expect(await isFolded(db, userId, upload)).toBe(true);
+	});
+});
+
+describe('freezeShare', () => {
+	it('cuts the range out of the newest blocks and keeps nothing of the owner', async () => {
+		const { blocks: old } = await merge(drives(0, 10), 50);
+		// The timeline moves on after the browser listed its blocks.
+		await merge(drives(9, 1), 60);
+
+		const record = await freezeShare(db, bucket, userId, 'share1', old, 'UTC', {
+			from: BASE + 2 * DAY,
+			to: BASE + 9 * DAY + 9 * 3600
+		});
+		expect(record.rows).toBe(7 * 3600 + 3600);
+		const stored = JSON.parse(
+			await (await bucket.get(shareBlobKey('share1', SHARE_RECORD)))!.text()
+		);
+		expect(stored.vin).toBe('');
+		expect(JSON.stringify(stored)).not.toContain(VIN);
+		expect(stored.coverage.every((w: { exportId: string }) => w.exportId === 'share1')).toBe(true);
+	});
+
+	it('is made for a link to an upload before the upload joins the timeline', async () => {
+		await storeDataset(db, bucket, userId, 'upload-1', await dataset(drives(0, 3), 50), 'UTC');
+		await run(
+			db,
+			`INSERT INTO shares (id, user_id, kind, vmodel, start_time, end_time, time_zone, export_id,
+				owner_user_id, meta_json, created_at)
+			 VALUES ('old', ?, 'export', 'F30b', 0, 0, 'UTC', 'upload-1', ?, '{}', 0)`,
+			userId,
+			userId
+		);
+		await foldUpload(db, bucket, userId, 'upload-1');
+		expect(await one(db, "SELECT export_id FROM shares WHERE id = 'old'")).toEqual({
+			export_id: null
+		});
+		expect(bucket.sizes.has(shareBlobKey('old', SHARE_RECORD))).toBe(true);
 	});
 });
 

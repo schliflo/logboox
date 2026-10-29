@@ -52,6 +52,9 @@ CREATE INDEX xpeng_downloads_user ON xpeng_downloads (user_id, created_at);
 -- request that completes it; the import Worker sweeps up the rest.
 ALTER TABLE exports ADD COLUMN fold INTEGER NOT NULL DEFAULT 0;
 CREATE INDEX exports_fold ON exports (fold) WHERE fold = 1;
+-- Everything already kept joins the timeline, account by account, in the
+-- import Worker's hourly runs. Links to a whole export are frozen first.
+UPDATE exports SET fold = 1 WHERE complete = 1 AND is_demo = 0;
 
 -- Uploads that were merged into the timeline and then removed, so a browser
 -- that still holds one knows it is in the account and does not send it again.

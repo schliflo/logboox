@@ -29,6 +29,7 @@ import { blobKey, deletePrefix, exportPrefix } from '../exports/r2';
 import { beginExport, deleteExport, getRecord, QuotaExceeded } from '../exports/repo';
 import { completeUpload } from '../exports/upload';
 import { candidatesForExport } from '../leaderboard/repo';
+import { freezeSharesOf } from '../shares/snapshot';
 
 const DAY = 86400;
 export const WEEK = 7 * DAY;
@@ -104,26 +105,22 @@ export async function mergeIntoBlocks(
 		if (part.time.length === 0) continue;
 
 		const slot = slotOf(week, source.vin);
-		const existing = await one<{ id: string }>(
-			db,
-			`SELECT id FROM exports WHERE user_id = ? AND complete = 1 AND id LIKE ? || '%'
-			 ORDER BY end_time DESC LIMIT 1`,
-			userId,
-			slot
-		);
-		const sources = [part];
-		if (existing) {
-			const record = await getRecord(db, userId, existing.id);
-			if (record) {
-				sources.unshift(sourceFromExport(record, await readBlobs(storage, userId, record)));
-			}
+		// Normally one; more only if a writer died between storing a version and removing the last.
+		const versions = await versionsOf(db, userId, slot);
+		const sources: MergeSource[] = [];
+		for (const version of versions) {
+			const record = await getRecord(db, userId, version);
+			if (record) sources.push(sourceFromExport(record, await readBlobs(storage, userId, record)));
 		}
+		sources.push(part);
 		// In the order given: the new data wins wherever it differs, even a backfill.
 		const merged = mergeSources(sources, { inOrder: true });
 		// A new id per version, even when the week's end did not move: blocks are immutable.
 		const id = `${slot}${rowId().slice(0, 8)}`;
-		const candidates = await storeDataset(db, storage, userId, id, merged, timeZone);
-		if (existing && existing.id !== id) await removeExport(db, storage, userId, existing.id);
+		const candidates = await uncharged(db, userId, versions, () =>
+			storeDataset(db, storage, userId, id, merged, timeZone)
+		);
+		for (const version of versions) await removeExport(db, storage, userId, version);
 		outcome.blocks.push(id);
 		outcome.candidates.push(...candidates);
 	}
@@ -162,6 +159,52 @@ export async function storeDataset(
 		throw new Error(done.error);
 	}
 	return candidatesForExport(db, userId, id);
+}
+
+/** Every stored version of one car's week, oldest first. */
+export async function versionsOf(db: Db, userId: string, slot: string): Promise<string[]> {
+	const rows = await all<{ id: string }>(
+		db,
+		`SELECT id FROM exports WHERE user_id = ? AND complete = 1 AND id LIKE ? || '%'
+		 ORDER BY uploaded_at, rowid`,
+		userId,
+		slot
+	);
+	return rows.map((row) => row.id);
+}
+
+/**
+ * Runs `work` with `ids` not counted against the quota: data about to be
+ * replaced by what `work` stores, so an account near its limit can still be
+ * rewritten. Their charge comes back if `work` fails; on success they are removed.
+ */
+async function uncharged<T>(db: Db, userId: string, ids: string[], work: () => Promise<T>) {
+	const charged: Array<{ id: string; stored_bytes: number }> = [];
+	for (const id of ids) {
+		const row = await one<{ stored_bytes: number }>(
+			db,
+			'SELECT stored_bytes FROM exports WHERE user_id = ? AND id = ?',
+			userId,
+			id
+		);
+		if (!row) continue;
+		charged.push({ id, stored_bytes: row.stored_bytes });
+		await run(db, 'UPDATE exports SET stored_bytes = 0 WHERE user_id = ? AND id = ?', userId, id);
+	}
+	try {
+		return await work();
+	} catch (error) {
+		for (const { id, stored_bytes } of charged) {
+			await run(
+				db,
+				'UPDATE exports SET stored_bytes = ? WHERE user_id = ? AND id = ?',
+				stored_bytes,
+				userId,
+				id
+			);
+		}
+		throw error;
+	}
 }
 
 export async function readBlobs(
@@ -203,7 +246,18 @@ export async function foldExport(
 	if (!record) return { blocks: [], candidates: [] };
 
 	const source = sourceFromExport(record, await readBlobs(storage, userId, record));
-	const outcome = await mergeIntoBlocks(db, storage, userId, source, row.time_zone ?? 'UTC');
+	// Its weeks are written before it is removed; it must not count twice meanwhile.
+	const outcome = await uncharged(db, userId, [id], () =>
+		mergeIntoBlocks(db, storage, userId, source, row.time_zone ?? 'UTC')
+	);
+	// Links that read this export's own objects get copies of their own first.
+	const shares = await all<{ id: string; time_zone: string }>(
+		db,
+		'SELECT id, time_zone FROM shares WHERE user_id = ? AND export_id = ? AND revoked_at IS NULL',
+		userId,
+		id
+	);
+	await freezeSharesOf(db, storage, userId, id, shares);
 	await run(
 		db,
 		'INSERT OR REPLACE INTO folded_exports (user_id, id, folded_at) VALUES (?, ?, ?)',

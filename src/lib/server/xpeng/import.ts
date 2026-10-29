@@ -62,8 +62,14 @@ export async function runImports(
 			if (done) report.folded++;
 			else report.busy++;
 		} catch (error) {
-			// Left as it is: the upload is still a whole export in the account.
+			// Left as a whole export, as before the timeline, rather than retried every hour.
 			console.error(`folding ${upload.id} into the timeline failed:`, error);
+			await run(
+				db,
+				'UPDATE exports SET fold = 0 WHERE user_id = ? AND id = ?',
+				upload.user_id,
+				upload.id
+			);
 			report.failed++;
 		}
 	}

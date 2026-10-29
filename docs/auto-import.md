@@ -74,9 +74,10 @@ Known limits:
   owner.
 - Weeks are UTC weeks. A drive across Monday 00:00 UTC (01:00–02:00 in
   Berlin) is split in the account's trip list, not on the dashboard.
-- Rewriting a block revokes a share of that whole block; shares of trips are
-  unaffected. Range shares come with phase 4 of the plan.
-- Exports uploaded before blocks stay as they are (phase 3 of the plan).
+- A shared range is a frozen copy (at most a calendar month); later block rewrites
+  don't change it.
+- Migration 0004 marks every existing export for folding; the hourly run folds
+  them account by account, freezing any whole-export share first.
 - ZIP64 archives are not read (an export would have to exceed 4 GB).
 
 ## Setting it up (operator)
