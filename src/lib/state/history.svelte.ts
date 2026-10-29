@@ -338,9 +338,39 @@ class HistoryStore {
 			}
 			const local = new Set(this.entries.map((entry) => entry.id));
 			const localSlots = new Set(this.entries.map((entry) => blockSlot(entry.id)));
+			const foldedHere = this.entries.filter(
+				(entry) => !blockSlot(entry.id) && this.folded.includes(entry.id)
+			);
+			// Per car, the week after which a block counts as new: the newest held, or
+			// on a browser that holds none, the last RECENT_WEEKS. Older weeks open on demand.
+			const since = new Map<string, number>();
+			for (const slot of held) {
+				const { car, week } = slotParts(slot);
+				since.set(car, Math.max(since.get(car) ?? -Infinity, week));
+			}
+			const heldCars = new Set(since.keys());
+			for (const entry of this.remote) {
+				const slot = blockSlot(entry.id);
+				if (!slot) continue;
+				const { car, week } = slotParts(slot);
+				if (heldCars.has(car)) continue;
+				since.set(car, Math.max(since.get(car) ?? -Infinity, week - RECENT_WEEKS * WEEK));
+			}
 			const wanted = this.remote.filter((entry) => {
 				const slot = blockSlot(entry.id);
-				return slot && !local.has(entry.id) && (localSlots.has(slot) || !held.has(slot));
+				if (!slot || local.has(entry.id)) return false;
+				// A newer version of a week this browser holds.
+				if (localSlots.has(slot)) return true;
+				// Removed from this browser: stays removed.
+				if (held.has(slot)) return false;
+				// The weeks an upload from here went into, so the upload can go.
+				const overlaps = (upload: ExportRecord) =>
+					upload.vin === entry.vin &&
+					entry.startTime <= upload.endTime &&
+					entry.endTime >= upload.startTime;
+				if (foldedHere.some(overlaps)) return true;
+				const { car, week } = slotParts(slot);
+				return week > since.get(car)!;
 			});
 
 			let pulled = 0;
@@ -419,6 +449,16 @@ class HistoryStore {
 		const local = new Set(this.entries.map((entry) => entry.id));
 		return ids.length > 0 && ids.every((id) => local.has(id));
 	}
+}
+
+/** Weeks pulled unasked onto a browser that holds none of a car's: about a month. */
+const RECENT_WEEKS = 5;
+const WEEK = 7 * 86400;
+
+/** The car tag and week (epoch seconds) of a block slot, `wk-{week}-{car}-`. */
+function slotParts(slot: string): { week: number; car: string } {
+	const [, week, car] = slot.split('-');
+	return { week: Number(week), car };
 }
 
 /** Block slots this browser has held. Only ids, as `logboox.last` keeps. */

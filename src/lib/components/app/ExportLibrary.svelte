@@ -30,7 +30,6 @@
 	import CloudOffIcon from '@lucide/svelte/icons/cloud-off';
 	import CloudUploadIcon from '@lucide/svelte/icons/cloud-upload';
 	import CloudDownloadIcon from '@lucide/svelte/icons/cloud-download';
-	import ShareIcon from '@lucide/svelte/icons/share-2';
 	import DownloadIcon from '@lucide/svelte/icons/download';
 	import EllipsisIcon from '@lucide/svelte/icons/ellipsis';
 	import LayersIcon from '@lucide/svelte/icons/layers';
@@ -38,6 +37,8 @@
 
 	/** Above this, a merged timeline is worth warning about before it is built. */
 	const VERY_HEAVY = 1024 * 1024 * 1024;
+	/** More entries than this go behind a details toggle. */
+	const FOLD_AFTER = 3;
 
 	let confirmingClear = $state(false);
 
@@ -109,38 +110,6 @@
 		} else {
 			toast(m.library.keptInAccount(ids.length), {
 				description: m.library.keptInAccountDetail
-			});
-		}
-	}
-
-	/**
-	 * Publishes a whole export. It costs no storage: the link points at the
-	 * objects the account already holds, and the record it serves has the
-	 * vehicle identification number taken out of it.
-	 */
-	async function shareExport(entry: LibraryEntry) {
-		try {
-			const created = await api<{ url: string }>('/api/v1/shares', {
-				method: 'POST',
-				body: {
-					kind: 'export',
-					vmodel: entry.vmodel,
-					exportId: entry.id,
-					startTime: entry.startTime,
-					endTime: entry.endTime,
-					timeZone: settings.timeZone,
-					meta: { days: entry.days, distanceKm: entry.distanceKm, trips: entry.trips }
-				}
-			});
-			await navigator.clipboard.writeText(created.url).catch(() => {});
-			toast(m.library.linkCopied, {
-				description: m.library.linkCopiedDetail,
-				duration: 8000
-			});
-		} catch (error) {
-			toast(m.library.linkFailed, {
-				description: error instanceof Error ? error.message : undefined,
-				closeButton: true
 			});
 		}
 	}
@@ -286,99 +255,107 @@
 				</Card.Header>
 
 				<Card.Content class="space-y-1">
-					{#each group.entries as entry (entry.id)}
-						<div
-							class="flex flex-wrap items-center gap-3 rounded-lg px-2 py-2 transition-colors hover:bg-muted/50"
-						>
-							<div class="min-w-40 flex-1">
-								<p class="flex items-center gap-2 text-sm font-medium">
-									{dateOnly(entry.startTime)} – {dateOnly(entry.endTime)}
-									{#if account.signedIn}
-										{#if entry.remote && entry.local}
-											<CloudIcon class="size-3.5 text-primary" aria-label={m.library.both} />
-										{:else if entry.remote}
-											<Badge variant="secondary" class="gap-1">
-												<CloudIcon class="size-3" />
-												{m.library.inAccount}
-											</Badge>
-										{:else}
-											<CloudOffIcon
-												class="size-3.5 text-muted-foreground"
-												aria-label={m.library.onlyHere}
-											/>
-										{/if}
-									{/if}
-								</p>
-								<p class="text-xs text-muted-foreground tabular-nums">
-									{m.library.entry(
-										entry.days,
-										num(entry.distanceKm),
-										entry.trips,
-										bytes(entry.storedBytes)
-									)}
-								</p>
-							</div>
-
-							<DropdownMenu.Root>
-								<DropdownMenu.Trigger class={buttonVariants({ variant: 'ghost', size: 'icon' })}>
-									<EllipsisIcon class="size-4" />
-									<span class="sr-only">{m.library.more}</span>
-								</DropdownMenu.Trigger>
-								<DropdownMenu.Content align="end">
-									{#if entry.local}
-										<DropdownMenu.Item onclick={() => data.open([entry.id])}>
-											<LayersIcon class="size-4" />
-											{m.library.openAlone}
-										</DropdownMenu.Item>
-									{:else}
-										<DropdownMenu.Item disabled={history.busy} onclick={() => fetchAndOpen(entry)}>
-											<CloudDownloadIcon class="size-4" />
-											{m.library.fetchOpen}
-										</DropdownMenu.Item>
-									{/if}
-									{#if entry.local}
-										<DropdownMenu.Item onclick={() => backup([entry.id])}>
-											<DownloadIcon class="size-4" />
-											{m.library.backUp}
-										</DropdownMenu.Item>
-									{/if}
-									{#if account.signedIn && entry.local && !entry.remote}
-										<DropdownMenu.Item onclick={() => keepInAccount([entry.id])}>
-											<CloudUploadIcon class="size-4" />
-											{m.library.keepInAccount}
-										</DropdownMenu.Item>
-									{/if}
-									{#if account.signedIn && entry.remote && !entry.local}
-										<DropdownMenu.Item onclick={() => pull([entry.id])}>
-											<CloudDownloadIcon class="size-4" />
-											{m.library.fetchHere}
-										</DropdownMenu.Item>
-									{/if}
-									{#if account.signedIn && entry.remote && !entry.isDemo}
-										<DropdownMenu.Item onclick={() => shareExport(entry)}>
-											<ShareIcon class="size-4" />
-											{m.library.shareExport}
-										</DropdownMenu.Item>
-									{/if}
-									{#if account.signedIn && entry.remote}
-										<DropdownMenu.Item onclick={() => removeFromAccount([entry.id])}>
-											<CloudOffIcon class="size-4" />
-											{m.library.removeAccount}
-										</DropdownMenu.Item>
-									{/if}
-									{#if entry.local}
-										<DropdownMenu.Item onclick={() => remove([entry.id])}>
-											<TrashIcon class="size-4" />
-											{m.library.removeHere}
-										</DropdownMenu.Item>
-									{/if}
-								</DropdownMenu.Content>
-							</DropdownMenu.Root>
-						</div>
-					{/each}
+					<!-- A car's timeline is many weeks: folded away once there are more than a few. -->
+					{#if group.entries.length > FOLD_AFTER}
+						<details>
+							<summary class="cursor-pointer px-2 py-1 text-sm text-muted-foreground">
+								{m.library.details(group.entries.length)}
+							</summary>
+							{@render entries(group.entries)}
+						</details>
+					{:else}
+						{@render entries(group.entries)}
+					{/if}
 				</Card.Content>
 			</Card.Root>
 		{/each}
+
+		{#snippet entries(list: LibraryEntry[])}
+			{#each list as entry (entry.id)}
+				<div
+					class="flex flex-wrap items-center gap-3 rounded-lg px-2 py-2 transition-colors hover:bg-muted/50"
+				>
+					<div class="min-w-40 flex-1">
+						<p class="flex items-center gap-2 text-sm font-medium">
+							{dateOnly(entry.startTime)} – {dateOnly(entry.endTime)}
+							{#if account.signedIn}
+								{#if entry.remote && entry.local}
+									<CloudIcon class="size-3.5 text-primary" aria-label={m.library.both} />
+								{:else if entry.remote}
+									<Badge variant="secondary" class="gap-1">
+										<CloudIcon class="size-3" />
+										{m.library.inAccount}
+									</Badge>
+								{:else}
+									<CloudOffIcon
+										class="size-3.5 text-muted-foreground"
+										aria-label={m.library.onlyHere}
+									/>
+								{/if}
+							{/if}
+						</p>
+						<p class="text-xs text-muted-foreground tabular-nums">
+							{m.library.entry(
+								entry.days,
+								num(entry.distanceKm),
+								entry.trips,
+								bytes(entry.storedBytes)
+							)}
+						</p>
+					</div>
+
+					<DropdownMenu.Root>
+						<DropdownMenu.Trigger class={buttonVariants({ variant: 'ghost', size: 'icon' })}>
+							<EllipsisIcon class="size-4" />
+							<span class="sr-only">{m.library.more}</span>
+						</DropdownMenu.Trigger>
+						<DropdownMenu.Content align="end">
+							{#if entry.local}
+								<DropdownMenu.Item onclick={() => data.open([entry.id])}>
+									<LayersIcon class="size-4" />
+									{m.library.openAlone}
+								</DropdownMenu.Item>
+							{:else}
+								<DropdownMenu.Item disabled={history.busy} onclick={() => fetchAndOpen(entry)}>
+									<CloudDownloadIcon class="size-4" />
+									{m.library.fetchOpen}
+								</DropdownMenu.Item>
+							{/if}
+							{#if entry.local}
+								<DropdownMenu.Item onclick={() => backup([entry.id])}>
+									<DownloadIcon class="size-4" />
+									{m.library.backUp}
+								</DropdownMenu.Item>
+							{/if}
+							{#if account.signedIn && entry.local && !entry.remote}
+								<DropdownMenu.Item onclick={() => keepInAccount([entry.id])}>
+									<CloudUploadIcon class="size-4" />
+									{m.library.keepInAccount}
+								</DropdownMenu.Item>
+							{/if}
+							{#if account.signedIn && entry.remote && !entry.local}
+								<DropdownMenu.Item onclick={() => pull([entry.id])}>
+									<CloudDownloadIcon class="size-4" />
+									{m.library.fetchHere}
+								</DropdownMenu.Item>
+							{/if}
+							{#if account.signedIn && entry.remote}
+								<DropdownMenu.Item onclick={() => removeFromAccount([entry.id])}>
+									<CloudOffIcon class="size-4" />
+									{m.library.removeAccount}
+								</DropdownMenu.Item>
+							{/if}
+							{#if entry.local}
+								<DropdownMenu.Item onclick={() => remove([entry.id])}>
+									<TrashIcon class="size-4" />
+									{m.library.removeHere}
+								</DropdownMenu.Item>
+							{/if}
+						</DropdownMenu.Content>
+					</DropdownMenu.Root>
+				</div>
+			{/each}
+		{/snippet}
 
 		<p class="text-xs text-muted-foreground">
 			{#if history.entries.length > 0}

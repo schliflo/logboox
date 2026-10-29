@@ -42,14 +42,10 @@ export const library: Messages['library'] = {
 	keptInAccount: (count) =>
 		count === 1 ? 'In deinem Konto gespeichert' : `${count} Exporte in deinem Konto gespeichert`,
 	keptInAccountDetail: 'Sie sind auch dann noch da, wenn dieser Browser alles vergisst.',
-	linkCopied: 'Link kopiert',
-	linkCopiedDetail:
-		'Jeder mit diesem Link kann den Export lesen. Widerrufen kannst du ihn in deinem Konto.',
-	linkFailed: 'Der Link konnte nicht erstellt werden',
 	removeFailed: 'Es konnte nicht aus deinem Konto entfernt werden',
 	removed: 'Aus deinem Konto entfernt',
 	removedDetail:
-		'Links auf den ganzen Export sind widerrufen. Die Kopie in diesem Browser bleibt unberührt.',
+		'Geteilte Links behalten ihre eigene Kopie. Die Kopie in diesem Browser bleibt unberührt.',
 	fetchUnfinished: 'Das Abrufen wurde nicht abgeschlossen',
 	fetchFailed: (count) =>
 		count === 1
@@ -66,6 +62,7 @@ export const library: Messages['library'] = {
 	groupSpan: (span, count, memory) =>
 		`${span} über ${count} Exporte, bis zu ${memory} Arbeitsspeicher auf einmal.`,
 	heavy: 'Das ist sehr viel für einen einzelnen Tab.',
+	details: (count) => `Die ${count} Wochen und Dateien dahinter`,
 	openTogether: 'Als eine Aufzeichnung öffnen',
 	both: 'Hier und in deinem Konto gespeichert',
 	inAccount: 'In deinem Konto',
@@ -77,7 +74,6 @@ export const library: Messages['library'] = {
 	backUp: 'Sichern',
 	keepInAccount: 'In meinem Konto speichern',
 	fetchHere: 'In diesen Browser holen',
-	shareExport: 'Diesen Export teilen',
 	removeAccount: 'Aus meinem Konto entfernen',
 	removeHere: 'Aus diesem Browser entfernen',
 	usage: (count, size) => `${count} ${count === 1 ? 'Export belegt' : 'Exporte belegen'} ${size}`,

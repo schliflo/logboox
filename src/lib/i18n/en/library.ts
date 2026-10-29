@@ -39,12 +39,9 @@ export const library = {
 	keptInAccount: (count: number) =>
 		count === 1 ? 'Kept in your account' : `${count} exports kept in your account`,
 	keptInAccountDetail: 'They will still be here if this browser forgets everything.',
-	linkCopied: 'Link copied',
-	linkCopiedDetail: 'Anyone with it can read this export. Revoke it from your account.',
-	linkFailed: 'The link could not be made',
 	removeFailed: 'It could not be removed from your account',
 	removed: 'Removed from your account',
-	removedDetail: 'Links to the whole export are revoked. The copy in this browser is untouched.',
+	removedDetail: 'Links you made keep their own copy. The copy in this browser is untouched.',
 	fetchUnfinished: 'The fetch did not finish',
 	fetchFailed: (count: number) =>
 		count === 1 ? 'That export could not be fetched' : 'Some exports could not be fetched',
@@ -59,6 +56,7 @@ export const library = {
 	groupSpan: (span: string, count: number, memory: string) =>
 		`${span} across ${count} exports, up to ${memory} of memory at once.`,
 	heavy: 'That is a great deal for one tab to hold.',
+	details: (count: number) => `The ${count} weeks and files behind it`,
 	openTogether: 'Open as one record',
 	both: 'Kept here and in your account',
 	inAccount: 'In your account',
@@ -71,7 +69,6 @@ export const library = {
 	backUp: 'Back up',
 	keepInAccount: 'Keep in my account',
 	fetchHere: 'Fetch to this browser',
-	shareExport: 'Share this export',
 	removeAccount: 'Remove from my account',
 	removeHere: 'Remove from this browser',
 	usage: (count: number, size: string) =>

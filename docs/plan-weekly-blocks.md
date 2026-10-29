@@ -1,7 +1,6 @@
 # Plan: one timeline per car, stored as weekly blocks
 
-Status: phases 1 and 2 built (blocks, auto-import, uploads merged synchronously,
-"Update now"); phases 3 and 4 open.
+Status: all four phases built, in one PR.
 
 ## Goal
 
@@ -66,22 +65,22 @@ Each phase ships on its own.
   in the import Worker over a service binding, rate-limited.
 - Signed out: unchanged, exports stay per file in the browser.
 
-**3. Existing accounts** (same PR as 2)
+**3. Existing accounts**
 
-- One-off: the import Worker marks every complete, non-demo export `pending`, so
-  phase 2 folds them in, account by account, within its time budget.
-- Whole-export shares are first turned into copies (phase 4) so they survive.
+- Migration 0004 sets `fold = 1` on every complete, non-demo export; the hourly
+  run folds them account by account, within its time budget.
+- Whole-export shares are frozen into copies before their export is folded.
 
-**4. Range export and share** (third PR)
+**4. Range export and share**
 
-- Library: one row per car (covered span, gaps), blocks behind "details".
+- Library: one card per car; its weeks and files behind "details" past three.
 - Opening loads the blocks overlapping the chosen range instead of "newest
   exports up to `RECORD_BUDGET`"; picking a range outside what is loaded loads
   those blocks.
 - **Download range:** the blocks overlapping it, restricted to the range, as one
   export in the existing backup ZIP (lossless, opens anywhere here).
 - **Share range:** a copy under the share's prefix, like trip shares, capped at
-  31 days, so later block rewrites never break a link. Replaces `kind: 'export'`.
+  a calendar month, so later block rewrites never break a link. Replaces `kind: 'export'`.
 - Public API: `GET /api/v1/exports` lists blocks; add `?vin&from&to`.
 
 ## Risks and limits
@@ -94,8 +93,8 @@ Each phase ships on its own.
 - Weeks are UTC weeks; the boundary is invisible to the user apart from block
   details.
 
-## Open questions
+## Decided
 
-1. Range download format: backup ZIP (proposed) or XPeng-style CSVs?
-2. Signed-out users keep per-file exports (proposed), or block locally too?
-3. Ship order: phase 1 in this PR, 2–4 after (proposed)?
+1. Range download: backup ZIP.
+2. Signed out: per-file exports, as before.
+3. Ship order: all phases in one PR.
