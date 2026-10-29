@@ -202,38 +202,40 @@
 		</div>
 	{/if}
 
-	<div class="space-y-1">
-		<h3 class="text-xs font-semibold tracking-widest text-muted-foreground uppercase">
-			{m.claims.onBoards}
-		</h3>
-		{#each entries as entry (entry.id)}
-			<div class="flex flex-wrap items-center gap-4 py-2">
-				<span class="w-10 text-lg font-semibold tabular-nums">#{entry.rank}</span>
-				<div class="min-w-40 flex-1">
-					<p class="text-[15px] font-medium">{label(entry.board)}</p>
-					<p class="text-sm text-muted-foreground">
-						{reading(entry.board, entry.value)} · {monthLabel(entry.month)}
-						{#if entry.locked}· {m.claims.closed}{/if}
-					</p>
+	{#if entries.length > 0 || pending.length === 0}
+		<div class="space-y-1">
+			<h3 class="text-xs font-semibold tracking-widest text-muted-foreground uppercase">
+				{m.claims.onBoards}
+			</h3>
+			{#each entries as entry (entry.id)}
+				<div class="flex flex-wrap items-center gap-4 py-2">
+					<span class="w-10 text-lg font-semibold tabular-nums">#{entry.rank}</span>
+					<div class="min-w-40 flex-1">
+						<p class="text-[15px] font-medium">{label(entry.board)}</p>
+						<p class="text-sm text-muted-foreground">
+							{reading(entry.board, entry.value)} · {monthLabel(entry.month)}
+							{#if entry.locked}· {m.claims.closed}{/if}
+						</p>
+					</div>
+					<Button variant="ghost" size="sm" href="/leaderboard/{entry.month}">
+						{m.claims.seeBoard}
+					</Button>
+					<Button
+						variant="outline"
+						size="sm"
+						disabled={working === entry.id}
+						onclick={() => withdraw(entry)}
+					>
+						{m.claims.takeDown}
+					</Button>
 				</div>
-				<Button variant="ghost" size="sm" href="/leaderboard/{entry.month}">
-					{m.claims.seeBoard}
-				</Button>
-				<Button
-					variant="outline"
-					size="sm"
-					disabled={working === entry.id}
-					onclick={() => withdraw(entry)}
-				>
-					{m.claims.takeDown}
-				</Button>
-			</div>
-		{:else}
-			{#if pending.length === 0}
-				<p class="py-1 text-sm text-muted-foreground">{m.claims.nothingYet}</p>
-			{/if}
-		{/each}
-	</div>
+			{:else}
+				{#if pending.length === 0}
+					<p class="py-1 text-sm text-muted-foreground">{m.claims.nothingYet}</p>
+				{/if}
+			{/each}
+		</div>
+	{/if}
 
 	{#if badges.length > 0}
 		<div class="space-y-2.5">
