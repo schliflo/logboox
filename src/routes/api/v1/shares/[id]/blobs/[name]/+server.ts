@@ -21,6 +21,7 @@ import { storeShareBlob } from '#lib/server/shares/blobs.js';
 import { MANIFEST_BLOB, declaredLength, readAtMost } from '#lib/server/shares/validate.js';
 import { blobKey, isSafeBlobName, shareBlobKey } from '#lib/server/exports/r2.js';
 import { now } from '#lib/server/db.js';
+import { SHARE_RECORD } from '#lib/server/shares/snapshot.js';
 import { requireDb, requireStorage } from '#lib/server/context.js';
 import { fail, json } from '#lib/server/response.js';
 
@@ -54,6 +55,8 @@ export const PUT: RequestHandler = async (event) => {
 export const GET: RequestHandler = async (event) => {
 	const { id, name } = event.params;
 	if (!isSafeBlobName(name)) return fail(400, 'Not a usable name.');
+	// Read through the record route, which masks it.
+	if (name === SHARE_RECORD) return fail(404, 'That part of the share is missing.');
 
 	const share = await getShare(requireDb(event), id);
 	if (!share) return fail(404, 'That link is no longer available.');

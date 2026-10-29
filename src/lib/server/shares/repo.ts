@@ -45,8 +45,8 @@ export interface NewShare {
 	startTime: number;
 	endTime: number;
 	timeZone: string;
-	/** Set for a whole-export share, which reads the owner's own objects. */
-	exportId?: string;
+	/** For a range share: the owner's exports to cut it from. Not stored. */
+	sources?: string[];
 	meta: unknown;
 }
 
@@ -58,6 +58,8 @@ export const MAX_SHARE_BLOBS = 128;
 export const MAX_SHARE_BYTES = 32 * 1024 * 1024;
 export const MAX_SHARE_MANIFEST_BYTES = 64 * 1024;
 export const MAX_SHARE_META_BYTES = 2 * 1024;
+/** The longest range one link may hold: any calendar month, in any zone, the DST hour included. */
+export const MAX_RANGE_SECONDS = 32 * 86400;
 
 /** A share is written once, straight after it is made, and never again. */
 export const SHARE_UPLOAD_WINDOW_SECONDS = 15 * 60;
@@ -82,16 +84,9 @@ export function listShares(db: Db, userId: string): Promise<ShareRow[]> {
 	);
 }
 
-/**
- * Every share of the user's that may hold objects of its own, revoked ones
- * included. A whole-export share never does: it reads the export's objects.
- */
+/** Every share of the user's, revoked ones included: any of them may hold objects. */
 export async function listShareIds(db: Db, userId: string): Promise<string[]> {
-	const rows = await all<{ id: string }>(
-		db,
-		"SELECT id FROM shares WHERE user_id = ? AND kind != 'export'",
-		userId
-	);
+	const rows = await all<{ id: string }>(db, 'SELECT id FROM shares WHERE user_id = ?', userId);
 	return rows.map((row) => row.id);
 }
 
@@ -115,10 +110,9 @@ export async function createShare(db: Db, userId: string, share: NewShare): Prom
 		start_time: share.startTime,
 		end_time: share.endTime,
 		time_zone: share.timeZone.slice(0, 64),
-		export_id: share.exportId ?? null,
-		// Kept beside the export id so a whole-export share can find the owner's
-		// objects without the reader being the owner.
-		owner_user_id: share.exportId ? userId : null,
+		// Only links from before frozen shares point at an export of the owner's.
+		export_id: null,
+		owner_user_id: null,
 		meta_json: JSON.stringify(share.meta),
 		created_at: now(),
 		revoked_at: null,

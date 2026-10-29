@@ -92,9 +92,9 @@ describe('listing a user’s share ids', () => {
 		expect(new Set(await listShareIds(db, userId))).toEqual(new Set([live.id, revoked.id]));
 	});
 
-	it('leaves out whole-export shares, which hold no objects of their own', async () => {
-		await createShare(db, userId, share({ kind: 'export', exportId: 'DA0001' }));
-		expect(await listShareIds(db, userId)).toEqual([]);
+	it('includes range shares, which hold a frozen copy', async () => {
+		const range = await createShare(db, userId, share({ kind: 'export', sources: ['wk-1'] }));
+		expect(await listShareIds(db, userId)).toEqual([range.id]);
 	});
 
 	it('is the user’s own and nobody else’s', async () => {

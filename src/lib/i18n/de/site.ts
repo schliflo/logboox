@@ -110,7 +110,7 @@ export const featuresPage: Messages['featuresPage'] = {
 				},
 				{
 					title: 'Eine Fahrt teilen',
-					body: 'Veröffentliche eine Fahrt, einen Ladevorgang oder einen ganzen Export unter einem Link. Geteiltes enthält nie die Fahrzeug-Identifizierungsnummer.'
+					body: 'Veröffentliche eine Fahrt, einen Ladevorgang oder bis zu einem Monat Fahrten unter einem Link. Geteiltes enthält nie die Fahrzeug-Identifizierungsnummer.'
 				},
 				{
 					title: 'Bestenlisten',

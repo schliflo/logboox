@@ -111,7 +111,7 @@ export const featuresPage = {
 				},
 				{
 					title: 'Share a trip',
-					body: 'Publish one trip, one charging session or a whole export at a link. Shares never carry the vehicle identification number.'
+					body: 'Publish one trip, one charging session or up to a month of driving at a link. Shares never carry the vehicle identification number.'
 				},
 				{
 					title: 'Leaderboards',

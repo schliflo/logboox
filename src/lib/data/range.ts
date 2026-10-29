@@ -96,6 +96,30 @@ export function defaultRange(derived: Extent, timeZone: string): TimeRange | nul
 	return null;
 }
 
+/** One calendar month, `YYYY-MM`, in the reader's zone. */
+export function monthRange(month: string, timeZone: string): TimeRange {
+	return {
+		from: startOfLocalDay(`${month}-01`, timeZone),
+		to: startOfLocalDay(`${nextMonth(month)}-01`, timeZone),
+		label: monthLabel(month),
+		preset: `month-${month}`
+	};
+}
+
+/** Every calendar month `[from, to]` (epoch seconds) touches, oldest first. */
+export function monthsBetween(from: number, to: number, timeZone: string): string[] {
+	const months: string[] = [];
+	const last = localDayKey(to, timeZone).slice(0, 7);
+	for (
+		let month = localDayKey(from, timeZone).slice(0, 7);
+		month <= last;
+		month = nextMonth(month)
+	) {
+		months.push(month);
+	}
+	return months;
+}
+
 /**
  * The ranges worth offering for what is loaded: the last week, month and
  * quarter when the data is longer than that, and each calendar month and year
@@ -116,14 +140,7 @@ export function rangePresets(derived: Extent, timeZone: string): TimeRange[] {
 	const recorded = derived.days.filter((day) => day.covered).map((day) => day.date);
 	const months = [...new Set(recorded.map((day) => day.slice(0, 7)))].sort();
 	if (months.length > 1) {
-		for (const month of months) {
-			presets.push({
-				from: startOfLocalDay(`${month}-01`, timeZone),
-				to: startOfLocalDay(`${nextMonth(month)}-01`, timeZone),
-				label: monthLabel(month),
-				preset: `month-${month}`
-			});
-		}
+		for (const month of months) presets.push(monthRange(month, timeZone));
 	}
 
 	const years = [...new Set(months.map((month) => month.slice(0, 4)))];

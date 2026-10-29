@@ -10,8 +10,10 @@
   export would make every total on the page quietly wrong. Showing everything
   needs no name, so there it is the icon alone on a phone.
 
-  Picking only changes the view. What is kept in this browser, copied to an
-  account or shared is always the whole export.
+  Picking changes the view; a range reaching weeks of the car's timeline that
+  are kept but not open opens them, and months not loaded at all are offered.
+  The view itself can be downloaded as one file, or shared (a month at most)
+  as a frozen copy.
 -->
 <script lang="ts">
 	import { m } from '#lib/i18n/index.svelte.js';
@@ -23,11 +25,17 @@
 	import { settings } from '#lib/state/settings.svelte.js';
 	import {
 		customRange,
+		monthRange,
+		monthsBetween,
 		rangeDays,
 		rangePresets,
 		recordedSpan,
 		type TimeRange
 	} from '#lib/data/range.js';
+	import { history } from '#lib/state/history.svelte.js';
+	import { downloadView, openRange, shareBlocker, shareView } from '#lib/state/timeline.js';
+	import DownloadIcon from '@lucide/svelte/icons/download';
+	import ShareIcon from '@lucide/svelte/icons/share-2';
 	import { rangeLabel } from '#lib/i18n/dates.js';
 	import CalendarIcon from '@lucide/svelte/icons/calendar-range';
 	import LoaderIcon from '@lucide/svelte/icons/loader-circle';
@@ -58,6 +66,23 @@
 	const elsewhere = $derived(data.range !== null && !quick.includes(data.range.preset));
 	const custom = $derived(loaded ? customRange(loaded, fromDay, toDay, settings.timeZone) : null);
 
+	/** Months of this car's timeline kept here or in the account but not loaded. */
+	const vin = $derived(data.source.kind === 'shared' ? null : (data.full?.dataset.vin ?? null));
+	const earlier = $derived.by(() => {
+		if (!vin || !loaded) return [];
+		const shown = new Set(monthsBetween(loaded.startTime, loaded.endTime, settings.timeZone));
+		const entries = history.groups.find((group) => group.vin === vin)?.entries ?? [];
+		const months = new Set(
+			entries.flatMap((entry) => monthsBetween(entry.startTime, entry.endTime, settings.timeZone))
+		);
+		return [...months]
+			.filter((month) => !shown.has(month))
+			.sort()
+			.reverse()
+			.map((month) => monthRange(month, settings.timeZone));
+	});
+	const blocker = $derived(data.isReady ? shareBlocker() : '');
+
 	const groups = $derived(
 		[
 			{
@@ -87,7 +112,16 @@
 
 	function pick(range: TimeRange | null) {
 		open = false;
-		void data.setRange(range);
+		// A range reaching weeks kept but not open (part of a month, say) opens them too.
+		if (range && vin && reachesUnopened(range)) void openRange(vin, range);
+		else void data.setRange(range);
+	}
+
+	function reachesUnopened(range: TimeRange): boolean {
+		const opened = new Set(data.source.ids);
+		return (history.groups.find((group) => group.vin === vin)?.entries ?? []).some(
+			(entry) => !opened.has(entry.id) && entry.endTime >= range.from && entry.startTime < range.to
+		);
 	}
 
 	function apply(event: SubmitEvent) {
@@ -167,6 +201,20 @@
 			{/each}
 		</div>
 
+		{#if earlier.length > 0}
+			<div class="max-h-32 overflow-y-auto" role="group" aria-labelledby="range-earlier">
+				<p id="range-earlier" class="px-2 pt-1 text-xs font-medium text-muted-foreground">
+					{m.range.earlier}
+				</p>
+				{#each earlier as month (month.preset)}
+					{@render choice(month.label, false, () => {
+						open = false;
+						void openRange(vin!, month);
+					})}
+				{/each}
+			</div>
+		{/if}
+
 		<form class="space-y-2 border-t pt-3" onsubmit={apply}>
 			<div class="grid grid-cols-2 gap-2">
 				<div class="space-y-1">
@@ -186,5 +234,27 @@
 			</div>
 			<Button type="submit" size="sm" class="w-full" disabled={!custom}>{m.range.apply}</Button>
 		</form>
+
+		<div class="space-y-2 border-t pt-3">
+			<Button variant="outline" size="sm" class="w-full" onclick={() => downloadView()}>
+				<DownloadIcon class="size-4" />
+				{m.range.download}
+			</Button>
+			{#if blocker !== ''}
+				<Button
+					variant="outline"
+					size="sm"
+					class="w-full"
+					disabled={blocker !== null}
+					onclick={() => shareView()}
+				>
+					<ShareIcon class="size-4" />
+					{m.range.share}
+				</Button>
+				{#if blocker}
+					<p class="text-xs text-muted-foreground">{blocker}</p>
+				{/if}
+			{/if}
+		</div>
 	</Popover.Content>
 </Popover.Root>

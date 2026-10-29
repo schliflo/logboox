@@ -178,7 +178,9 @@ tries to gets a 403.
 
 The exports the account keeps: summaries, not data. Each has its `id`, `vin`,
 `vmodel`, the span it covers (`startTime`, `endTime`), `rows`, `days`,
-`distanceKm`, `trips`, `storedBytes`, `isDemo` and `uploadedAt`.
+`distanceKm`, `trips`, `storedBytes`, `isDemo` and `uploadedAt`. Optional
+`?vin=&from=&to=` (epoch seconds) keeps only one car's exports that overlap
+that stretch.
 
 Signed-in accounts keep one timeline per car as weekly blocks, ids
 `wk-{week}-{vin tag}-{version}`; a block is replaced under a new id whenever

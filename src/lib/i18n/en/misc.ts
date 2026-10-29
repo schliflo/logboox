@@ -19,7 +19,16 @@ export const range = {
 	years: 'Years',
 	from: 'From',
 	to: 'To',
-	apply: 'Apply'
+	apply: 'Apply',
+	earlier: 'Not loaded yet',
+	download: 'Download this range',
+	downloadFailed: 'The range could not be written',
+	share: 'Share this range',
+	shareTooLong: 'A link can hold a month at most. Pick a shorter range to share it.',
+	shareNotInAccount: 'Keep this data in your account first, then share it.',
+	linkCopied: 'Link copied',
+	linkCopiedDetail: 'Anyone with it can read this range. Revoke it from your account.',
+	linkFailed: 'The link could not be made'
 };
 
 export const dropZone = {

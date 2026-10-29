@@ -125,7 +125,7 @@ export const sharedPage: Messages['sharedPage'] = {
 	reading: 'Messpunkte werden gelesen…',
 	wholeMonth: 'Ein ganzer Monat',
 	wholeMonthHint:
-		'Dieser Link enthält einen ganzen Export. Beim Öffnen wird alles in deinen Browser gelesen, das dauert einen Moment und braucht einige hundert Megabyte Arbeitsspeicher.',
+		'Dieser Link enthält jede Sekunde von bis zu einem Monat. Beim Öffnen wird alles in deinen Browser gelesen, das dauert einen Moment und braucht einige hundert Megabyte Arbeitsspeicher.',
 	readingExport: 'Wird gelesen…',
 	openDashboard: 'Dashboard öffnen',
 	yoursToo: 'Dein Auto zeichnet das auch auf',

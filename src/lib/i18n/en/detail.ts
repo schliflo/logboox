@@ -120,7 +120,7 @@ export const sharedPage = {
 	reading: 'Reading the samples…',
 	wholeMonth: 'A whole month',
 	wholeMonthHint:
-		'This link carries an entire export. Opening it reads the whole thing into your browser, which takes a moment and a few hundred megabytes of memory.',
+		'This link carries every sample of up to a month. Opening it reads the whole thing into your browser, which takes a moment and a few hundred megabytes of memory.',
 	readingExport: 'Reading…',
 	openDashboard: 'Open the dashboard',
 	yoursToo: 'Your car records this too',

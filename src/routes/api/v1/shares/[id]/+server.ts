@@ -52,8 +52,7 @@ export const DELETE: RequestHandler = async (event) => {
 	const revoked = await revokeShare(db, auth.user.id, event.params.id);
 	if (!revoked) return fail(404, 'That link is not one of yours.');
 
-	// A trip share owns its copy of the samples; an export share only points at
-	// objects that belong to the export and must not take them with it.
+	// Every share owns its copy under its own prefix; it goes with the link.
 	const storage = maybeStorage(event);
 	if (storage) await deletePrefix(storage, sharePrefix(event.params.id));
 

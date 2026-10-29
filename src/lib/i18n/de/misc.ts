@@ -18,7 +18,17 @@ export const range: Messages['range'] = {
 	years: 'Jahre',
 	from: 'Von',
 	to: 'Bis',
-	apply: 'Anwenden'
+	apply: 'Anwenden',
+	earlier: 'Noch nicht geladen',
+	download: 'Diesen Zeitraum herunterladen',
+	downloadFailed: 'Der Zeitraum konnte nicht geschrieben werden',
+	share: 'Diesen Zeitraum teilen',
+	shareTooLong: 'Ein Link fasst höchstens einen Monat. Wähle zum Teilen einen kürzeren Zeitraum.',
+	shareNotInAccount: 'Behalte diese Daten zuerst in deinem Konto, dann kannst du sie teilen.',
+	linkCopied: 'Link kopiert',
+	linkCopiedDetail:
+		'Wer ihn hat, kann diesen Zeitraum lesen. Widerrufen kannst du ihn in deinem Konto.',
+	linkFailed: 'Der Link konnte nicht erstellt werden'
 };
 
 export const dropZone: Messages['dropZone'] = {

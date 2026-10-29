@@ -12,6 +12,7 @@ import { isValidTimeZone } from '#lib/leaderboard/periods.js';
 import type { SliceManifest } from '#lib/share/slice.js';
 import { isSafeBlobName } from '../exports/r2';
 import {
+	MAX_RANGE_SECONDS,
 	MAX_SHARE_BLOBS,
 	MAX_SHARE_MANIFEST_BYTES,
 	MAX_SHARE_META_BYTES,
@@ -19,6 +20,9 @@ import {
 	type NewShare,
 	type ShareKind
 } from './repo';
+
+/** A month of weekly blocks, with room for uploads that overlap them. */
+const MAX_RANGE_SOURCES = 12;
 
 /** Uploaded as a buffer like the rest, but plain JSON despite its `.gz` key. */
 export const MANIFEST_BLOB = '_manifest';
@@ -85,8 +89,18 @@ export function checkNewShare(body: Record<string, unknown> | null): Checked<New
 	const meta = checkMeta(body.meta ?? {});
 	if (!meta) return refuse(400, 'The figures for that share are not ones the app sends.');
 
-	if (kind === 'export' && typeof body.exportId !== 'string') {
-		return refuse(400, 'Say which export to share.');
+	const sources = body.sources;
+	if (
+		kind === 'export' &&
+		(!Array.isArray(sources) ||
+			sources.length === 0 ||
+			sources.length > MAX_RANGE_SOURCES ||
+			!sources.every((id) => typeof id === 'string' && isSafeBlobName(id)))
+	) {
+		return refuse(400, 'Say which of your exports the range comes from.');
+	}
+	if (kind === 'export' && endTime - startTime > MAX_RANGE_SECONDS) {
+		return refuse(400, 'A shared range can be a month at most.');
 	}
 
 	return {
@@ -99,7 +113,7 @@ export function checkNewShare(body: Record<string, unknown> | null): Checked<New
 			startTime: Math.floor(startTime),
 			endTime: Math.floor(endTime),
 			timeZone,
-			exportId: kind === 'export' ? (body.exportId as string) : undefined,
+			sources: kind === 'export' ? (sources as string[]) : undefined,
 			meta
 		}
 	};

@@ -59,9 +59,14 @@ describe('checkNewShare', () => {
 		expect(checked.ok && checked.value.timeZone).toBe('UTC');
 	});
 
-	it('wants an export id for a whole-export share', () => {
-		expect(checkNewShare({ ...TRIP, kind: 'export' }).ok).toBe(false);
-		expect(checkNewShare({ ...TRIP, kind: 'export', exportId: 'DA0001' }).ok).toBe(true);
+	it('wants the exports a range share is cut from, and a month at most', () => {
+		const range = { ...TRIP, kind: 'export', sources: ['wk-1-ab-cd'] };
+		expect(checkNewShare({ ...range, sources: undefined }).ok).toBe(false);
+		expect(checkNewShare({ ...range, sources: ['../x'] }).ok).toBe(false);
+		expect(checkNewShare(range).ok).toBe(true);
+		// October in Berlin: 31 days and the hour the clocks go back.
+		expect(checkNewShare({ ...range, endTime: TRIP.startTime + 31 * 86400 + 3600 }).ok).toBe(true);
+		expect(checkNewShare({ ...range, endTime: TRIP.startTime + 33 * 86400 }).ok).toBe(false);
 	});
 
 	it('refuses something that is not a share at all', () => {

@@ -1,4 +1,8 @@
-/** What this account is keeping. Summaries only; the buffers are asked for by name. */
+/**
+ * What this account is keeping. Summaries only; the buffers are asked for by
+ * name. `?vin=&from=&to=` (epoch seconds) narrows it to the exports of one car
+ * that overlap a stretch of time, e.g. the weekly blocks behind a range.
+ */
 
 import type { RequestHandler } from './$types';
 import { listExports } from '#lib/server/exports/repo.js';
@@ -11,7 +15,14 @@ export const GET: RequestHandler = async (event) => {
 	if (!auth) return fail(401, 'Not signed in.');
 
 	const db = requireDb(event);
-	const rows = await listExports(db, auth.user.id);
+	const params = event.url.searchParams;
+	const vin = params.get('vin');
+	const from = Number(params.get('from') ?? -Infinity);
+	const to = Number(params.get('to') ?? Infinity);
+	if (Number.isNaN(from) || Number.isNaN(to)) return fail(400, 'from and to are epoch seconds.');
+	const rows = (await listExports(db, auth.user.id)).filter(
+		(row) => (!vin || row.vin === vin) && row.end_time >= from && row.start_time < to
+	);
 
 	return json({
 		exports: rows.map((row) => ({

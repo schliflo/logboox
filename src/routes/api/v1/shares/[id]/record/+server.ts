@@ -14,7 +14,9 @@ import type { RequestHandler } from './$types';
 import type { ExportRecord } from '#lib/history/codec.js';
 import { getShare } from '#lib/server/shares/repo.js';
 import { getRecord } from '#lib/server/exports/repo.js';
-import { requireDb } from '#lib/server/context.js';
+import { requireDb, requireStorage } from '#lib/server/context.js';
+import { shareBlobKey } from '#lib/server/exports/r2.js';
+import { SHARE_RECORD } from '#lib/server/shares/snapshot.js';
 import { fail } from '#lib/server/response.js';
 
 /** Same shape as a VIN, so nothing downstream has to special-case it. */
@@ -23,11 +25,16 @@ const REDACTED_VIN = 'SHARED00000000000';
 export const GET: RequestHandler = async (event) => {
 	const db = requireDb(event);
 	const share = await getShare(db, event.params.id);
-	if (!share || share.kind !== 'export' || !share.export_id || !share.owner_user_id) {
-		return fail(404, 'That link is no longer available.');
-	}
+	if (!share || share.kind !== 'export') return fail(404, 'That link is no longer available.');
 
-	const record = await getRecord(db, share.owner_user_id, share.export_id);
+	// Frozen under the link, or, for a link from before that, the owner's export itself.
+	let record: ExportRecord | null = null;
+	if (share.export_id && share.owner_user_id) {
+		record = await getRecord(db, share.owner_user_id, share.export_id);
+	} else {
+		const object = await requireStorage(event).get(shareBlobKey(share.id, SHARE_RECORD));
+		record = object ? ((await object.json()) as ExportRecord) : null;
+	}
 	if (!record) return fail(404, 'That link is no longer available.');
 
 	const published: ExportRecord = {

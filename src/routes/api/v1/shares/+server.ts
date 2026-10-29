@@ -2,9 +2,9 @@
  * Making a link, and listing the ones already made.
  *
  * A trip or a charging session carries its own samples, uploaded straight
- * after this call returns an id. A whole export carries nothing: it points at
- * the objects the owner already has, so sharing a month costs no storage at
- * all.
+ * after this call returns an id. A range of the timeline (kind `export`) is
+ * cut out of the owner's exports here and frozen under the link, so later
+ * rewrites of the timeline leave it as it was (shares/snapshot.ts).
  */
 
 import type { RequestHandler } from './$types';
@@ -15,8 +15,11 @@ import {
 	listShares
 } from '#lib/server/shares/repo.js';
 import { checkNewShare } from '#lib/server/shares/validate.js';
-import { getExportRow } from '#lib/server/exports/repo.js';
-import { requireDb, siteUrl } from '#lib/server/context.js';
+import { freezeShare } from '#lib/server/shares/snapshot.js';
+import { withTimelineLock } from '#lib/server/timeline/blocks.js';
+import { deletePrefix, sharePrefix } from '#lib/server/exports/r2.js';
+import { run, type Db } from '#lib/server/db.js';
+import { requireDb, requireStorage, siteUrl } from '#lib/server/context.js';
 import { fail, json, readJson } from '#lib/server/response.js';
 
 export const GET: RequestHandler = async (event) => {
@@ -53,14 +56,33 @@ export const POST: RequestHandler = async (event) => {
 		return fail(409, 'That is as many links as one account can have. Revoke one first.');
 	}
 
-	// A whole-export share reads the owner's own objects, so it only works for
-	// an export that is actually there and finished uploading.
-	if (input.kind === 'export') {
-		const row = await getExportRow(db, auth.user.id, input.exportId ?? '');
-		if (!row || row.complete !== 1) return fail(404, 'That export is not in your account.');
-	}
-
 	const share = await createShare(db, auth.user.id, input);
+
+	if (input.kind === 'export') {
+		const storage = requireStorage(event);
+		let frozen: boolean | null;
+		try {
+			frozen = await withTimelineLock(db, auth.user.id, async () => {
+				await freezeShare(db, storage, auth.user.id, share.id, input.sources!, input.timeZone, {
+					from: input.startTime,
+					to: input.endTime
+				});
+				return true;
+			});
+		} catch (error) {
+			await dropShare(db, storage, share.id);
+			return fail(404, error instanceof Error ? error.message : 'That range could not be shared.');
+		}
+		if (!frozen) {
+			await dropShare(db, storage, share.id);
+			return fail(409, 'Your timeline is being updated right now. Try again in a minute.');
+		}
+	}
 
 	return json({ id: share.id, url: `${siteUrl(event)}/s/${share.id}` });
 };
+
+async function dropShare(db: Db, storage: R2Bucket, id: string) {
+	await deletePrefix(storage, sharePrefix(id));
+	await run(db, 'DELETE FROM shares WHERE id = ?', id);
+}
