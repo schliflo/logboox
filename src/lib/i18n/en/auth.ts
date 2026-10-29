@@ -54,17 +54,18 @@ export const accountPage = {
 	elsewhere: 'Accounts live at logboox.app',
 	elsewhereDetail: 'This address serves an older deployment with no account database.',
 	yours: 'Your account',
-	signedInAs: (email: string, date: string) => `Signed in as ${email} since ${date}.`,
+	profileDetail: 'Signed in with a link sent by e-mail. There is no password to forget.',
+	memberSince: (date: string) => `Member since ${date}`,
+	onThisPage: 'On this page',
 	exportsKept: (count: number) => `${count} ${count === 1 ? 'export kept' : 'exports kept'}`,
 	usedOf: (used: string, quota: string) => `${used} of ${quota}`,
 	nothingYet: (quota: string) => `nothing yet, of ${quota}`,
 	nearlyFull: (share: string) => `${share} used. Remove an export you no longer need to make room.`,
 	signOut: 'Sign out',
-	keeping: 'Keeping exports',
+	keepingAndReminders: 'Keeping & reminders',
 	keepingDetail:
 		'A copy in the account outlives this browser. Exports are still read here, and still kept here. Nothing is copied unless you ask for it or switch this on.',
 	autoSync: 'Copy new imports to my account automatically',
-	reminders: 'Reminders',
 	remindersDetail:
 		'XPeng only ever holds a rolling thirty days. A month nobody asked for cannot be recovered later.',
 	reminderSwitch: 'E-mail me when a new export is due',
@@ -74,7 +75,6 @@ export const accountPage = {
 	deleteDetail:
 		'Removes the account, every export kept in it and every shared link, with the files behind them. What is stored in this browser stays where it is.',
 	deleteButton: 'Delete account',
-	deleteConfirmTitle: (email: string) => `Delete ${email}?`,
 	deleteConfirmDetail:
 		'This cannot be undone. Back up anything you want to keep first — the copies in this browser are not affected.',
 	typeBefore: 'Type',

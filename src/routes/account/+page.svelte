@@ -11,14 +11,13 @@
 	import { goto } from '$app/navigation';
 	import { toast } from 'svelte-sonner';
 	import * as Card from '#lib/components/ui/card/index.js';
-	import * as Dialog from '#lib/components/ui/dialog/index.js';
 	import { Button } from '#lib/components/ui/button/index.js';
 	import { Input } from '#lib/components/ui/input/index.js';
 	import { Label } from '#lib/components/ui/label/index.js';
 	import { Switch } from '#lib/components/ui/switch/index.js';
-	import { Separator } from '#lib/components/ui/separator/index.js';
 	import Seo from '#lib/components/app/Seo.svelte';
 	import MadeBy from '#lib/components/app/MadeBy.svelte';
+	import AccountSection from '#lib/components/app/AccountSection.svelte';
 	import ApiTokens from '#lib/components/app/ApiTokens.svelte';
 	import BoardPlaces from '#lib/components/app/BoardPlaces.svelte';
 	import SharedLinks from '#lib/components/app/SharedLinks.svelte';
@@ -34,6 +33,14 @@
 	const used = $derived(account.storage?.usedBytes ?? 0);
 	const quota = $derived(account.storage?.quotaBytes ?? 0);
 	const fraction = $derived(quota > 0 ? Math.min(1, used / quota) : 0);
+
+	const sections = $derived([
+		['profile', m.accountPage.yours],
+		['keeping', m.accountPage.keepingAndReminders],
+		['leaderboard', m.claims.title],
+		['links', m.shares.title],
+		['tokens', m.tokens.title]
+	]);
 
 	onMount(async () => {
 		await account.refresh();
@@ -65,10 +72,15 @@
 		}
 	}
 
+	function cancelDelete() {
+		confirmingDelete = false;
+		deleteConfirmation = '';
+	}
+
 	async function remove() {
 		try {
 			await account.deleteAccount();
-			confirmingDelete = false;
+			cancelDelete();
 			await goto(localHref('/'));
 			toast(m.accountPage.deleted, {
 				description: m.accountPage.deletedDetail
@@ -88,12 +100,20 @@
 
 <Seo title={m.accountPage.title} path="/account" noindex />
 
-<main class="mx-auto min-h-svh max-w-2xl space-y-6 px-6 py-12">
-	<div class="flex items-center gap-3">
-		<Button variant="ghost" size="sm" onclick={() => goto(localHref('/'))}>
+<main class="mx-auto min-h-svh max-w-5xl space-y-10 px-4 py-10 sm:px-6 sm:py-12">
+	<div class="space-y-4">
+		<Button variant="ghost" size="sm" class="-ml-2" onclick={() => goto(localHref('/'))}>
 			<ArrowLeftIcon class="size-4" />
 			{m.accountPage.backToStart}
 		</Button>
+		<h1 class="text-2xl font-semibold tracking-tight">{m.accountPage.title}</h1>
+		{#if ACCOUNTS_ENABLED && account.signedIn}
+			<nav aria-label={m.accountPage.onThisPage} class="-ml-3 flex flex-wrap gap-1">
+				{#each sections as [id, label] (id)}
+					<Button variant="ghost" size="sm" href="#{id}">{label}</Button>
+				{/each}
+			</nav>
+		{/if}
 	</div>
 
 	{#if !ACCOUNTS_ENABLED}
@@ -106,64 +126,102 @@
 			</Card.Header>
 		</Card.Root>
 	{:else if account.signedIn && account.user}
-		<Card.Root>
-			<Card.Header>
-				<Card.Title>{m.accountPage.yours}</Card.Title>
-				<Card.Description>
-					{m.accountPage.signedInAs(account.user.email, dateOnly(account.user.createdAt))}
-				</Card.Description>
-			</Card.Header>
-			<Card.Content class="space-y-4">
-				<div class="space-y-2">
-					<div class="flex items-baseline justify-between text-sm">
-						<span class="text-muted-foreground">
-							{m.accountPage.exportsKept(account.storage?.exports ?? 0)}
-						</span>
-						<span class="tabular-nums">
-							<!-- `bytes` reads zero as "no figure to give", which is right
-							     where a size is unknown and wrong here: an empty account
-							     is a fact worth stating. -->
-							{used > 0
-								? m.accountPage.usedOf(bytes(used), bytes(quota))
-								: m.accountPage.nothingYet(bytes(quota))}
-						</span>
-					</div>
-					<div class="h-2 overflow-hidden rounded-full bg-muted">
-						<div
-							class="h-full rounded-full bg-primary transition-[width]"
-							style="width: {Math.max(fraction * 100, used > 0 ? 1 : 0)}%"
-						></div>
-					</div>
-					{#if fraction > 0.8}
-						<p class="text-xs text-muted-foreground">
-							{m.accountPage.nearlyFull(percent(fraction))}
-						</p>
-					{/if}
-				</div>
-
-				<Button variant="outline" size="sm" onclick={signOut}>
+		<AccountSection
+			id="profile"
+			title={m.accountPage.yours}
+			description={m.accountPage.profileDetail}
+		>
+			<div class="flex flex-wrap items-center gap-4">
+				<span
+					class="grid size-12 shrink-0 place-items-center rounded-full bg-primary/15 text-lg font-semibold text-primary uppercase"
+					aria-hidden="true">{account.user.email.charAt(0)}</span
+				>
+				<span class="min-w-0 flex-[1_1_14rem]">
+					<span class="block truncate text-base font-semibold">{account.user.email}</span>
+					<span class="text-sm text-muted-foreground">
+						{m.accountPage.memberSince(dateOnly(account.user.createdAt))}
+					</span>
+				</span>
+				<Button variant="outline" onclick={signOut}>
 					<LogOutIcon class="size-4" />
 					{m.accountPage.signOut}
 				</Button>
-			</Card.Content>
-		</Card.Root>
+			</div>
 
-		<Card.Root>
-			<Card.Header>
-				<Card.Title>{m.accountPage.keeping}</Card.Title>
-				<Card.Description>
-					{m.accountPage.keepingDetail}
-				</Card.Description>
-			</Card.Header>
-			<Card.Content>
-				<div class="flex items-center justify-between gap-4">
-					<Label for="auto-sync" class="font-normal">
-						{m.accountPage.autoSync}
-					</Label>
-					<Switch id="auto-sync" checked={account.user.autoSync} onCheckedChange={setAutoSync} />
+			<div class="space-y-2.5">
+				<div class="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+					<span class="text-[15px] font-medium">
+						{m.accountPage.exportsKept(account.storage?.exports ?? 0)}
+					</span>
+					<span class="text-sm text-muted-foreground tabular-nums">
+						<!-- `bytes` reads zero as "no figure to give", which is right
+						     where a size is unknown and wrong here: an empty account
+						     is a fact worth stating. -->
+						{used > 0
+							? m.accountPage.usedOf(bytes(used), bytes(quota))
+							: m.accountPage.nothingYet(bytes(quota))}
+					</span>
 				</div>
-			</Card.Content>
-		</Card.Root>
+				<div class="h-2 overflow-hidden rounded-full bg-muted">
+					<div
+						class="h-full rounded-full bg-primary transition-[width]"
+						style="width: {Math.max(fraction * 100, used > 0 ? 1 : 0)}%"
+					></div>
+				</div>
+				{#if fraction > 0.8}
+					<p class="text-xs text-muted-foreground">
+						{m.accountPage.nearlyFull(percent(fraction))}
+					</p>
+				{/if}
+			</div>
+		</AccountSection>
+
+		<AccountSection
+			id="keeping"
+			title={m.accountPage.keepingAndReminders}
+			description={m.accountPage.remindersDetail}
+		>
+			<div class="flex items-center gap-4">
+				<span class="flex-1">
+					<Label for="auto-sync" class="text-[15px] font-medium">{m.accountPage.autoSync}</Label>
+					<span class="mt-0.5 block text-sm text-muted-foreground">
+						{m.accountPage.keepingDetail}
+					</span>
+				</span>
+				<Switch id="auto-sync" checked={account.user.autoSync} onCheckedChange={setAutoSync} />
+			</div>
+
+			<div class="flex items-center gap-4">
+				<Label for="reminder" class="flex-1 text-[15px] font-medium">
+					{m.accountPage.reminderSwitch}
+				</Label>
+				<Switch
+					id="reminder"
+					checked={account.user.reminderEnabled}
+					onCheckedChange={setReminder}
+				/>
+			</div>
+
+			{#if account.user.reminderEnabled}
+				<div class="-mx-6 flex flex-wrap items-center gap-4 bg-muted/40 px-6">
+					<span class="flex-[1_1_16rem]">
+						<Label for="reminder-days" class="font-medium">{m.accountPage.reminderDays}</Label>
+						<span class="mt-0.5 block text-sm text-muted-foreground">
+							{m.accountPage.reminderHint}
+						</span>
+					</span>
+					<Input
+						id="reminder-days"
+						type="number"
+						min="7"
+						max="29"
+						class="w-20 tabular-nums"
+						value={account.user.reminderAfterDays}
+						onchange={(event) => setReminderDays(Number(event.currentTarget.value))}
+					/>
+				</div>
+			{/if}
+		</AccountSection>
 
 		<BoardPlaces />
 
@@ -171,77 +229,32 @@
 
 		<ApiTokens />
 
-		<Card.Root>
-			<Card.Header>
-				<Card.Title>{m.accountPage.reminders}</Card.Title>
-				<Card.Description>
-					{m.accountPage.remindersDetail}
-				</Card.Description>
-			</Card.Header>
-			<Card.Content class="space-y-4">
-				<div class="flex items-center justify-between gap-4">
-					<Label for="reminder" class="font-normal">{m.accountPage.reminderSwitch}</Label>
-					<Switch
-						id="reminder"
-						checked={account.user.reminderEnabled}
-						onCheckedChange={setReminder}
-					/>
-				</div>
-
-				{#if account.user.reminderEnabled}
-					<Separator />
-					<div class="space-y-2">
-						<Label for="reminder-days">{m.accountPage.reminderDays}</Label>
-						<Input
-							id="reminder-days"
-							type="number"
-							min="7"
-							max="29"
-							class="w-28"
-							value={account.user.reminderAfterDays}
-							onchange={(event) => setReminderDays(Number(event.currentTarget.value))}
-						/>
-						<p class="text-xs text-muted-foreground">
-							{m.accountPage.reminderHint}
-						</p>
-					</div>
-				{/if}
-			</Card.Content>
-		</Card.Root>
-
-		<Card.Root class="border-destructive/40">
-			<Card.Header>
-				<Card.Title>{m.accountPage.deleteTitle}</Card.Title>
-				<Card.Description>
+		<AccountSection id="delete" title={m.accountPage.deleteTitle} danger>
+			<div class="flex flex-wrap items-center gap-4">
+				<p class="flex-[1_1_18rem] text-sm leading-relaxed text-muted-foreground">
 					{m.accountPage.deleteDetail}
-				</Card.Description>
-			</Card.Header>
-			<Card.Content>
-				<Button variant="outline" size="sm" onclick={() => (confirmingDelete = true)}>
-					{m.accountPage.deleteButton}
-				</Button>
-			</Card.Content>
-		</Card.Root>
+				</p>
+				{#if !confirmingDelete}
+					<Button
+						variant="outline"
+						class="border-destructive/40 text-destructive hover:text-destructive"
+						onclick={() => (confirmingDelete = true)}
+					>
+						{m.accountPage.deleteButton}…
+					</Button>
+				{/if}
+			</div>
 
-		<Dialog.Root bind:open={confirmingDelete}>
-			<Dialog.Content class="sm:max-w-md">
-				<Dialog.Header>
-					<Dialog.Title>{m.accountPage.deleteConfirmTitle(account.user.email)}</Dialog.Title>
-					<Dialog.Description>
-						{m.accountPage.deleteConfirmDetail}
-					</Dialog.Description>
-				</Dialog.Header>
-				<div class="space-y-2">
-					<Label for="confirm-delete"
-						>{m.accountPage.typeBefore} <strong>{m.accountPage.confirmWord}</strong>
-						{m.accountPage.typeAfter}</Label
-					>
-					<Input id="confirm-delete" bind:value={deleteConfirmation} autocomplete="off" />
-				</div>
-				<Dialog.Footer>
-					<Button variant="outline" onclick={() => (confirmingDelete = false)}
-						>{m.accountPage.keepIt}</Button
-					>
+			{#if confirmingDelete}
+				<div class="flex flex-wrap items-end gap-3">
+					<div class="flex-[1_1_15rem] space-y-2">
+						<Label for="confirm-delete" class="block leading-relaxed font-normal">
+							{m.accountPage.typeBefore} <strong>{m.accountPage.confirmWord}</strong>
+							{m.accountPage.typeAfter}. {m.accountPage.deleteConfirmDetail}
+						</Label>
+						<Input id="confirm-delete" bind:value={deleteConfirmation} autocomplete="off" />
+					</div>
+					<Button variant="outline" onclick={cancelDelete}>{m.accountPage.keepIt}</Button>
 					<Button
 						variant="destructive"
 						disabled={deleteConfirmation.trim().toLowerCase() !== m.accountPage.confirmWord}
@@ -249,9 +262,9 @@
 					>
 						{m.accountPage.deleteEverything}
 					</Button>
-				</Dialog.Footer>
-			</Dialog.Content>
-		</Dialog.Root>
+				</div>
+			{/if}
+		</AccountSection>
 	{:else}
 		<Card.Root>
 			<Card.Header>
