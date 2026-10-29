@@ -10,7 +10,7 @@
  */
 
 import type { RequestHandler } from './$types';
-import type { ExportRecord } from '#lib/history/codec.js';
+import { blockSlot, type ExportRecord } from '#lib/history/codec.js';
 import type { ExportSummary } from '#lib/data/analytics/summary.js';
 import {
 	Invalid,
@@ -22,6 +22,7 @@ import {
 } from '#lib/server/exports/repo.js';
 import { deletePrefix, exportPrefix, isSafeBlobName } from '#lib/server/exports/r2.js';
 import { maybeStorage, requireDb } from '#lib/server/context.js';
+import { isFolded } from '#lib/server/timeline/blocks.js';
 import { isValidTimeZone } from '#lib/leaderboard/periods.js';
 import { fail, json, readJson } from '#lib/server/response.js';
 
@@ -32,6 +33,11 @@ export const PUT: RequestHandler = async (event) => {
 
 	const id = event.params.id;
 	if (!isSafeBlobName(id)) return fail(400, 'That is not a usable export identifier.');
+	// Blocks are written by the server alone; a browser's copy may be one it has since replaced.
+	if (blockSlot(id)) return fail(409, 'That week of the timeline is already in your account.');
+	const db = requireDb(event);
+	// Merged into the timeline already: as good as stored.
+	if (await isFolded(db, auth.user.id, id)) return json({ ok: true, complete: true });
 
 	const body = await readJson<{
 		record?: unknown;
@@ -49,7 +55,7 @@ export const PUT: RequestHandler = async (event) => {
 	try {
 		checkRecord(body.record, id);
 		({ complete } = await beginExport(
-			requireDb(event),
+			db,
 			auth.user.id,
 			id,
 			body.record as ExportRecord,

@@ -29,7 +29,10 @@
 		// Turns the account UI on. Absent on the legacy Worker below, which has
 		// no database to talk to.
 		"PUBLIC_ACCOUNTS": "1",
-		"MAIL_FROM": "hello@logboox.app"
+		"MAIL_FROM": "hello@logboox.app",
+		// Offers automatic import on the account page. The import Worker
+		// (import/) does the work and holds the XPeng credentials.
+		"XPENG_IMPORT": "1"
 	},
 	// Accounts: who signed in, what they kept, and what they shared. Everything
 	// here is optional — the app reads an export without ever touching it.
@@ -54,6 +57,8 @@
 	],
 	// Sign-in links and import reminders. The sender domain has to be verified
 	// in Email Service first; unverified senders fail with E_SENDER_NOT_VERIFIED.
+	// The import Worker (import/), for "Update now". It holds the XPeng secrets.
+	"services": [{ "binding": "IMPORT", "service": "logboox-import", "entrypoint": "Importer" }],
 	"send_email": [
 		{
 			"name": "EMAIL"

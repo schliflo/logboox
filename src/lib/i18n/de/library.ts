@@ -92,3 +92,61 @@ export const library: Messages['library'] = {
 		`Alle ${count}, ${size}, werden aus diesem Browser gelöscht. Die Originaldateien von XPeng bleiben unberührt, aber alles, was nicht gesichert ist, müsste erneut abgelegt werden.`,
 	keepThem: 'Behalten'
 };
+
+export const xpeng: Messages['xpeng'] = {
+	title: 'Automatischer Import von XPeng',
+	description:
+		'LogbooX holt jeden Tag deinen Export bei XPeng ab und ergänzt dieses Konto um das Neue, als eine durchgehende Aufzeichnung. Kein Monat geht verloren, und du musst nichts tun.',
+	connected: (date) => `Verbunden seit ${date}`,
+	lastFetched: (date) => `zuletzt abgeholt ${date}`,
+	nextFetch: (date) => `nächster Abruf ${date}`,
+	exporting: 'XPeng erzeugt gerade einen Export.',
+	importedTo: (date) => `Deine Aufzeichnung in diesem Konto reicht bis ${date}.`,
+	messages: {
+		downloadFailed:
+			'Der letzte Download von XPeng ist fehlgeschlagen. Neuer Versuch innerhalb einer Stunde.',
+		notImported:
+			'Frühere Exporte konnten noch nicht importiert werden; bis dahin wird nichts Neues abgeholt.',
+		exportFailed: 'XPeng konnte den Export nicht erzeugen. Neuer Versuch morgen.',
+		limit: 'XPengs Grenze von fünf Exporten am Tag ist erreicht. Neuer Versuch morgen.',
+		unauthorized:
+			'XPeng kennt keine Freigabe für diese Zugangsdaten. Prüfe sie, oder gib LogbooX im XPeng Data Center erneut frei.',
+		tokenExpired:
+			'XPeng akzeptiert diesen Access-Token nicht mehr. Gib LogbooX im XPeng Data Center erneut frei und trage die neuen Zugangsdaten ein.',
+		appError:
+			'XPeng hat die Zugangsdaten von LogbooX selbst abgelehnt. Das beheben wir; du musst nichts tun.',
+		error:
+			'XPeng hat mit einem unerwarteten Fehler geantwortet. Neuer Versuch innerhalb einer Stunde.',
+		importFailed:
+			'Der letzte Export konnte nicht importiert werden. Das beheben wir; es wird erneut versucht.',
+		quota: 'Dieses Konto ist voll, daher konnte der letzte Export nicht ergänzt werden.'
+	},
+	connect: 'Verbinden',
+	replace: 'Neue Zugangsdaten eintragen',
+	disconnect: 'Trennen',
+	disconnected: 'Getrennt',
+	disconnectedDetail: 'Es wird nichts mehr abgeholt. Was importiert wurde, bleibt im Konto.',
+	formTitle: 'Deine XPeng-Zugangsdaten',
+	formDetail:
+		'Gib LogbooX zuerst im XPeng Data Center frei. XPeng schickt dir dann diese vier Werte per E-Mail; übernimm sie exakt.',
+	enterpriseName: 'Unternehmensname, genau wie im Data Center eingegeben',
+	save: 'Speichern',
+	saving: 'Speichere …',
+	saveFailed: 'Die Zugangsdaten konnten nicht gespeichert werden.',
+	saved: 'Gespeichert',
+	savedDetail:
+		'Der erste Abruf startet innerhalb einer Stunde; die letzten dreißig Tage folgen kurz darauf.',
+	guideBefore: 'Schritt für Schritt, mit allem, was wo einzutragen ist:',
+	pulled: 'Neue Tage von XPeng',
+	pulledDetail: 'In deine Aufzeichnung in diesem Browser übernommen.',
+	open: 'Öffnen',
+	update: 'Jetzt aktualisieren',
+	updating: 'Frage bei XPeng an…',
+	updateExporting:
+		'XPeng bereitet die Datei vor, das dauert ein paar Minuten. Du kannst die Seite verlassen.',
+	updateDone: 'Auf dem neuesten Stand',
+	updateDoneDetail: 'Die neuesten Daten von XPeng sind in deiner Aufzeichnung.',
+	updateWait: (time: string) => `Nächste Aktualisierung ab ${time} möglich.`,
+	updateLater: 'XPeng ist noch dabei. Der nächste stündliche Lauf holt es ab.',
+	updateFailed: 'Aktualisierung fehlgeschlagen'
+};

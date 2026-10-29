@@ -24,7 +24,7 @@ import {
 	type TransferResult
 } from '../data/client';
 import { backupKept } from '../data/client';
-import { estimateOpen, type ExportRecord } from '../history/codec';
+import { blockSlot, estimateOpen, type ExportRecord } from '../history/codec';
 import { clearExports, deleteExports, listExports, storageAvailable } from '../history/db';
 import { downloadBlob } from '../utils/download';
 import { boardById } from '../leaderboard/boards';
@@ -131,6 +131,8 @@ class HistoryStore {
 	status = $state<Status>('unknown');
 	entries = $state<ExportRecord[]>([]);
 	remote = $state<RemoteExport[]>([]);
+	/** Uploads the account merged into its timeline and removed. */
+	folded = $state<string[]>([]);
 	usage = $state<{ used: number; quota: number } | null>(null);
 	busy = $state(false);
 	error = $state<string | null>(null);
@@ -142,6 +144,7 @@ class HistoryStore {
 		// must not stay on screen, offering to fetch exports of someone's who left.
 		account.onSignedOut(() => {
 			this.remote = [];
+			this.folded = [];
 		});
 	}
 
@@ -191,7 +194,10 @@ class HistoryStore {
 	get notInAccount(): ExportRecord[] {
 		if (!account.signedIn) return [];
 		const remote = new Set(this.remote.map((entry) => entry.id));
-		return this.entries.filter((entry) => !remote.has(entry.id) && !entry.isDemo);
+		// A block not in the account is one it has since replaced; it is never sent back.
+		return this.entries.filter(
+			(entry) => !remote.has(entry.id) && !entry.isDemo && !blockSlot(entry.id)
+		);
 	}
 
 	async refresh(): Promise<void> {
@@ -219,8 +225,9 @@ class HistoryStore {
 			return;
 		}
 		try {
-			const body = await api<{ exports: RemoteExport[] }>('/api/v1/exports');
+			const body = await api<{ exports: RemoteExport[]; folded?: string[] }>('/api/v1/exports');
 			this.remote = body.exports;
+			this.folded = body.folded ?? [];
 		} catch (error) {
 			// Offline says nothing about what the account holds, so the last
 			// listing stays; anything else means it can no longer be trusted.
@@ -305,12 +312,66 @@ class HistoryStore {
 			await this.refreshRemote();
 			await account.refresh();
 			announceCandidates(result.candidates);
+			// What was sent is now part of the timeline: swap it for its weeks.
+			await this.adoptTimeline().catch(() => {});
 			return { ids: result.ids, failed: result.failed };
 		} finally {
 			this.transfer = null;
 			this.busy = false;
 		}
 	}
+
+	/**
+	 * Brings this browser's copy of the account's timeline up to date: new
+	 * weekly blocks in; replaced blocks, and uploads merged into blocks, out.
+	 * Each week is pulled once, so one removed from this browser stays
+	 * removed. Returns how many blocks arrived.
+	 */
+	async adoptTimeline(): Promise<number> {
+		if (this.adopting || !account.signedIn) return 0;
+		this.adopting = true;
+		try {
+			const held = rememberedSlots();
+			for (const entry of this.entries) {
+				const slot = blockSlot(entry.id);
+				if (slot) held.add(slot);
+			}
+			const local = new Set(this.entries.map((entry) => entry.id));
+			const localSlots = new Set(this.entries.map((entry) => blockSlot(entry.id)));
+			const wanted = this.remote.filter((entry) => {
+				const slot = blockSlot(entry.id);
+				return slot && !local.has(entry.id) && (localSlots.has(slot) || !held.has(slot));
+			});
+
+			let pulled = 0;
+			let complete = true;
+			if (wanted.length > 0) {
+				const result = await this.pull(wanted.map((entry) => entry.id));
+				pulled = result.ids.length;
+				complete = result.failed.length === 0;
+				for (const id of result.ids) held.add(blockSlot(id)!);
+			}
+
+			const remote = new Set(this.remote.map((entry) => entry.id));
+			const kept = new Set(this.entries.map((entry) => entry.id));
+			const stale = this.entries.filter((entry) => {
+				if (remote.has(entry.id)) return false;
+				const slot = blockSlot(entry.id);
+				if (!slot) return complete && this.folded.includes(entry.id);
+				// Replaced, and the replacement is here.
+				return this.remote.some((other) => blockSlot(other.id) === slot && kept.has(other.id));
+			});
+			if (stale.length > 0) await this.remove(stale.map((entry) => entry.id));
+
+			const live = new Set(this.remote.map((entry) => blockSlot(entry.id)));
+			rememberSlots(new Set([...held].filter((slot) => live.has(slot))));
+			return pulled;
+		} finally {
+			this.adopting = false;
+		}
+	}
+
+	private adopting = false;
 
 	/** Brings exports down from the account into this browser. */
 	async pull(
@@ -357,6 +418,25 @@ class HistoryStore {
 	openable(ids: string[]): boolean {
 		const local = new Set(this.entries.map((entry) => entry.id));
 		return ids.length > 0 && ids.every((id) => local.has(id));
+	}
+}
+
+/** Block slots this browser has held. Only ids, as `logboox.last` keeps. */
+const SLOTS_KEY = 'logboox.timeline.slots';
+
+function rememberedSlots(): Set<string> {
+	try {
+		return new Set(JSON.parse(localStorage.getItem(SLOTS_KEY) ?? '[]') as string[]);
+	} catch {
+		return new Set();
+	}
+}
+
+function rememberSlots(slots: Set<string>): void {
+	try {
+		localStorage.setItem(SLOTS_KEY, JSON.stringify([...slots]));
+	} catch {
+		// Private windows and full storage: a removed week may come back once.
 	}
 }
 

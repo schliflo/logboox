@@ -16,6 +16,7 @@
 		"deploy": "pnpm build && wrangler deploy",
 		"deploy:legacy": "PUBLIC_MOVED_TO=https://logboox.app vite build && wrangler deploy --env legacy",
 		"deploy:cron": "wrangler deploy --config cron/wrangler.jsonc",
+		"deploy:import": "wrangler deploy --config import/wrangler.jsonc",
 		"db:migrate": "wrangler d1 migrations apply logboox --remote",
 		"db:migrate:local": "wrangler d1 migrations apply logboox --local",
 		"db:seed:local": "node tooling/seed.ts",
@@ -28,7 +29,8 @@
 		"test:smoke": "node tooling/smoke.ts",
 		"lint": "prettier --check .",
 		"format": "prettier --write .",
-		"gen": "wrangler types"
+		"gen": "wrangler types",
+		"xpeng:query": "node --env-file-if-exists=.env scripts/xpeng-query.ts"
 	},
 	"devDependencies": {
 		"@fontsource-variable/geist": "^5.3.0",

@@ -41,13 +41,30 @@ export interface IngestProgress {
 /** Average bytes per source row, used to pre-size the builders. */
 const BYTES_PER_ROW_ESTIMATE = 95;
 
+/**
+ * Only the rows timed in `[from, to)`. Every line is still read, but only
+ * these are kept, so a server with 128 MB can take a month in slices.
+ */
+export interface ParseWindow {
+	from: number;
+	to: number;
+}
+
 export async function parseStream(
 	files: RecognizedFile[],
 	stream: StreamId,
-	onProgress?: (progress: IngestProgress) => void
+	onProgress?: (progress: IngestProgress) => void,
+	window?: ParseWindow
 ): Promise<StreamParseResult> {
 	const totalBytes = files.reduce((sum, f) => sum + f.file.size, 0);
-	const capacity = Math.max(1024, Math.ceil(totalBytes / BYTES_PER_ROW_ESTIMATE));
+	const estimate = Math.ceil(totalBytes / BYTES_PER_ROW_ESTIMATE);
+	// One sample a second at most, plus the repeats: a window caps the estimate.
+	const capacity = Math.max(
+		1024,
+		window ? Math.min(estimate, window.to - window.from + 1024) : estimate
+	);
+	const from = window?.from ?? -Infinity;
+	const to = window?.to ?? Infinity;
 
 	const timeBuilder = new TimeBuilder(capacity);
 	const builders = new Map<string, ColumnBuilder>();
@@ -120,6 +137,7 @@ export async function parseStream(
 
 			if (!vin && vinIndex !== -1) vin = fields[vinIndex] ?? '';
 			if (!vmodel && vmodelIndex !== -1) vmodel = fields[vmodelIndex] ?? '';
+			if (t < from || t >= to) continue;
 
 			timeBuilder.push(t);
 			for (let i = 0; i < fieldPlan.length; i++) {

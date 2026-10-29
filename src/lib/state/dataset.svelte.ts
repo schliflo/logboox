@@ -465,8 +465,10 @@ class DatasetStore {
 		const last = recall();
 		if (!last || last.ids.length === 0) return false;
 		await history.refresh();
-		if (!history.openable(last.ids)) return false;
-		await this.open(last.ids, to);
+		// What was open may since have been merged into the timeline's weeks.
+		const ids = history.openable(last.ids) ? last.ids : recordIds();
+		if (ids.length === 0 || !history.openable(ids)) return false;
+		await this.open(ids, to);
 		if (this.status === 'ready' && last.range !== undefined) await this.setRange(last.range);
 		return this.status === 'ready';
 	}

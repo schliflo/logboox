@@ -87,3 +87,56 @@ export const library = {
 		`All ${count} of them, ${size}, deleted from this browser. The original files XPeng sent you are untouched, but anything not backed up would have to be dropped in again.`,
 	keepThem: 'Keep them'
 };
+
+export const xpeng = {
+	title: 'Automatic import from XPeng',
+	description:
+		'Every day LogbooX fetches your export from XPeng and adds what is new to this account, as one continuous record. No month is missed, and nothing needs doing.',
+	connected: (date: string) => `Connected ${date}`,
+	lastFetched: (date: string) => `last fetched ${date}`,
+	nextFetch: (date: string) => `next fetch ${date}`,
+	exporting: 'XPeng is generating an export right now.',
+	importedTo: (date: string) => `Your record in this account reaches ${date}.`,
+	messages: {
+		downloadFailed: 'The last download from XPeng failed. Trying again within the hour.',
+		notImported: 'Earlier exports could not be imported yet, so nothing more is fetched for now.',
+		exportFailed: 'XPeng could not generate the export. Trying again tomorrow.',
+		limit: 'XPeng’s limit of five exports a day is used up. Trying again tomorrow.',
+		unauthorized:
+			'XPeng has no authorisation for these credentials. Check them, or authorise LogbooX again in the XPeng Data Center.',
+		tokenExpired:
+			'XPeng no longer accepts this access token. Authorise LogbooX again in the XPeng Data Center and enter the new credentials.',
+		appError:
+			'XPeng refused LogbooX’s own credentials. This is ours to fix; nothing is needed from you.',
+		error: 'XPeng answered with an unexpected error. Trying again within the hour.',
+		importFailed: 'The last export could not be imported. This is ours to fix; it is retried.',
+		quota: 'This account is full, so the last export could not be added.'
+	},
+	connect: 'Connect',
+	replace: 'Enter new credentials',
+	disconnect: 'Disconnect',
+	disconnected: 'Disconnected',
+	disconnectedDetail: 'Nothing more is fetched. What was imported stays in the account.',
+	formTitle: 'Your XPeng credentials',
+	formDetail:
+		'Authorise LogbooX in the XPeng Data Center first. XPeng then mails you these four values; copy them exactly.',
+	enterpriseName: 'Enterprise name, exactly as typed in the Data Center',
+	save: 'Save',
+	saving: 'Saving…',
+	saveFailed: 'The credentials could not be saved.',
+	saved: 'Saved',
+	savedDetail: 'The first fetch starts within the hour; the last thirty days arrive soon after.',
+	guideBefore: 'Step by step, with what to type where:',
+	pulled: 'New days from XPeng',
+	pulledDetail: 'Added to your record in this browser.',
+	open: 'Open',
+	update: 'Update now',
+	updating: 'Asking XPeng…',
+	updateExporting:
+		'XPeng is preparing the file, which takes a few minutes. You can leave this page.',
+	updateDone: 'Up to date',
+	updateDoneDetail: 'The latest data from XPeng is in your record.',
+	updateWait: (time: string) => `Next update possible from ${time}.`,
+	updateLater: 'XPeng is still at it. The next hourly run picks it up.',
+	updateFailed: 'Could not update'
+};

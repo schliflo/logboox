@@ -18,6 +18,7 @@
 	import { Label } from '#lib/components/ui/label/index.js';
 	import { Badge } from '#lib/components/ui/badge/index.js';
 	import { account } from '#lib/state/account.svelte.js';
+	import { pullAutomatic } from '#lib/state/xpeng.js';
 	import CloudIcon from '@lucide/svelte/icons/cloud';
 	import MailIcon from '@lucide/svelte/icons/mail';
 	import UserIcon from '@lucide/svelte/icons/circle-user';
@@ -37,8 +38,10 @@
 
 	const benefits = $derived(m.accountMenu.benefits);
 
-	onMount(() => {
-		account.refresh();
+	onMount(async () => {
+		await account.refresh();
+		// Exports the import Worker added to the account; see docs/auto-import.md.
+		void pullAutomatic();
 	});
 
 	async function submit(event: SubmitEvent) {

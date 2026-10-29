@@ -22,6 +22,18 @@ import type { MergeSource } from '../data/parse/merge';
 
 export const RECORD_VERSION = 1;
 
+/**
+ * Ids of a car's weekly timeline blocks: `wk-{week}-{vin tag}-{version}`. The
+ * server rewrites a block under a new version whenever new data reaches its week.
+ */
+export const BLOCK_PREFIX = 'wk-';
+
+/** `wk-{week}-{vin tag}-`: the same for every version of one car's week; null if not a block. */
+export function blockSlot(id: string): string | null {
+	const match = /^wk-\d+-[0-9a-f]+-/.exec(id);
+	return match ? match[0] : null;
+}
+
 /** Name of the buffer holding the shared timeline. */
 export const TIME_BLOB = '_time';
 
@@ -84,7 +96,9 @@ export async function compress(buffer: ArrayBuffer): Promise<Uint8Array> {
 	if (typeof CompressionStream === 'undefined') {
 		return gzipSync(new Uint8Array(buffer), { level: 6 });
 	}
-	const gzip = new Blob([buffer]).stream().pipeThrough(new CompressionStream('gzip'));
+	// From a Response rather than a Blob: Node holds a Blob's bytes long after
+	// it is dropped, which the import Worker's tests would read as a leak.
+	const gzip = new Response(buffer).body!.pipeThrough(new CompressionStream('gzip'));
 	return new Uint8Array(await new Response(gzip).arrayBuffer());
 }
 

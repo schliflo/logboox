@@ -180,6 +180,11 @@ The exports the account keeps: summaries, not data. Each has its `id`, `vin`,
 `vmodel`, the span it covers (`startTime`, `endTime`), `rows`, `days`,
 `distanceKm`, `trips`, `storedBytes`, `isDemo` and `uploadedAt`.
 
+Signed-in accounts keep one timeline per car as weekly blocks, ids
+`wk-{week}-{vin tag}-{version}`; a block is replaced under a new id whenever
+new data reaches its week. An upload is merged into them and removed; `folded`
+lists the ids of uploads that went that way.
+
 ### `GET /api/v1/exports/{id}/record`
 
 What one export is made of: the span it covers and the compressed buffers that

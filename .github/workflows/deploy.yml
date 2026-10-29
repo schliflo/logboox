@@ -53,7 +53,8 @@ jobs:
 
   production:
     name: logboox.app
-    needs: migrate
+    # The app binds the import Worker, which has to exist first.
+    needs: [migrate, import]
     runs-on: ubuntu-latest
     environment:
       name: production
@@ -107,6 +108,33 @@ jobs:
             CRON_SECRET
         env:
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
+
+  import:
+    name: Import Worker
+    needs: migrate
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 26
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # From `import`, like the cron job, so the secrets land on this Worker.
+      - uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: import
+          command: deploy
+          secrets: |
+            XPENG_APP_ID
+            XPENG_APP_SECRET
+        env:
+          XPENG_APP_ID: ${{ secrets.XPENG_APP_ID }}
+          XPENG_APP_SECRET: ${{ secrets.XPENG_APP_SECRET }}
 
   legacy:
     name: Old workers.dev address

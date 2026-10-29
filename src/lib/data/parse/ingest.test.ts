@@ -114,6 +114,23 @@ describe('parseStream', () => {
 		]);
 	});
 
+	it('keeps only the rows inside a window, and still learns the VIN', async () => {
+		const files = [0, 1].map((i) =>
+			fixture(FIXTURE_FILES.operation[i], PREFIX + EXPORT_NAMES.operation[i])
+		);
+		const result = await parseStream(
+			recognizeFiles(files).streams.operation!,
+			'operation',
+			undefined,
+			{
+				from: 1785600002,
+				to: 1785600004
+			}
+		);
+		expect([...result.time]).toEqual([1785600002, 1785600003]);
+		expect(result.vin).toBe('L1NTEST00000000001');
+	});
+
 	it('maps CAN not-available sentinels to null', async () => {
 		const result = await parseFixtureStream();
 		const speed = result.columns.get('esp_vehspd')!;

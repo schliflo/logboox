@@ -124,6 +124,19 @@ export function cronSecret(event: RequestEvent): string | null {
 	return binding(event, 'CRON_SECRET');
 }
 
+/**
+ * Whether automatic import runs on this deployment. The import Worker holds
+ * the XPeng credentials and does the work; the app only offers it.
+ */
+export function xpengImport(event: RequestEvent): boolean {
+	return binding(event, 'XPENG_IMPORT') === '1';
+}
+
+/** The import Worker, for "Update now"; null where it is not bound (tests, `vite dev` alone). */
+export function importService(event: RequestEvent) {
+	return binding(event, 'IMPORT');
+}
+
 /** What development signs unsubscribe links with. Not a secret; it opens one switch. */
 const DEV_MAIL_SECRET = 'development-mail-secret';
 

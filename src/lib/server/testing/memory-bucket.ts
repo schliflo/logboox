@@ -29,13 +29,28 @@ export function memoryBucket(): MemoryBucket {
 		async head(key: string) {
 			return objects.has(key) ? meta(key) : null;
 		},
-		async get(key: string) {
-			const bytes = objects.get(key);
-			if (!bytes) return null;
+		async get(key: string, options?: R2GetOptions) {
+			const whole = objects.get(key);
+			if (!whole) return null;
+			const range = options?.range as { offset?: number; length?: number } | undefined;
+			const start = range?.offset ?? 0;
+			const bytes = whole.subarray(
+				start,
+				range?.length === undefined ? undefined : start + range.length
+			);
 			return {
 				...meta(key),
 				text: async () => new TextDecoder().decode(bytes),
-				arrayBuffer: async () => bytes.slice().buffer
+				arrayBuffer: async () => bytes.slice().buffer,
+				get body() {
+					const copy = bytes.slice();
+					return new ReadableStream<Uint8Array>({
+						start(controller) {
+							controller.enqueue(copy);
+							controller.close();
+						}
+					});
+				}
 			};
 		},
 		async put(key: string, value: unknown) {

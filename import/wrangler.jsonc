@@ -1,0 +1,38 @@
+{
+	"$schema": "../node_modules/wrangler/config-schema.json",
+	"name": "logboox-import",
+	"main": "index.ts",
+	"compatibility_date": "2026-09-01",
+	// Nothing to serve: it only ever wakes up on its schedule.
+	"workers_dev": false,
+	"preview_urls": false,
+	"triggers": {
+		// Hourly: a step of fetching per owner, then every ZIP waiting is
+		// imported. An hourly schedule also gets 15 minutes of CPU rather than 30 s.
+		"crons": ["45 * * * *"]
+	},
+	// For "Update now" over the service binding: a first import of thirty days
+	// takes ~30 s of CPU, more than a request's default. Scheduled runs get 15 min.
+	"limits": { "cpu_ms": 300000 },
+	"vars": {
+		// "prod" or "uat". XPENG_APP_ID and XPENG_APP_SECRET are secrets.
+		"XPENG_OPEN_ENV": "prod"
+	},
+	// The app's own database and bucket: what this writes is an ordinary export.
+	"d1_databases": [
+		{
+			"binding": "DB",
+			"database_name": "logboox",
+			"database_id": "3dec4df1-34c4-48cd-ba36-8c46a8660525",
+			"migrations_dir": "../migrations"
+		}
+	],
+	"r2_buckets": [
+		{
+			"binding": "STORAGE",
+			"bucket_name": "logboox-exports",
+			"jurisdiction": "eu"
+		}
+	],
+	"observability": { "enabled": true }
+}

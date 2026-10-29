@@ -7,6 +7,8 @@ interface __BaseEnv_Env {
 	PUBLIC_MOVED_TO?: 'https://logboox.app';
 	CRON_SECRET: string;
 	MAIL_SECRET: string;
+	XPENG_IMPORT?: '1';
+	IMPORT?: Fetcher & import('./src/lib/server/xpeng/update').ImportService;
 	STORAGE?: R2Bucket;
 	DB?: D1Database;
 	EMAIL?: SendEmail;

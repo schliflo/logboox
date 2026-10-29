@@ -159,7 +159,8 @@ export function sourceFromDataset(dataset: Dataset): MergeSource {
 	};
 }
 
-export function mergeSources(sources: MergeSource[]): Dataset {
+/** `inOrder`: the sources are already oldest first, whatever their dates say. */
+export function mergeSources(sources: MergeSource[], { inOrder = false } = {}): Dataset {
 	if (sources.length === 0) throw new Error('There is nothing to open.');
 
 	const vins = new Set(sources.map((s) => s.vin).filter(Boolean));
@@ -168,7 +169,9 @@ export function mergeSources(sources: MergeSource[]): Dataset {
 	}
 
 	// Oldest first, so the newest export overwrites what it disagrees with.
-	const ordered = [...sources].sort((a, b) => endOf(a) - endOf(b) || startOf(a) - startOf(b));
+	const ordered = inOrder
+		? sources
+		: [...sources].sort((a, b) => endOf(a) - endOf(b) || startOf(a) - startOf(b));
 	const { time, maps } = mergeTimelines(
 		ordered.map((s) => s.time),
 		true

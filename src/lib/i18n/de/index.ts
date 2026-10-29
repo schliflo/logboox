@@ -10,7 +10,7 @@ import { charts } from './charts';
 import { range, dropZone, moved, offline, notices, report, errors } from './misc';
 import { boards, claims, leaderboard } from './boards';
 import { detail, exportMenu, shares, share, notes, sharedPage } from './detail';
-import { tokens, library } from './library';
+import { tokens, library, xpeng } from './library';
 import { landing } from './landing';
 import { site, featuresPage, faqPage } from './site';
 import { guidesPage, guides } from './guides';
@@ -50,6 +50,7 @@ export const de: Messages = {
 	share,
 	notes,
 	tokens,
+	xpeng,
 	library,
 	landing,
 	site,

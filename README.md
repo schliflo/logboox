@@ -75,6 +75,9 @@ earliest one. Drop the whole set in, or the ZIP as downloaded.
 The export covers a rolling thirty days at one sample per second while the car
 is awake, which comes to roughly 340 MB and 3.6 million rows.
 
+With an account, LogbooX can also fetch this export for you through the XPeng
+Open Platform: [docs/auto-import.md](docs/auto-import.md).
+
 ## Running it
 
 ```sh
@@ -106,6 +109,10 @@ changes when you have one. What it adds:
   imported it.
 - **An API over your own data**, with tokens you make and revoke yourself — see
   [docs/api.md](docs/api.md), which includes a Home Assistant example.
+- **Automatic import.** Authorise LogbooX in XPeng's Data Center, enter the
+  credentials XPeng mails you, and the server fetches and imports a fresh
+  export every day into one continuous history, no app visit needed — see
+  [docs/auto-import.md](docs/auto-import.md).
 - **A link to one trip or charging session**, or a whole export. Shares carry
   the model of the car and never its identification number, and revoking one
   takes effect within a few minutes: browsers may cache a link for five.

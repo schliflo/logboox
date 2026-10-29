@@ -79,6 +79,14 @@
 	</li>
 	<li><strong>API tokens</strong> you create, stored as hashes.</li>
 	<li>
+		<strong>XPeng credentials for automatic import</strong>, if you enter them: the openId, access
+		token, scope code and enterprise name XPeng issued for your authorisation of LogbooX under the
+		EU Data Act. With them the server asks XPeng for your export every day, adds the new data to
+		your account as exports like the ones you upload, and deletes the ZIP XPeng delivered once that
+		is done. Disconnecting deletes the credentials; you can also withdraw the authorisation in the
+		XPeng Data Center.
+	</li>
+	<li>
 		<strong>Shared links and leaderboard places</strong> you create, described below. A shared link also
 		keeps its time zone and a count of how often it has been opened, and nothing about who opened it.
 	</li>

@@ -173,7 +173,11 @@ export async function deleteUser(db: Db, id: string): Promise<void> {
 		'annotations',
 		'shares',
 		'board_candidates',
-		'board_entries'
+		'board_entries',
+		'xpeng_links',
+		'xpeng_downloads',
+		'folded_exports',
+		'timeline_locks'
 	].map((table) => db.prepare(`DELETE FROM ${table} WHERE user_id = ?`).bind(id));
 
 	// Not linked by id: a sign-in link only knows the address it was sent to.

@@ -1,0 +1,4 @@
+# Local secrets for `wrangler dev --config import/wrangler.jsonc`. Copy to
+# `import/.dev.vars`. In production the deploy workflow sets them.
+XPENG_APP_ID=
+XPENG_APP_SECRET=

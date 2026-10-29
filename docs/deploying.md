@@ -3,12 +3,15 @@
 Merging to `main` deploys. The workflow in
 [`.github/workflows/deploy.yml`](../.github/workflows/deploy.yml) runs the same
 checks CI runs, then the deploy check (below), applies any pending database
-migrations, and ships three Workers:
+migrations, and ships four Workers:
 
-1. **logboox.app** — the app itself. Goes first.
-2. **logboox-cron** — the Worker that starts the daily run: reminders, board
+1. **logboox-import** — hourly automatic import from XPeng and "Update now";
+   see [auto-import.md](auto-import.md). Goes first: the app binds it
+   (`IMPORT` service binding), and a binding to a missing Worker fails.
+2. **logboox.app** — the app itself.
+3. **logboox-cron** — the Worker that starts the daily run: reminders, board
    messages, the yearly summary and the tidying up.
-3. **xpeng-data-export-browser** — the old workers.dev address, which still
+4. **xpeng-data-export-browser** — the old workers.dev address, which still
    serves an export-only page pointing at the new one.
 
 Once production is out, the cron and legacy jobs run side by side. Production
@@ -110,14 +113,17 @@ GitHub, not under an environment:
 | `CLOUDFLARE_ACCOUNT_ID` | From any Workers page in the dashboard                                    |
 | `CRON_SECRET`           | Any long random string; the app and the cron Worker are both given it     |
 | `MAIL_SECRET`           | A long random string (`openssl rand -base64 32`); signs unsubscribe links |
+| `XPENG_APP_ID`          | From XPeng's Open Platform approval mail; see docs/auto-import.md         |
+| `XPENG_APP_SECRET`      | From the same mail                                                        |
 
 The workflow uses two environments, and a secret set on one is invisible to the
-other. The jobs for migrations, logboox.app and the cron Worker run in
+other. The jobs for migrations, logboox.app, the cron and the import Worker run in
 `production`; the legacy job runs in `legacy`. All of them need
 `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID`, so repository level is the
 simple answer: every job reads them. (Environment secrets would work too, but
 the two Cloudflare ones would have to be set in both.) `CRON_SECRET` is used by
-the production and cron jobs, and `MAIL_SECRET` by the production job only.
+the production and cron jobs; `MAIL_SECRET` by the production job only; the two
+`XPENG_` secrets by the import job only, which fails while either is missing.
 
 Both are deployed with the Workers rather than set in the dashboard, so there is
 one place they can drift out of step: this list.
@@ -183,14 +189,16 @@ The scripts are still there, and the order still matters:
 ```bash
 pnpm check:deploy
 pnpm db:migrate
+pnpm deploy:import     # before the app, which binds it
 pnpm run deploy        # `run` is not optional: `pnpm deploy` is a pnpm builtin
 pnpm deploy:cron
 pnpm deploy:legacy
 ```
 
 These ship no secrets. Put them on by hand with `wrangler secret put`:
-`CRON_SECRET` and `MAIL_SECRET` on `logboox`, and `CRON_SECRET` on
-`logboox-cron` (add `--config cron/wrangler.jsonc` for that one).
+`CRON_SECRET` and `MAIL_SECRET` on `logboox`, `CRON_SECRET` on `logboox-cron`
+(`--config cron/wrangler.jsonc`), and `XPENG_APP_ID` and `XPENG_APP_SECRET` on
+`logboox-import` (`--config import/wrangler.jsonc`).
 
 ## Checking a deploy
 

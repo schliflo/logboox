@@ -37,6 +37,7 @@ import {
 	yearOf
 } from '#lib/leaderboard/periods.js';
 import { all, now as currentTime, one, rowId, run, type Db, type Statement } from '../db';
+import { getExportRow } from '../exports/repo';
 
 export interface CandidateRow {
 	id: string;
@@ -933,4 +934,48 @@ export async function listBadges(db: Db, userId: string, now = currentTime()): P
 			periodOrder(b.period).localeCompare(periodOrder(a.period)) ||
 			boardIndex(a.board) - boardIndex(b.board)
 	);
+}
+
+/**
+ * What this export would put on a board, if anything.
+ *
+ * Rebuilt from the rows just written rather than from the request, so it
+ * describes what the account actually holds. A failure here is swallowed: the
+ * upload succeeded, and a missed offer is not worth telling anyone about.
+ */
+export async function candidatesForExport(db: Db, userId: string, exportId: string) {
+	try {
+		const row = await getExportRow(db, userId, exportId);
+		if (!row?.time_zone || row.is_demo === 1) return [];
+
+		const trips = await all<{ summary_json: string }>(
+			db,
+			'SELECT summary_json FROM trips WHERE user_id = ? AND export_id = ?',
+			userId,
+			exportId
+		);
+		const charging = await all<{ summary_json: string }>(
+			db,
+			'SELECT summary_json FROM charging_sessions WHERE user_id = ? AND export_id = ?',
+			userId,
+			exportId
+		);
+
+		const summary: ExportSummary = {
+			trips: trips.map((t) => JSON.parse(t.summary_json)),
+			charging: charging.map((c) => JSON.parse(c.summary_json)),
+			vehicle: {
+				vin: row.vin,
+				vmodel: row.vmodel,
+				lastSampleTime: row.end_time,
+				odometerKm: null,
+				soc: null,
+				rangeKm: null
+			}
+		};
+
+		return await detectCandidates(db, userId, summary, row.time_zone);
+	} catch {
+		return [];
+	}
 }

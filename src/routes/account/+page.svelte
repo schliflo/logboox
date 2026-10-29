@@ -22,6 +22,7 @@
 	import ApiTokens from '#lib/components/app/ApiTokens.svelte';
 	import BoardPlaces from '#lib/components/app/BoardPlaces.svelte';
 	import SharedLinks from '#lib/components/app/SharedLinks.svelte';
+	import XpengImport from '#lib/components/app/XpengImport.svelte';
 	import { account } from '#lib/state/account.svelte.js';
 	import { ACCOUNTS_ENABLED } from '#lib/features.js';
 	import { bytes, dateOnly, percent } from '#lib/utils/format.js';
@@ -164,6 +165,8 @@
 				</div>
 			</Card.Content>
 		</Card.Root>
+
+		<XpengImport />
 
 		<BoardPlaces />
 
