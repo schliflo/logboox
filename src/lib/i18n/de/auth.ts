@@ -56,18 +56,20 @@ export const accountPage: Messages['accountPage'] = {
 	elsewhere: 'Konten gibt es unter logboox.app',
 	elsewhereDetail: 'Diese Adresse bedient eine ältere Version ohne Kontendatenbank.',
 	yours: 'Dein Konto',
-	signedInAs: (email, date) => `Angemeldet als ${email} seit ${date}.`,
+	profileDetail:
+		'Angemeldet über einen Link per E-Mail. Es gibt kein Passwort, das man vergessen kann.',
+	memberSince: (date) => `Dabei seit ${date}`,
+	onThisPage: 'Auf dieser Seite',
 	exportsKept: (count) => `${count} ${count === 1 ? 'Export gespeichert' : 'Exporte gespeichert'}`,
 	usedOf: (used, quota) => `${used} von ${quota}`,
 	nothingYet: (quota) => `noch nichts, von ${quota}`,
 	nearlyFull: (share) =>
 		`${share} belegt. Entferne einen Export, den du nicht mehr brauchst, um Platz zu schaffen.`,
 	signOut: 'Abmelden',
-	keeping: 'Exporte aufbewahren',
+	keepingAndReminders: 'Aufbewahren & Erinnern',
 	keepingDetail:
 		'Eine Kopie im Konto überdauert diesen Browser. Exporte werden weiterhin hier gelesen und hier gespeichert. Es wird nichts kopiert, außer du bittest darum oder schaltest das hier ein.',
 	autoSync: 'Neue Importe automatisch in mein Konto kopieren',
-	reminders: 'Erinnerungen',
 	remindersDetail:
 		'XPeng hält immer nur die letzten dreißig Tage vor. Ein Monat, den niemand angefordert hat, lässt sich später nicht zurückholen.',
 	reminderSwitch: 'Mir eine E-Mail schicken, wenn ein neuer Export fällig ist',
@@ -77,7 +79,6 @@ export const accountPage: Messages['accountPage'] = {
 	deleteDetail:
 		'Entfernt das Konto, jeden darin gespeicherten Export und jeden geteilten Link samt den Dateien dahinter. Was in diesem Browser liegt, bleibt, wo es ist.',
 	deleteButton: 'Konto löschen',
-	deleteConfirmTitle: (email) => `${email} löschen?`,
 	deleteConfirmDetail:
 		'Das lässt sich nicht rückgängig machen. Sichere vorher alles, was du behalten willst — die Kopien in diesem Browser sind nicht betroffen.',
 	typeBefore: 'Gib',

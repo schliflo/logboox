@@ -43,7 +43,8 @@ export const shares: Messages['shares'] = {
 	made: (date) => `Erstellt ${date}`,
 	views: (count) => (count === 1 ? 'einmal geöffnet' : `${count}-mal geöffnet`),
 	copy: 'Link kopieren',
-	revoke: 'Link widerrufen'
+	revoke: 'Link widerrufen',
+	none: 'Noch keine geteilten Links. Teile eine Fahrt oder einen Ladevorgang von seiner Seite aus.'
 };
 
 export const share: Messages['share'] = {

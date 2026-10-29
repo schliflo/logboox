@@ -40,7 +40,8 @@ export const shares = {
 	made: (date: string) => `Made ${date}`,
 	views: (count: number) => (count === 1 ? 'opened once' : `opened ${count} times`),
 	copy: 'Copy this link',
-	revoke: 'Revoke this link'
+	revoke: 'Revoke this link',
+	none: 'No shared links yet. Share a trip or a charging session from its page to make one.'
 };
 
 export const share = {

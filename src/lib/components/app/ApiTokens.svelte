@@ -10,7 +10,7 @@
 	import { m } from '#lib/i18n/index.svelte.js';
 	import { onMount } from 'svelte';
 	import { toast } from 'svelte-sonner';
-	import * as Card from '#lib/components/ui/card/index.js';
+	import AccountSection from '#lib/components/app/AccountSection.svelte';
 	import * as Dialog from '#lib/components/ui/dialog/index.js';
 	import { Badge } from '#lib/components/ui/badge/index.js';
 	import { Button } from '#lib/components/ui/button/index.js';
@@ -99,50 +99,39 @@
 	}
 </script>
 
-<Card.Root>
-	<Card.Header>
-		<Card.Title>{m.tokens.title}</Card.Title>
-		<Card.Description>
-			{m.tokens.description}
-		</Card.Description>
-	</Card.Header>
+<AccountSection id="tokens" title={m.tokens.title} description={m.tokens.description}>
+	{#each tokens as token (token.id)}
+		<div class="flex flex-wrap items-center gap-3">
+			<KeyIcon class="size-4 shrink-0 text-muted-foreground" />
+			<div class="min-w-32 flex-1">
+				<p class="text-[15px] font-medium">{token.name}</p>
+				<p class="text-sm text-muted-foreground">
+					<code>lbx_…{token.hint}</code>
+					· {m.tokens.made(dateOnly(token.createdAt))}
+					{#if token.lastUsedAt}
+						· {m.tokens.lastUsed(dateOnly(token.lastUsedAt))}
+					{:else}
+						· {m.tokens.neverUsed}
+					{/if}
+				</p>
+			</div>
+			<Badge variant="secondary">{token.scopes.join(', ')}</Badge>
+			<Button
+				variant="ghost"
+				size="icon"
+				class="text-destructive hover:text-destructive"
+				onclick={() => revoke(token)}
+			>
+				<TrashIcon class="size-4" />
+				<span class="sr-only">{m.tokens.revoke(token.name)}</span>
+			</Button>
+		</div>
+	{:else}
+		<p class="text-sm text-muted-foreground">{m.tokens.none}</p>
+	{/each}
 
-	<Card.Content class="space-y-4">
-		{#if tokens.length > 0}
-			<ul class="divide-y rounded-lg border">
-				{#each tokens as token (token.id)}
-					<li class="flex flex-wrap items-center gap-3 p-3">
-						<KeyIcon class="size-4 shrink-0 text-muted-foreground" />
-						<div class="min-w-32 flex-1">
-							<p class="text-sm font-medium">{token.name}</p>
-							<p class="text-xs text-muted-foreground">
-								<code>lbx_…{token.hint}</code>
-								· {m.tokens.made(dateOnly(token.createdAt))}
-								{#if token.lastUsedAt}
-									· {m.tokens.lastUsed(dateOnly(token.lastUsedAt))}
-								{:else}
-									· {m.tokens.neverUsed}
-								{/if}
-							</p>
-						</div>
-						<Badge variant="secondary">{token.scopes.join(', ')}</Badge>
-						<Button variant="ghost" size="icon" onclick={() => revoke(token)}>
-							<TrashIcon class="size-4" />
-							<span class="sr-only">{m.tokens.revoke(token.name)}</span>
-						</Button>
-					</li>
-				{/each}
-			</ul>
-		{:else}
-			<p class="text-sm text-muted-foreground">{m.tokens.none}</p>
-		{/if}
-
-		<Button variant="outline" size="sm" onclick={() => (creating = true)}>
-			<PlusIcon class="size-4" />
-			{m.tokens.newToken}
-		</Button>
-
-		<p class="text-xs text-muted-foreground">
+	<div class="flex flex-wrap items-center gap-4">
+		<p class="flex-[1_1_16rem] text-sm text-muted-foreground">
 			{m.tokens.readOnlyBefore}
 			<a
 				class="text-primary underline underline-offset-4"
@@ -151,8 +140,12 @@
 				rel="noreferrer noopener">docs/api.md</a
 			>.
 		</p>
-	</Card.Content>
-</Card.Root>
+		<Button variant="outline" onclick={() => (creating = true)}>
+			<PlusIcon class="size-4" />
+			{m.tokens.newToken}
+		</Button>
+	</div>
+</AccountSection>
 
 <Dialog.Root
 	bind:open={creating}
